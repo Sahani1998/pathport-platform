@@ -15,6 +15,38 @@ export default function StudentJourney() {
           subtitle="From your first enquiry to your first day of class — PathPort guides every step of your journey."
         />
 
+        {/* Student life image strip */}
+        <div className="grid grid-cols-3 gap-3 max-w-3xl mx-auto mb-14">
+          {[
+            {
+              src: "https://images.unsplash.com/photo-1543269865-cbf427effbad?auto=format&fit=crop&w=600&q=80",
+              alt: "Happy international students on campus",
+            },
+            {
+              src: "https://images.unsplash.com/photo-1517486808906-6ca8b3f04846?auto=format&fit=crop&w=600&q=80",
+              alt: "Students working together in a modern study space",
+            },
+            {
+              src: "https://images.unsplash.com/photo-1571260899304-425eee4c7efc?auto=format&fit=crop&w=600&q=80",
+              alt: "Student holding graduation certificate smiling",
+            },
+          ].map((img, i) => (
+            <div
+              key={img.src}
+              className="relative rounded-xl overflow-hidden border border-white/[0.08]"
+              style={{ aspectRatio: "4/3" }}
+            >
+              <img
+                src={img.src}
+                alt={img.alt}
+                loading="lazy"
+                className="w-full h-full object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-navy-900/60 to-transparent" />
+            </div>
+          ))}
+        </div>
+
         {/* Journey connector layout */}
         <div className="relative max-w-5xl mx-auto">
           {/* Vertical connector line — desktop */}

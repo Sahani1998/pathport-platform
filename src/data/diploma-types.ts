@@ -8,6 +8,7 @@ export const diplomaTypes: DiplomaType[] = [
     description:
       "Entry-level qualification recognised across Singapore and internationally. Ideal for students with 10th or 12th standard backgrounds seeking structured industry knowledge.",
     duration: "12 – 18 months",
+    feeRange: "SGD 4,000 – 6,000 / year",
     eligibility: "10th / 12th Standard (CBSE, ICSE, State Board)",
     subjects: [
       "Business Administration",
@@ -26,6 +27,7 @@ export const diplomaTypes: DiplomaType[] = [
     description:
       "Builds directly on Diploma qualifications, providing deeper subject mastery and advanced professional skills for career progression.",
     duration: "12 – 18 months",
+    feeRange: "SGD 4,500 – 7,000 / year",
     eligibility: "Diploma or equivalent qualification",
     subjects: [
       "Advanced Business Management",
@@ -42,8 +44,9 @@ export const diplomaTypes: DiplomaType[] = [
     title: "Higher Diploma",
     subtitle: "Near-Degree Level",
     description:
-      "The highest level of diploma qualification — equivalent to the first year of a Bachelor's degree and a direct pathway into Year 2 at many partner universities.",
+      "The highest level of diploma qualification — equivalent to the first year of a Bachelor's degree and a potential pathway into advanced standing at many universities abroad.",
     duration: "18 – 24 months",
+    feeRange: "SGD 5,500 – 8,000 / year",
     eligibility: "Advanced Diploma or equivalent",
     subjects: [
       "Business with Finance",
@@ -62,6 +65,7 @@ export const diplomaTypes: DiplomaType[] = [
     description:
       "Designed for working professionals and graduates seeking to upskill in a specific domain. Part-time and full-time options available.",
     duration: "6 – 12 months",
+    feeRange: "SGD 4,000 – 6,500 / year",
     eligibility: "Diploma / Degree holders or working professionals",
     subjects: [
       "Digital Business Transformation",

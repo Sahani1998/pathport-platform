@@ -180,8 +180,9 @@ export default function StudentInterestForm() {
                   )}
                 </GoldButton>
 
-                <p className="text-center text-white/28 font-body text-xs leading-relaxed">
-                  We respect your privacy. Your details are never shared or sold. No spam, ever.
+                <p className="text-center text-white/35 font-body text-xs leading-relaxed">
+                  We respect your privacy. Your details are never shared or sold. No spam, ever.<br />
+                  Questions? WhatsApp us: <span className="text-gold-400">+65 8377 6492</span>
                 </p>
               </form>
             )}

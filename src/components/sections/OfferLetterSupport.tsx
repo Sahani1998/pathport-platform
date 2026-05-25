@@ -20,7 +20,7 @@ const FEATURES = [
   {
     Icon: Phone,
     title: "Direct College Liaison",
-    description: "We have established relationships with admissions offices at all partner colleges. Your application is tracked from submission to offer.",
+    description: "PathPort helps you navigate the admissions process at Singapore private colleges — tracking your application and keeping you informed from submission through to offer.",
   },
   {
     Icon: ShieldCheck,
@@ -61,11 +61,11 @@ export default function OfferLetterSupport() {
                 </span>
               </h2>
               <p className="text-white/50 font-body text-lg leading-relaxed mb-8">
-                PathPort handles your entire Singapore college application — from document preparation to offer letter — so you can focus on what matters: preparing for your new life in Singapore.
+                PathPort handles your entire Singapore college application — from <strong className="text-white/80">document preparation</strong> to <strong className="text-white/80">offer letter</strong> — so you can focus on what matters: preparing for your new life in Singapore.
               </p>
               <div className="flex flex-col sm:flex-row gap-3">
                 <GoldButton variant="solid-gold" size="md">Apply Now — It&apos;s Free</GoldButton>
-                <GoldButton variant="ghost" size="md">📞 Talk to an Advisor</GoldButton>
+                <GoldButton variant="ghost" size="md">📞 +65 8377 6492</GoldButton>
               </div>
             </div>
 

@@ -27,7 +27,7 @@ const STEPS = [
     description:
       "Secure a 6-month paid internship with PathPort's employer partners in Singapore. Real industry experience, real earnings, and a professional reference that sets your CV apart.",
     outcomes: [
-      "S$800 – S$1,500 / month stipend",
+      "S$800 – S$1,500 / month paid stipend",
       "Industry mentorship & training",
       "Professional reference letter",
       "Build your Singapore professional network",
@@ -40,7 +40,7 @@ const STEPS = [
     duration: "After Month 12",
     title: "Advance Your Career or Studies",
     description:
-      "With a Singapore qualification and international work experience, you can progress to an Advanced Diploma, Higher Diploma, or pursue degree entry at partner universities with advanced standing.",
+      "With a Singapore qualification and international work experience, you can progress to an Advanced Diploma, Higher Diploma, or explore degree entry options at universities abroad with advanced standing consideration.",
     outcomes: [
       "Pathway to Advanced / Higher Diploma",
       "University advanced-standing entry",

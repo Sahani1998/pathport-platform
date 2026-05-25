@@ -4,7 +4,7 @@ export const arrivalServices: ArrivalService[] = [
   {
     id: "student-pass",
     title: "Student Pass (ICA)",
-    description: "End-to-end Student Pass application support — document preparation, submission, and ICA liaison — with near-100% approval for Indian students.",
+    description: "End-to-end Student Pass application support — document preparation, submission guidance, and ICA process walkthrough — so your application is complete and correct from the start.",
     icon: "🪪",
     features: ["Document checklist", "Form filling support", "ICA direct liaison", "Renewal reminders"],
     featured: true,

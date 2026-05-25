@@ -29,7 +29,7 @@ export const journeySteps: JourneyStep[] = [
   {
     step: 5,
     title: "Student Pass Application",
-    description: "We guide you through the ICA Student Pass process with near-100% first-application success.",
+    description: "We guide you through the ICA Student Pass application — document checklist, form preparation, and step-by-step process guidance.",
     icon: "🪪",
   },
   {

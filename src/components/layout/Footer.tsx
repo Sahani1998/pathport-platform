@@ -37,7 +37,7 @@ export default function Footer() {
               </span>
             </div>
 
-            <p className="text-white/38 font-body text-sm leading-relaxed mb-5 max-w-[200px]">
+            <p className="text-white/55 font-body text-sm leading-relaxed mb-5 max-w-[200px]">
               India&apos;s dedicated Singapore diploma platform — connecting Indian students to private college programmes, internships, and arrival services.
             </p>
 
@@ -60,11 +60,11 @@ export default function Footer() {
           {/* Link columns */}
           {Object.entries(LINKS).map(([section, links]) => (
             <div key={section} className="col-span-1">
-              <h4 className="font-body font-semibold text-white/70 text-xs tracking-[0.18em] uppercase mb-4">{section}</h4>
+              <h4 className="font-body font-semibold text-white/85 text-xs tracking-[0.18em] uppercase mb-4">{section}</h4>
               <ul className="space-y-2.5">
                 {links.map(link => (
                   <li key={link}>
-                    <Link href="#" className="font-body text-sm text-white/35 hover:text-gold-300 transition-colors">{link}</Link>
+                    <Link href="#" className="font-body text-sm text-white/55 hover:text-gold-300 transition-colors">{link}</Link>
                   </li>
                 ))}
               </ul>
@@ -79,8 +79,8 @@ export default function Footer() {
               <Mail className="w-4 h-4 text-gold-400" />
             </div>
             <div>
-              <p className="text-white/28 font-body text-[11px]">Email</p>
-              <p className="text-white/65 font-body text-sm">hello@pathport.sg</p>
+              <p className="text-white/50 font-body text-[11px]">Email</p>
+              <p className="text-white/80 font-body text-sm">pathpportsg@gmail.com</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -88,8 +88,8 @@ export default function Footer() {
               <Phone className="w-4 h-4 text-gold-400" />
             </div>
             <div>
-              <p className="text-white/28 font-body text-[11px]">WhatsApp / Call</p>
-              <p className="text-white/65 font-body text-sm">+65 9000 0000</p>
+              <p className="text-white/50 font-body text-[11px]">WhatsApp / Call</p>
+              <p className="text-white/80 font-body text-sm">+65 8377 6492</p>
             </div>
           </div>
         </div>
@@ -104,13 +104,13 @@ export default function Footer() {
 
         {/* ── Bottom ───────────────────────────────────────────────── */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-6 border-t border-white/[0.06]">
-          <p className="text-white/25 font-body text-sm text-center sm:text-left">
+          <p className="text-white/45 font-body text-sm text-center sm:text-left">
             © {new Date().getFullYear()} PathPort · Singapore&apos;s India Diploma Platform
           </p>
           <div className="flex items-center gap-4">
-            <Link href="#" className="text-white/25 hover:text-white/50 font-body text-xs transition-colors">Privacy</Link>
-            <Link href="#" className="text-white/25 hover:text-white/50 font-body text-xs transition-colors">Terms</Link>
-            <Link href="#" className="text-white/25 hover:text-white/50 font-body text-xs transition-colors">Cookies</Link>
+            <Link href="#" className="text-white/40 hover:text-white/70 font-body text-xs transition-colors">Privacy</Link>
+            <Link href="#" className="text-white/40 hover:text-white/70 font-body text-xs transition-colors">Terms</Link>
+            <Link href="#" className="text-white/40 hover:text-white/70 font-body text-xs transition-colors">Cookies</Link>
           </div>
         </div>
       </div>

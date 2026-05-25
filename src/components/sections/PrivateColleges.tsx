@@ -23,9 +23,18 @@ export default function PrivateColleges() {
       <div className="max-w-7xl mx-auto px-5 md:px-10">
         <SectionHeader
           eyebrow="Singapore Private Colleges"
-          title="Top Colleges, Fully Supported Applications"
-          subtitle="PathPort works directly with Singapore's leading private colleges. We submit your application, track its status, and get you an offer letter — fast."
+          title="Explore Your Singapore College Options"
+          subtitle="Explore Singapore private college options for diploma, advanced diploma, higher diploma, and specialist diploma pathways. PathPort helps students compare programmes, prepare documents, and submit applications."
         />
+
+        {/* Fee callout */}
+        <div className="max-w-2xl mx-auto mb-10 text-center p-4 rounded-2xl bg-gold-400/[0.06] border border-gold-400/20">
+          <p className="text-white/65 font-body text-sm">
+            💰 Course fees typically range from{" "}
+            <strong className="text-gold-300">SGD 4,000 to SGD 8,000 per year</strong>
+            {" "}— PathPort advisors help you find options that fit your budget.
+          </p>
+        </div>
 
         {/* Filter tabs */}
         <div className="flex flex-wrap justify-center gap-2 mb-10" role="tablist">
@@ -50,8 +59,8 @@ export default function PrivateColleges() {
         {/* College cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" aria-live="polite">
           {filtered.map((college, i) => (
-            <GlassCard key={college.id} className="p-6 group" gold={i === 0 && filter === "All"}>
-              <div className="flex items-start justify-between gap-3 mb-4">
+            <GlassCard key={college.id} className="p-6 group">
+              <div className="flex items-start justify-between gap-3 mb-3">
                 {/* College initial avatar */}
                 <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-pathBlue-700 to-pathBlue-900 border border-pathBlue-500/30 flex items-center justify-center flex-shrink-0 shadow-blue-sm">
                   <span className="font-display font-bold text-pathBlue-300 text-base leading-none">
@@ -61,8 +70,12 @@ export default function PrivateColleges() {
                 <div className="flex-1 min-w-0">
                   <h3 className="font-body font-semibold text-white/90 text-sm leading-snug">{college.name}</h3>
                 </div>
-                {college.tag && <Badge variant="gold" className="text-[10px] flex-shrink-0">{college.tag}</Badge>}
               </div>
+
+              {/* Popular label */}
+              <p className="text-white/35 font-body text-xs mb-3 italic">
+                Popular Singapore private college option
+              </p>
 
               {/* Specialisms */}
               <div className="flex flex-wrap gap-1.5 mb-4">
@@ -83,10 +96,10 @@ export default function PrivateColleges() {
         {/* CTA note */}
         <div className="mt-10 text-center">
           <p className="text-white/40 font-body text-sm mb-4">
-            Not sure which college is right for you? PathPort advisors match you based on your budget, course, and goals.
+            Not sure which college is right for you? PathPort advisors help you compare options based on your budget, course interest, and background.
           </p>
           <GoldButton variant="outline-gold" size="md">
-            Get a Free College Match
+            Get a Free College Comparison
           </GoldButton>
         </div>
       </div>

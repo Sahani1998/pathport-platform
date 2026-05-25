@@ -3,6 +3,7 @@ import Footer              from "@/components/layout/Footer";
 import HeroSection         from "@/components/sections/HeroSection";
 import StudentInterestForm from "@/components/sections/StudentInterestForm";
 import WhySingapore        from "@/components/sections/WhySingapore";
+import SingaporeGallery    from "@/components/sections/SingaporeGallery";
 import DiplomaCategories   from "@/components/sections/DiplomaCategories";
 import InternshipPathway   from "@/components/sections/InternshipPathway";
 import PrivateColleges     from "@/components/sections/PrivateColleges";
@@ -39,6 +40,7 @@ export default function HomePage() {
         <HeroSection />
         <StudentInterestForm />
         <WhySingapore />
+        <SingaporeGallery />
         <DiplomaCategories />
         <InternshipPathway />
         <PrivateColleges />

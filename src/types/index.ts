@@ -6,6 +6,7 @@ export interface DiplomaType {
   subtitle: string;
   description: string;
   duration: string;
+  feeRange: string;
   eligibility: string;
   subjects: string[];
   icon: string;

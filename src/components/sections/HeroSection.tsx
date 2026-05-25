@@ -7,10 +7,10 @@ import { INDIAN_STATES, COURSE_OPTIONS } from "@/data/form-constants";
 import { cn } from "@/lib/utils";
 
 const STATS = [
-  { value: "250+",   label: "Institutions"  },
-  { value: "15+",    label: "Countries"     },
-  { value: "4",      label: "Diploma Types" },
-  { value: "24hrs",  label: "Offer Letter"  },
+  { value: "5+",    label: "Institute Network"  },
+  { value: "100+",  label: "Student Inquiries"  },
+  { value: "4",     label: "Diploma Pathways"   },
+  { value: "24hrs", label: "Offer Letter"        },
 ];
 
 const INPUT = cn(
@@ -38,7 +38,15 @@ export default function HeroSection() {
 
   return (
     <section className="relative min-h-screen flex items-center overflow-hidden pt-[68px]">
-      {/* Background */}
+      {/* Singapore skyline background image */}
+      <div aria-hidden className="absolute inset-0 pointer-events-none">
+        <img
+          src="https://images.unsplash.com/photo-1525625293386-3f8f99389edd?auto=format&fit=crop&w=1800&q=60"
+          alt=""
+          className="absolute bottom-0 left-0 w-full h-[55%] object-cover object-top opacity-[0.08]"
+        />
+        <div className="absolute bottom-0 left-0 w-full h-[55%] bg-gradient-to-t from-navy-900 via-navy-900/80 to-transparent" />
+      </div>
       <div aria-hidden className="absolute inset-0 bg-grid-subtle bg-[size:60px_60px] opacity-70 pointer-events-none" />
       <div aria-hidden className="absolute top-[30%] left-[5%] w-[500px] h-[500px] rounded-full bg-pathBlue-500/[0.05] blur-[130px] animate-float pointer-events-none" />
       <div aria-hidden className="absolute bottom-[10%] right-[5%] w-[400px] h-[400px] rounded-full bg-gold-400/[0.05] blur-[110px] animate-float pointer-events-none" style={{ animationDelay: "3s" }} />
@@ -70,9 +78,7 @@ export default function HeroSection() {
 
             {/* Subheadline */}
             <p className="text-white/52 font-body text-lg leading-relaxed mb-10 max-w-xl">
-              Apply to Singapore diploma, advanced diploma, higher diploma, and specialist diploma
-              programmes from India — with application tracking, 24-hour offer letter support,
-              internship pathways, and full arrival services.
+              Apply to Singapore <strong className="text-white/80">diploma, advanced diploma, higher diploma,</strong> and <strong className="text-white/80">specialist diploma</strong> programmes from India — with <strong className="text-white/80">application tracking</strong>, <strong className="text-white/80">24-hour offer letter support</strong>, <strong className="text-white/80">internship pathways</strong>, and full arrival services. Courses start from <strong className="text-gold-400">SGD 4,000 to 8,000</strong> per year.
             </p>
 
             {/* CTAs */}
@@ -109,7 +115,7 @@ export default function HeroSection() {
                 Start Your Singapore Journey
               </h2>
               <p className="text-white/45 font-body text-sm mb-5 leading-relaxed">
-                Students from India can submit their interest and receive course recommendations, guidance, and fast offer letter assistance.
+                Students from India can submit their interest and receive <strong className="text-white/70">course recommendations</strong>, guidance, and <strong className="text-white/70">fast offer letter assistance</strong>.
               </p>
 
               {submitted ? (
@@ -167,10 +173,10 @@ export default function HeroSection() {
 
               <div className="grid grid-cols-2 gap-3">
                 {[
-                  { label: "University Match",   value: "92%",      color: "text-pathBlue-400" },
-                  { label: "Application Status", value: "Tracking", color: "text-gold-400"     },
-                  { label: "Scholarship Fit",    value: "High",     color: "text-emerald-400"  },
-                  { label: "Career Path",        value: "Ready",    color: "text-white"        },
+                  { label: "Student Satisfaction", value: "95%",     color: "text-gold-400"     },
+                  { label: "Application Status",   value: "Tracking",color: "text-pathBlue-400" },
+                  { label: "Advisor Response",      value: "24hrs",   color: "text-emerald-400"  },
+                  { label: "Career Path",           value: "Ready",   color: "text-white"        },
                 ].map(({ label, value, color }) => (
                   <div key={label} className="bg-navy-700/60 border border-white/[0.07] rounded-xl p-3.5">
                     <p className="text-white/40 font-body text-xs mb-1.5">{label}</p>

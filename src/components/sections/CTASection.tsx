@@ -35,18 +35,18 @@ export default function CTASection() {
           </GoldButton>
           <GoldButton variant="outline-gold" size="lg" className="min-w-[230px]">
             <MessageCircle className="w-5 h-5" />
-            WhatsApp an Advisor
+            WhatsApp: +65 8377 6492
           </GoldButton>
         </div>
 
         <ul className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3" role="list">
           {[
-            "No registration fee",
-            "Advisor calls within 24 hours",
-            "Offer letter support included",
-            "Full arrival services",
+            "No Registration Fee",
+            "Advisor Call Within 24 Hours",
+            "Offer Letter Support",
+            "Arrival Services Support",
           ].map(signal => (
-            <li key={signal} className="flex items-center gap-2 text-white/35 font-body text-sm">
+            <li key={signal} className="flex items-center gap-2 text-white/50 font-body text-sm font-medium">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 flex-shrink-0" aria-hidden />
               {signal}
             </li>

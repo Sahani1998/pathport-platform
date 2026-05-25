@@ -56,6 +56,15 @@ export default function DiplomaCategories() {
                 {type.description}
               </p>
 
+              {/* Fee range */}
+              <div className="flex items-center gap-2 p-3 rounded-xl bg-gold-400/[0.07] border border-gold-400/20 mb-4">
+                <span className="text-gold-400 text-base" aria-hidden>💰</span>
+                <p className="font-body text-sm">
+                  <span className="text-white/55">Course fees from </span>
+                  <span className="text-gold-300 font-bold">{type.feeRange}</span>
+                </p>
+              </div>
+
               {/* Eligibility */}
               <div className="flex items-start gap-2 p-3 rounded-xl bg-white/[0.04] border border-white/[0.07] mb-4">
                 <GraduationCap className="w-4 h-4 text-gold-400/70 flex-shrink-0 mt-0.5" />
