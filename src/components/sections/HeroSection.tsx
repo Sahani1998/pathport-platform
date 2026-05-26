@@ -3,7 +3,7 @@
 import { useState, type ChangeEvent, type FormEvent } from "react";
 import { createClient } from "@/lib/supabase/client";
 import GoldButton from "@/components/ui/GoldButton";
-import { ArrowRight, CheckCircle2 } from "lucide-react";
+import { ArrowRight, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
 import { INDIAN_STATES, COURSE_OPTIONS } from "@/data/form-constants";
 import { cn } from "@/lib/utils";
 
@@ -24,36 +24,51 @@ const INPUT = cn(
 export default function HeroSection() {
   const [form, setForm] = useState({ fullName: "", phone: "", email: "", state: "", city: "", course: "" });
   const [submitted, setSubmitted] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [loading,   setLoading]   = useState(false);
+  const [error,     setError]     = useState<string | null>(null);
 
   const onChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
     setForm(p => ({ ...p, [e.target.name]: e.target.value }));
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    e.stopPropagation();
+    setError(null);
     setLoading(true);
 
-    const supabase = createClient();
-    const { error: insertError } = await supabase
-      .from("student_inquiries")
-      .insert({
-        full_name:       form.fullName.trim(),
-        email:           form.email.trim().toLowerCase(),
-        whatsapp_number: form.phone.trim()  || null,
-        country:         "India",
-        indian_state:    form.state         || null,
-        city:            form.city.trim()   || null,
-        course_interest: form.course        || null,
-      });
+    try {
+      const supabase = createClient();
+      console.log("[InquirySubmit] hero form — inserting into public.student_inquiries");
 
-    if (insertError) {
-      // Still show success to avoid confusing the user —
-      // admin will follow up manually if table not yet created.
-      console.error("Hero form insert error:", insertError.message);
+      const { error: insertError } = await supabase
+        .from("student_inquiries")
+        .insert({
+          full_name:       form.fullName.trim(),
+          email:           form.email.trim().toLowerCase(),
+          whatsapp_number: form.phone.trim()  || null,
+          country:         "India",
+          indian_state:    form.state         || null,
+          city:            form.city.trim()   || null,
+          course_interest: form.course        || null,
+          status:          "new",
+        });
+
+      console.log("[InquirySubmit] hero form result — error:", insertError?.message ?? "none");
+
+      if (insertError) {
+        console.error("[InquirySubmit] hero insert error:", insertError.code, insertError.message);
+        setError("Something went wrong. Please WhatsApp us at +65 8377 6492.");
+        return;
+      }
+
+      setSubmitted(true);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error("[InquirySubmit] hero form exception:", msg);
+      setError("Something went wrong. Please WhatsApp us at +65 8377 6492.");
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
-    setSubmitted(true);
   };
 
   return (
@@ -145,7 +160,15 @@ export default function HeroSection() {
                   <p className="text-white/50 font-body text-sm mt-1">Thank you. A PathPort advisor will contact you within 24 hours.</p>
                 </div>
               ) : (
-                <form onSubmit={onSubmit} className="space-y-3">
+                <form onSubmit={onSubmit} method="POST" action="#" className="space-y-3">
+
+                  {/* Error banner */}
+                  {error && (
+                    <div className="flex items-start gap-2 p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 font-body text-xs">
+                      <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+                      {error}
+                    </div>
+                  )}
                   <div className="grid grid-cols-2 gap-3">
                     <input required name="fullName" type="text" value={form.fullName} onChange={onChange}
                       placeholder="Full Name" className={INPUT} autoComplete="name" />
@@ -169,7 +192,10 @@ export default function HeroSection() {
                     {COURSE_OPTIONS.map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
                   <GoldButton type="submit" variant="solid-gold" size="md" disabled={loading} className="w-full rounded-xl mt-1">
-                    {loading ? "Submitting…" : "Submit Interest"}
+                    {loading
+                      ? <><Loader2 className="w-4 h-4 animate-spin" /> Submitting…</>
+                      : "Submit Interest"
+                    }
                   </GoldButton>
                   <p className="text-center text-white/28 font-body text-[11px]">
                     Offer letter support • Singapore guidance • Internship pathways

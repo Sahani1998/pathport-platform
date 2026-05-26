@@ -38,31 +38,44 @@ export default function StudentInterestForm() {
 
   const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setError(null);
     setLoading(true);
 
-    const supabase = createClient();
-    const { error: insertError } = await supabase
-      .from("student_inquiries")
-      .insert({
-        full_name:       form.fullName.trim(),
-        email:           form.email.trim().toLowerCase(),
-        whatsapp_number: form.whatsapp.trim()    || null,
-        country:         form.country,
-        indian_state:    form.country === "India" ? (form.indianState || null) : null,
-        city:            form.city.trim()          || null,
-        course_interest: form.courseInterest       || null,
-        intended_intake: form.intendedIntake       || null,
-        budget_range:    form.budgetRange          || null,
-      });
+    try {
+      const supabase = createClient();
+      console.log("[InquirySubmit] interest form — inserting into public.student_inquiries");
 
-    if (insertError) {
+      const { error: insertError } = await supabase
+        .from("student_inquiries")
+        .insert({
+          full_name:       form.fullName.trim(),
+          email:           form.email.trim().toLowerCase(),
+          whatsapp_number: form.whatsapp.trim()    || null,
+          country:         form.country,
+          indian_state:    form.country === "India" ? (form.indianState || null) : null,
+          city:            form.city.trim()          || null,
+          course_interest: form.courseInterest       || null,
+          intended_intake: form.intendedIntake       || null,
+          budget_range:    form.budgetRange          || null,
+          status:          "new",
+        });
+
+      console.log("[InquirySubmit] interest form result — error:", insertError?.message ?? "none");
+
+      if (insertError) {
+        console.error("[InquirySubmit] interest insert error:", insertError.code, insertError.message);
+        setError("Something went wrong. Please try again or WhatsApp us at +65 8377 6492.");
+        return;
+      }
+
+      setSubmitted(true);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error("[InquirySubmit] interest form exception:", msg);
       setError("Something went wrong. Please try again or WhatsApp us at +65 8377 6492.");
+    } finally {
       setLoading(false);
-      return;
     }
-
-    setLoading(false);
-    setSubmitted(true);
   };
 
   return (
