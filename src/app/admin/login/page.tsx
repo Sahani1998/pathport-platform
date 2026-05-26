@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import LoginForm from "@/components/auth/LoginForm";
+import AdminLoginForm from "@/components/auth/AdminLoginForm";
 
 // No index, no follow — keeps this page out of search results
 export const metadata: Metadata = {
@@ -40,7 +40,7 @@ export default function AdminLoginPage() {
           </p>
         </div>
 
-        <LoginForm />
+        <AdminLoginForm />
       </div>
 
       <p className="mt-6 text-white/18 font-body text-xs text-center">
