@@ -4,9 +4,12 @@ import { cookies } from "next/headers";
 /**
  * Supabase client for Server Components, Server Actions, and Route Handlers.
  *
- * setAll uses REST spread  { name, value, ...options }  — same reason as
- * middleware: Supabase passes cookie attributes at the TOP LEVEL of each item,
- * not nested under an "options" key.
+ * Uses the individual get/set/remove cookie adapter — identical logic to the
+ * middleware client — so getUser() reads the session via the same direct
+ * name-based lookup that middleware already confirmed works.
+ *
+ * set/remove are wrapped in try/catch because Server Components cannot write
+ * cookies (read-only).  Middleware handles all token refresh writes.
  */
 export async function createClient() {
   const cookieStore = await cookies();
@@ -16,24 +19,34 @@ export async function createClient() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        getAll() {
-          return cookieStore.getAll();
+        // Direct lookup — same pattern that made middleware work
+        get(name: string) {
+          return cookieStore.get(name)?.value;
         },
 
-        setAll(
-          cookiesToSet: Array<{ name: string; value: string; [key: string]: unknown }>
-        ) {
+        // Server Components are read-only; swallow the error.
+        // Middleware is responsible for writing refreshed tokens.
+        set(name: string, value: string, options: Record<string, unknown>) {
           try {
-            cookiesToSet.forEach(({ name, value, ...options }) =>
-              cookieStore.set(
-                name,
-                value,
-                options as Parameters<typeof cookieStore.set>[2]
-              )
+            cookieStore.set(
+              name,
+              value,
+              options as Parameters<typeof cookieStore.set>[2]
             );
           } catch {
-            // Called from a Server Component where cookies() is read-only.
-            // Middleware handles token refresh; this catch is intentional.
+            // intentional — Server Component context
+          }
+        },
+
+        remove(name: string, options: Record<string, unknown>) {
+          try {
+            cookieStore.set(
+              name,
+              "",
+              options as Parameters<typeof cookieStore.set>[2]
+            );
+          } catch {
+            // intentional — Server Component context
           }
         },
       },

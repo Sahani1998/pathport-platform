@@ -18,7 +18,11 @@ export default async function DashboardLayout({ children }: { children: ReactNod
     const pathname    = headerList.get("x-pathname") ?? "";
     const isAdminPath = pathname.startsWith("/dashboard/admin");
 
-    console.log("[DashboardLayout] REDIRECT →", isAdminPath ? "/admin/login" : "/login", "| x-pathname:", pathname);
+    console.log(
+      "[DashboardLayout] REDIRECT →", isAdminPath ? "/admin/login" : "/login",
+      "| x-pathname:", pathname,
+      "| reason:", error?.message ?? "user null"
+    );
 
     if (isAdminPath) {
       redirect("/admin/login");
