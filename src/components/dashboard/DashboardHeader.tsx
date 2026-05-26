@@ -1,6 +1,7 @@
 "use client";
 
 import { useAuth } from "@/context/AuthContext";
+import { usePathname } from "next/navigation";
 import { Bell, Search } from "lucide-react";
 import type { UserRole } from "@/types/auth";
 
@@ -26,7 +27,18 @@ interface DashboardHeaderProps {
 
 export default function DashboardHeader({ title }: DashboardHeaderProps) {
   const { profile } = useAuth();
-  const role        = profile?.role ?? "student";
+  const pathname    = usePathname();
+
+  // Infer role from URL path while profile is still loading — same as Sidebar.
+  // Prevents the role badge from flashing "STUDENT" for admins on page load.
+  const inferredRole: UserRole =
+    pathname.startsWith("/dashboard/admin")         ? "admin"
+    : pathname.startsWith("/dashboard/institution") ? "institution"
+    : pathname.startsWith("/dashboard/partner")     ? "recruitment_partner"
+    : pathname.startsWith("/dashboard/employer")    ? "employer"
+    : "student";
+
+  const role = (profile?.role as UserRole) ?? inferredRole;
 
   return (
     <header className="h-16 border-b border-white/[0.07] bg-navy-900/80 backdrop-blur-md flex items-center justify-between px-6 gap-4 flex-shrink-0">

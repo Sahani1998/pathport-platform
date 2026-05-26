@@ -12,56 +12,81 @@ import { ROLE_META } from "@/types/auth";
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface AuthContextValue {
-  user:        User | null;
-  profile:     Profile | null;
-  role:        UserRole | null;
-  loading:     boolean;
-  signOut:     () => Promise<void>;
+  user:           User    | null;
+  profile:        Profile | null;
+  role:           UserRole | null;
+  loading:        boolean;
+  signOut:        () => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
 
 // ─── Context ──────────────────────────────────────────────────────────────────
 
 const AuthContext = createContext<AuthContextValue>({
-  user:        null,
-  profile:     null,
-  role:        null,
-  loading:     true,
-  signOut:     async () => {},
+  user:           null,
+  profile:        null,
+  role:           null,
+  loading:        true,
+  signOut:        async () => {},
   refreshProfile: async () => {},
 });
 
 // ─── Provider ─────────────────────────────────────────────────────────────────
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const supabase = createClient();
+  // ── Stable client ──────────────────────────────────────────────────────────
+  // CRITICAL: createClient() must NOT be called on every render.
+  // Calling it at the module level (outside the component) or here with
+  // useState lazy-init creates exactly one instance for the lifetime of the
+  // provider.  If it were called directly in the function body, React would
+  // create a new Supabase instance every render → fetchProfile's useCallback
+  // dep array would see a new reference → fetchProfile would be recreated →
+  // the useEffect dep array would change → useEffect would re-run → setProfile
+  // would trigger a new render → new supabase instance → infinite loop that
+  // intermittently resets profile to null, making role snap back to "student".
+  const [supabase] = useState(() => createClient());
+
   const [user,    setUser]    = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // ── Profile fetch ──────────────────────────────────────────────────────────
+  // supabase is now stable so fetchProfile is stable too — no re-creation loop.
   const fetchProfile = useCallback(async (userId: string) => {
-    const { data, error } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", userId)
-      .single();
+    try {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", userId)
+        .single();
 
-    if (!error && data) setProfile(data as Profile);
+      if (!error && data) {
+        setProfile(data as Profile);
+      }
+    } catch (err) {
+      console.error("[AuthContext] fetchProfile error:", err);
+    }
   }, [supabase]);
 
   const refreshProfile = useCallback(async () => {
     if (user) await fetchProfile(user.id);
   }, [user, fetchProfile]);
 
+  // ── Auth listener — runs exactly once ──────────────────────────────────────
+  // supabase and fetchProfile are both stable references so these deps never
+  // change — the effect never re-runs after mount.
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      setUser(user);
-      if (user) fetchProfile(user.id).finally(() => setLoading(false));
-      else setLoading(false);
+    // Get current session on mount
+    supabase.auth.getUser().then(({ data: { user: currentUser } }) => {
+      setUser(currentUser);
+      if (currentUser) {
+        fetchProfile(currentUser.id).finally(() => setLoading(false));
+      } else {
+        setLoading(false);
+      }
     });
 
-    // Listen for auth state changes
+    // React to sign-in / sign-out
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
         const currentUser = session?.user ?? null;
@@ -76,8 +101,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     );
 
     return () => subscription.unsubscribe();
-  }, [supabase, fetchProfile]);
+  }, [supabase, fetchProfile]); // stable refs → runs once
 
+  // ── Sign-out ───────────────────────────────────────────────────────────────
   const signOut = async () => {
     await supabase.auth.signOut();
     setUser(null);
@@ -89,7 +115,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       value={{
         user,
         profile,
-        role: profile?.role ?? null,
+        role:    profile?.role ?? null,  // null until profile loads, NEVER a fake default
         loading,
         signOut,
         refreshProfile,
@@ -100,7 +126,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 }
 
-// ─── Hook ─────────────────────────────────────────────────────────────────────
+// ─── Hooks ────────────────────────────────────────────────────────────────────
 
 export function useAuth() {
   const ctx = useContext(AuthContext);

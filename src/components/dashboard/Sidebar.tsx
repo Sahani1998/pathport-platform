@@ -67,13 +67,41 @@ const ROLE_LABEL: Record<UserRole, string> = {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function Sidebar() {
-  const { profile, signOut } = useAuth();
+  const { profile, loading, signOut } = useAuth();
   const pathname = usePathname();
   const router   = useRouter();
   const [collapsed, setCollapsed] = useState(false);
 
-  const role  = profile?.role ?? "student";
+  // Derive role with three priority levels:
+  // 1. profile.role from Supabase (authoritative, once loaded)
+  // 2. pathname inference (instant, matches what the server already verified)
+  // 3. "student" only if we're genuinely on a student path and profile hasn't loaded
+  //
+  // This prevents the "flash of student nav" when the client-side profile fetch
+  // is slower than the render — the server already redirected admin users to
+  // /dashboard/admin, so the path tells us the role reliably.
+  const inferredRole: UserRole =
+    pathname.startsWith("/dashboard/admin")       ? "admin"
+    : pathname.startsWith("/dashboard/institution") ? "institution"
+    : pathname.startsWith("/dashboard/partner")     ? "recruitment_partner"
+    : pathname.startsWith("/dashboard/employer")    ? "employer"
+    : "student";
+
+  const role  = (profile?.role as UserRole) ?? inferredRole;
   const items = NAV_ITEMS[role] ?? NAV_ITEMS.student;
+
+  // Show a minimal skeleton while profile is still loading so nav never flickers
+  if (loading && !profile) {
+    return (
+      <aside className={`${collapsed ? "w-16" : "w-64"} h-screen bg-navy-900 border-r border-white/[0.07] flex-shrink-0 transition-all duration-300`}>
+        <div className="p-4 space-y-2 mt-4">
+          {[...Array(5)].map((_, i) => (
+            <div key={i} className="h-9 rounded-xl bg-white/[0.05] animate-pulse" />
+          ))}
+        </div>
+      </aside>
+    );
+  }
 
   const handleSignOut = async () => {
     await signOut();
