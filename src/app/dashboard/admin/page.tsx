@@ -6,6 +6,7 @@ import {
   Users, FileText, TrendingUp, AlertCircle,
   MessageSquare, CheckCircle2, Star, Clock,
   Globe, UserPlus, Activity, ArrowRight, ChevronRight,
+  Building2, BookOpen,
 } from "lucide-react";
 
 // ── Status badge helper ────────────────────────────────────────────────────────
@@ -50,6 +51,19 @@ export default async function AdminDashboardPage() {
   const [{ count: totalStudents }, { count: totalProfiles }] = await Promise.all([
     supabase.from("profiles").select("*", { count: "exact", head: true }).eq("role", "student"),
     supabase.from("profiles").select("*", { count: "exact", head: true }),
+  ]);
+
+  // ── Platform counts (colleges / courses / applications) ────────────────
+  const [
+    { count: totalColleges },
+    { count: totalCourses },
+    { count: openCourses },
+    { count: totalApplications },
+  ] = await Promise.all([
+    supabase.from("colleges").select("*",     { count: "exact", head: true }),
+    supabase.from("courses").select("*",      { count: "exact", head: true }),
+    supabase.from("courses").select("*",      { count: "exact", head: true }).eq("status", "open"),
+    supabase.from("applications").select("*", { count: "exact", head: true }),
   ]);
 
   const [
@@ -223,6 +237,27 @@ export default async function AdminDashboardPage() {
 
         {/* Right column: activity + reg users ─────────────────────────────── */}
         <div className="space-y-4">
+
+          {/* Platform overview */}
+          <div className="bg-white/[0.04] border border-white/[0.08] rounded-2xl p-5">
+            <h3 className="font-display text-xl text-white mb-4">Platform</h3>
+            <div className="space-y-2">
+              {[
+                { label: "Colleges",         value: totalColleges     ?? "—", icon: Building2    },
+                { label: "Courses",          value: totalCourses      ?? "—", icon: BookOpen      },
+                { label: "Open Courses",     value: openCourses       ?? "—", icon: TrendingUp    },
+                { label: "Applications",     value: totalApplications ?? "—", icon: FileText      },
+              ].map(({ label, value, icon: Icon }) => (
+                <div key={label} className="flex items-center justify-between p-3 bg-white/[0.03] border border-white/[0.06] rounded-xl">
+                  <div className="flex items-center gap-2.5">
+                    <Icon className="w-4 h-4 text-pathBlue-400" />
+                    <span className="font-body text-sm text-white/65">{label}</span>
+                  </div>
+                  <span className="font-display text-xl text-white font-bold">{value}</span>
+                </div>
+              ))}
+            </div>
+          </div>
 
           {/* Registered users */}
           <div className="bg-white/[0.04] border border-white/[0.08] rounded-2xl p-5">
