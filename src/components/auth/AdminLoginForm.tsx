@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import GoldButton from "@/components/ui/GoldButton";
 import { Eye, EyeOff, Loader2, AlertCircle } from "lucide-react";
@@ -22,7 +21,6 @@ const INPUT = cn(
  * - Always clears loading on any error path.
  */
 export default function AdminLoginForm() {
-  const router   = useRouter();
   const supabase = createClient();
 
   const [email,    setEmail]    = useState("");
@@ -93,23 +91,10 @@ export default function AdminLoginForm() {
         return;
       }
 
-      // ── 4. Verify session is committed, then redirect ─────────────────────
-      // getSession() reads the cookie written by signInWithPassword.
-      // If it returns null, the cookie hasn't been committed yet —
-      // the server-side layout would see no user and redirect back to login.
-      const { data: { session } } = await supabase.auth.getSession();
-
-      if (!session) {
-        console.error("[AdminLogin] Session not readable after sign-in — cookie may not be committed.");
-        setError("Session could not be established. Please clear your browser cookies and try again.");
-        setLoading(false);
-        return;
-      }
-
-      console.log("[AdminLogin] Session confirmed. Redirecting to /dashboard/admin");
-      router.push("/dashboard/admin");
-      router.refresh();
-      // Keep loading=true — component unmounts on successful navigation.
+      // ── 4. Admin confirmed — hard navigate immediately ─────────────────────
+      console.log("[AdminLogin] Admin confirmed. Redirecting to /dashboard/admin");
+      window.location.href = "/dashboard/admin";
+      // Do not setLoading(false) — page will navigate away.
 
     } catch (err) {
       console.error("[AdminLogin] Unexpected error:", err);
