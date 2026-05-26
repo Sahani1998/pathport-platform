@@ -91,7 +91,10 @@ export default function SignupForm() {
   ) => setForm(p => ({ ...p, [e.target.name]: e.target.value }));
 
   const handleSubmit = async (e: FormEvent) => {
+    // Must be synchronous and first — prevents any native GET fallback
     e.preventDefault();
+    e.stopPropagation();
+
     setError(null);
 
     if (form.password !== form.confirmPassword) {
@@ -105,33 +108,44 @@ export default function SignupForm() {
 
     setLoading(true);
 
-    const { error: authError } = await supabase.auth.signUp({
-      email:    form.email.trim().toLowerCase(),
-      password: form.password,
-      options: {
-        data: {
-          full_name:       form.fullName.trim(),
-          role:            "student",          // ← always student, never exposed
-          phone:           form.phone.trim(),
-          country:         form.country,
-          course_interest: form.courseInterest,
-          intended_intake: form.intendedIntake,
+    try {
+      const { error: authError } = await supabase.auth.signUp({
+        email:    form.email.trim().toLowerCase(),
+        password: form.password,
+        options: {
+          data: {
+            full_name:       form.fullName.trim(),
+            role:            "student",          // always student — never exposed
+            phone:           form.phone.trim(),
+            country:         form.country,
+            course_interest: form.courseInterest,
+            intended_intake: form.intendedIntake,
+          },
         },
-      },
-    });
+      });
 
-    if (authError) {
-      setError(authError.message);
+      if (authError) {
+        setError(authError.message);
+        return;
+      }
+
+      router.push("/dashboard/student");
+      router.refresh();
+    } catch {
+      setError("An unexpected error occurred. Please try again.");
+    } finally {
       setLoading(false);
-      return;
     }
-
-    router.push("/dashboard/student");
-    router.refresh();
   };
 
   return (
-    <form onSubmit={handleSubmit} noValidate className="space-y-5">
+    <form
+      onSubmit={handleSubmit}
+      method="POST"
+      action="#"
+      noValidate
+      className="space-y-5"
+    >
 
       {/* Error banner */}
       {error && (
