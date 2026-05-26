@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import GoldButton from "@/components/ui/GoldButton";
@@ -18,7 +17,6 @@ const INPUT = cn(
 );
 
 export default function LoginForm() {
-  const router   = useRouter();
   const supabase = createClient();
 
   const [email,    setEmail]    = useState("");
@@ -29,37 +27,65 @@ export default function LoginForm() {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     setError(null);
     setLoading(true);
 
-    const { data, error: authError } = await supabase.auth.signInWithPassword({
-      email: email.trim(),
-      password,
-    });
+    // Track whether we successfully start a navigation.
+    // If true, the page will hard-reload so setLoading(false) is not needed.
+    let navigating = false;
 
-    if (authError) {
-      setError(authError.message);
-      setLoading(false);
-      return;
+    try {
+      // ── Step 1: Authenticate ──────────────────────────────────────────────
+      const { data, error: authError } = await supabase.auth.signInWithPassword({
+        email:    email.trim().toLowerCase(),
+        password,
+      });
+
+      if (authError) {
+        setError(authError.message);
+        return; // finally clears loading
+      }
+
+      // ── Step 2: Fetch role ────────────────────────────────────────────────
+      // Note: profile might not exist yet if the DB trigger is slow.
+      // Fall back to /dashboard which resolves the role server-side.
+      let redirectTo = "/dashboard";
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", data.user.id)
+        .single();
+
+      if (profile?.role) {
+        const roleMeta = ROLE_META.find(r => r.value === (profile.role as UserRole));
+        if (roleMeta) redirectTo = roleMeta.dashboardPath;
+      }
+
+      // ── Step 3: Hard navigate ─────────────────────────────────────────────
+      // MUST use window.location — not router.push() — so the browser sends
+      // the fresh Supabase session cookies in the next HTTP request.
+      // router.push() + router.refresh() race on Vercel and stall navigation.
+      navigating = true;
+      window.location.href = redirectTo;
+
+    } catch {
+      setError("Sign in failed. Please check your credentials and try again.");
+    } finally {
+      // Only clear loading on failure — on success the page will unmount
+      if (!navigating) setLoading(false);
     }
-
-    // Fetch profile to get role for redirect
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", data.user.id)
-      .single();
-
-    const role      = (profile?.role ?? "student") as UserRole;
-    const roleMeta  = ROLE_META.find(r => r.value === role);
-    const redirect  = roleMeta?.dashboardPath ?? "/dashboard";
-
-    router.push(redirect);
-    router.refresh();
   };
 
   return (
-    <form onSubmit={handleSubmit} noValidate className="space-y-5">
+    <form
+      onSubmit={handleSubmit}
+      method="POST"
+      action="#"
+      noValidate
+      className="space-y-5"
+    >
       {/* Error banner */}
       {error && (
         <div className="flex items-center gap-3 p-4 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 font-body text-sm">
