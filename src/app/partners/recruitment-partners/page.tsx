@@ -80,12 +80,12 @@ export default function RecruitmentPartnersPage() {
                 <Link href="/login">
                   <GoldButton variant="solid-gold" size="lg">Recruitment Partner Login</GoldButton>
                 </Link>
-                <a href="mailto:pathpportsg@gmail.com?subject=Recruitment Partner Application">
+                <Link href="/partner-with-us">
                   <GoldButton variant="outline-gold" size="lg" className="group">
                     Apply to Partner With Us
                     <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                   </GoldButton>
-                </a>
+                </Link>
               </div>
             </div>
           </div>
@@ -159,9 +159,9 @@ export default function RecruitmentPartnersPage() {
               <Link href="/login">
                 <GoldButton variant="solid-gold" size="lg">Recruitment Partner Login</GoldButton>
               </Link>
-              <a href="mailto:pathpportsg@gmail.com?subject=New Recruitment Partner Application">
+              <Link href="/partner-with-us">
                 <GoldButton variant="outline-gold" size="lg">Apply to Partner With Us</GoldButton>
-              </a>
+              </Link>
             </div>
             <p className="text-white/28 font-body text-sm mt-6">
               All recruitment partnerships are approved manually by the PathPort team.<br />

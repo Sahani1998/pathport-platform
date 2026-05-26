@@ -89,12 +89,12 @@ export default function EmployersPage() {
                 <Link href="/login">
                   <GoldButton variant="solid-gold" size="lg">Employer Login</GoldButton>
                 </Link>
-                <a href="mailto:pathpportsg@gmail.com?subject=Employer Partner Application">
+                <Link href="/partner-with-us">
                   <GoldButton variant="outline-gold" size="lg" className="group">
                     Apply to Partner With Us
                     <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                   </GoldButton>
-                </a>
+                </Link>
               </div>
             </div>
           </div>
@@ -204,9 +204,9 @@ export default function EmployersPage() {
               <Link href="/login">
                 <GoldButton variant="solid-gold" size="lg">Employer Login</GoldButton>
               </Link>
-              <a href="mailto:pathpportsg@gmail.com?subject=Employer Partner Application">
+              <Link href="/partner-with-us">
                 <GoldButton variant="outline-gold" size="lg">Apply to Partner With Us</GoldButton>
-              </a>
+              </Link>
             </div>
             <p className="text-white/28 font-body text-sm mt-6">
               Employer accounts are approved and onboarded manually by PathPort.<br />
