@@ -4,89 +4,98 @@ import { type NextRequest, NextResponse } from "next/server";
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
 
-  // ── Env var guard ─────────────────────────────────────────────────────────
-  if (
-    !process.env.NEXT_PUBLIC_SUPABASE_URL ||
-    !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  ) {
+  // ── Env diagnostics ───────────────────────────────────────────────────────
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL    ?? "MISSING";
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "MISSING";
+
+  if (supabaseUrl === "MISSING" || supabaseKey === "MISSING") {
     console.error(
-      "[Middleware] ❌ NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY is missing. " +
-      "Add them to Vercel → Project → Settings → Environment Variables."
+      "[Middleware] ❌ Env vars missing — add NEXT_PUBLIC_SUPABASE_URL and " +
+      "NEXT_PUBLIC_SUPABASE_ANON_KEY in Vercel → Project → Settings → Environment Variables"
     );
   }
 
-  // ── Env diagnostic (shows in Vercel Runtime Logs) ─────────────────────────
-  const supabaseUrl    = process.env.NEXT_PUBLIC_SUPABASE_URL   ?? "MISSING";
-  const supabaseKey    = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "MISSING";
-  const keyPrefix      = supabaseKey.slice(0, 15);
   console.log("[Middleware] SUPABASE_URL:", supabaseUrl);
-  console.log("[Middleware] ANON_KEY prefix:", keyPrefix);
+  console.log("[Middleware] ANON_KEY prefix:", supabaseKey.slice(0, 15));
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        // Read all cookies from the incoming request
-        getAll() {
-          return request.cookies.getAll();
-        },
+  // ── Supabase client ───────────────────────────────────────────────────────
+  // Uses the individual get/set/remove adapter so Supabase calls
+  // request.cookies.get(name)?.value directly — no batch-search mismatch.
+  //
+  // set/remove write to BOTH:
+  //   1. request.cookies  → downstream server components see the new value
+  //   2. supabaseResponse.cookies → browser receives the Set-Cookie header
+  //
+  // supabaseResponse is re-created from the mutated request after each write
+  // so Next.js propagates the updated cookie headers to the route handler.
 
-        // Write refreshed session cookies back to both the request AND the
-        // response so server components further down the chain see them.
-        //
-        // CRITICAL: use REST spread  { name, value, ...options }  NOT the
-        // explicit destructure  { name, value, options }
-        //
-        // Supabase passes cookie attributes (maxAge, path, sameSite, secure…)
-        // as TOP-LEVEL properties on each item — there is no nested "options"
-        // key.  The explicit destructure always produces `options = undefined`,
-        // so cookies are written without any attributes, Vercel strips them,
-        // and the session is never seen server-side.
-        setAll(
-          cookiesToSet: Array<{ name: string; value: string; [key: string]: unknown }>
-        ) {
-          // Propagate into the mutated request so later middleware/layout reads work
-          cookiesToSet.forEach(({ name, value }) =>
-            request.cookies.set(name, value)
-          );
-
-          // Re-create the response from the updated request
-          supabaseResponse = NextResponse.next({ request });
-
-          // Write cookies (with all attributes) onto the HTTP response
-          cookiesToSet.forEach(({ name, value, ...options }) =>
-            supabaseResponse.cookies.set(name, value, options as Parameters<typeof supabaseResponse.cookies.set>[2])
-          );
-        },
+  const supabase = createServerClient(supabaseUrl, supabaseKey, {
+    cookies: {
+      // ── READ ─────────────────────────────────────────────────────────────
+      get(name: string) {
+        return request.cookies.get(name)?.value;
       },
-    }
-  );
 
-  // ── Session refresh ───────────────────────────────────────────────────────
-  // Do NOT add any logic between createServerClient and getUser().
+      // ── WRITE (token refresh / sign-in) ───────────────────────────────────
+      set(name: string, value: string, options: Record<string, unknown>) {
+        // RequestCookies.set only accepts name + value (no attributes)
+        request.cookies.set(name, value);
+
+        // Recreate response from the now-mutated request so Next.js
+        // forwards the updated cookie to server components via cookies()
+        supabaseResponse = NextResponse.next({ request });
+
+        // ResponseCookies.set accepts full attributes (maxAge, path, sameSite…)
+        supabaseResponse.cookies.set(
+          name,
+          value,
+          options as Parameters<typeof supabaseResponse.cookies.set>[2]
+        );
+      },
+
+      // ── DELETE (sign-out) ─────────────────────────────────────────────────
+      remove(name: string, options: Record<string, unknown>) {
+        request.cookies.set(name, "");
+
+        supabaseResponse = NextResponse.next({ request });
+
+        supabaseResponse.cookies.set(
+          name,
+          "",
+          options as Parameters<typeof supabaseResponse.cookies.set>[2]
+        );
+      },
+    },
+  });
+
+  // ── IMPORTANT: nothing between createServerClient and getUser() ───────────
   const {
-    data: { user },
+    data:  { user },
     error: userError,
   } = await supabase.auth.getUser();
 
-  // ── Debug logging (Vercel → Functions → Runtime Logs) ────────────────────
+  // ── Cookie diagnostics ────────────────────────────────────────────────────
   const allCookies  = request.cookies.getAll();
-  const authCookies = allCookies.filter(c => c.name.includes("sb-") || c.name.includes("supabase"));
+  const authCookies = allCookies.filter(
+    c => c.name.includes("sb-") || c.name.includes("supabase")
+  );
 
   console.log(
-    "[Middleware] path:", request.nextUrl.pathname,
-    "| user:", user ? user.id : "null",
-    "| userError:", userError?.message ?? "none",
-    "| cookies total:", allCookies.length,
-    "| auth cookies:", authCookies.map(c => `${c.name}(${c.value.length}chars)`).join(", ") || "NONE"
+    "[Middleware] path:",       request.nextUrl.pathname,
+    "| user:",                  user       ? user.id          : "null",
+    "| userError:",             userError  ? userError.message : "none",
+    "| cookies total:",         allCookies.length,
+    "| auth cookies:",          authCookies.map(c => `${c.name}(${c.value.length}ch)`).join(", ") || "NONE"
   );
 
   // ── Route guards ──────────────────────────────────────────────────────────
   const path        = request.nextUrl.pathname;
   const isDashboard = path.startsWith("/dashboard");
   const isAdminDash = path.startsWith("/dashboard/admin");
-  const isAuthPage  = path === "/login" || path === "/signup" || path === "/forgot-password";
+  const isAuthPage  =
+    path === "/login" ||
+    path === "/signup" ||
+    path === "/forgot-password";
 
   if (isDashboard && !user) {
     if (isAdminDash) {
