@@ -15,6 +15,13 @@ export async function updateSession(request: NextRequest) {
     );
   }
 
+  // ── Env diagnostic (shows in Vercel Runtime Logs) ─────────────────────────
+  const supabaseUrl    = process.env.NEXT_PUBLIC_SUPABASE_URL   ?? "MISSING";
+  const supabaseKey    = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "MISSING";
+  const keyPrefix      = supabaseKey.slice(0, 15);
+  console.log("[Middleware] SUPABASE_URL:", supabaseUrl);
+  console.log("[Middleware] ANON_KEY prefix:", keyPrefix);
+
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -70,9 +77,9 @@ export async function updateSession(request: NextRequest) {
   console.log(
     "[Middleware] path:", request.nextUrl.pathname,
     "| user:", user ? user.id : "null",
+    "| userError:", userError?.message ?? "none",
     "| cookies total:", allCookies.length,
-    "| auth cookies:", authCookies.map(c => c.name).join(", ") || "NONE",
-    "| userError:", userError?.message ?? "none"
+    "| auth cookies:", authCookies.map(c => `${c.name}(${c.value.length}chars)`).join(", ") || "NONE"
   );
 
   // ── Route guards ──────────────────────────────────────────────────────────
