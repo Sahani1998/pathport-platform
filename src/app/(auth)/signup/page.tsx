@@ -2,17 +2,25 @@ import type { Metadata } from "next";
 import SignupForm from "@/components/auth/SignupForm";
 
 export const metadata: Metadata = {
-  title: "Create Account | PathPort",
-  description: "Create your free PathPort account and start your Singapore journey.",
+  title: "Register as Student | PathPort",
+  description:
+    "Create your free PathPort student account and start your Singapore diploma journey. Apply from India — offer letter in 24 hours.",
 };
 
 export default function SignupPage() {
   return (
     <>
       <div className="text-center mb-8">
-        <h1 className="font-display text-3xl text-white mb-2">Create Your Account</h1>
-        <p className="text-white/45 font-body text-sm">
-          Join PathPort — Singapore&apos;s India diploma platform. Free to register.
+        <div className="inline-flex items-center gap-2 bg-gold-400/10 border border-gold-400/25 rounded-full px-3.5 py-1.5 mb-4">
+          <span className="text-base">🎓</span>
+          <span className="text-gold-300 font-body text-xs font-semibold tracking-widest uppercase">
+            Student Registration
+          </span>
+        </div>
+        <h1 className="font-display text-3xl text-white mb-2">Register as Student</h1>
+        <p className="text-white/45 font-body text-sm max-w-xs mx-auto leading-relaxed">
+          Free to register. Advisor calls within 24 hours.
+          Courses from <span className="text-gold-400">SGD 4,000/year</span>.
         </p>
       </div>
       <SignupForm />

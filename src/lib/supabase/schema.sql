@@ -97,3 +97,44 @@ CREATE TRIGGER profiles_updated_at
 
 -- ── 6. Realtime (optional — enable if using live updates) ────────────────────
 -- ALTER PUBLICATION supabase_realtime ADD TABLE public.profiles;
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- PathPort — Partner Applications Table
+-- Run this separately after the main schema to enable the Partner With Us form.
+-- ═══════════════════════════════════════════════════════════════════════════
+
+CREATE TABLE public.partner_applications (
+  id           UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  org_name     TEXT        NOT NULL,
+  contact_name TEXT        NOT NULL,
+  email        TEXT        NOT NULL,
+  phone        TEXT        NOT NULL,
+  partner_type TEXT        NOT NULL CHECK (partner_type IN ('institution', 'recruitment_partner', 'employer')),
+  country      TEXT        NOT NULL,
+  website      TEXT,
+  message      TEXT,
+  status       TEXT        NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
+  created_at   TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Enable RLS
+ALTER TABLE public.partner_applications ENABLE ROW LEVEL SECURITY;
+
+-- Allow anyone (including unauthenticated visitors) to INSERT
+CREATE POLICY "partner_applications: public insert"
+  ON public.partner_applications FOR INSERT
+  TO anon, authenticated
+  WITH CHECK (true);
+
+-- Only admins can SELECT / UPDATE
+CREATE POLICY "partner_applications: admin read"
+  ON public.partner_applications FOR SELECT
+  USING (
+    (SELECT role FROM public.profiles WHERE id = auth.uid()) = 'admin'
+  );
+
+CREATE POLICY "partner_applications: admin update"
+  ON public.partner_applications FOR UPDATE
+  USING (
+    (SELECT role FROM public.profiles WHERE id = auth.uid()) = 'admin'
+  );

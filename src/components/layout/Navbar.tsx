@@ -68,7 +68,7 @@ function PartnersPanel({ onClose }: { onClose: () => void }) {
       </div>
       <div className="border-t border-white/[0.07] p-3">
         <Link
-          href="/partners/institutions"
+          href="/partner-with-us"
           onClick={onClose}
           className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-gold-400/[0.08] border border-gold-400/25 text-gold-400 hover:bg-gold-400/[0.14] hover:text-gold-300 font-body text-sm font-semibold transition-all"
         >
@@ -108,7 +108,7 @@ export default function Navbar() {
   const [mobileOpen,   setMobileOpen]   = useState(false);
   const [openDropdown, setOpenDropdown] = useState<OpenDropdown>(null);
   const [mobilePartnersOpen, setMobilePartnersOpen] = useState(false);
-  const partnersRef = useRef<HTMLDivElement>(null);
+  const partnersRef = useRef<HTMLLIElement>(null);
   const loginRef    = useRef<HTMLDivElement>(null);
 
   // Scroll detection
@@ -264,7 +264,7 @@ export default function Navbar() {
             /* Unauthenticated */
             <>
               {/* Partner With Us */}
-              <Link href="/partners/institutions">
+              <Link href="/partner-with-us">
                 <button className="px-4 py-2 rounded-xl border border-white/[0.15] text-white/55 hover:text-white/90 hover:border-white/30 font-body text-sm tracking-wide transition-all duration-200">
                   Partner With Us
                 </button>
@@ -383,7 +383,7 @@ export default function Navbar() {
                     Register as Student
                   </GoldButton>
                 </Link>
-                <Link href="/partners/institutions" onClick={closeAll}>
+                <Link href="/partner-with-us" onClick={closeAll}>
                   <GoldButton variant="outline-gold" size="md" className="w-full">
                     Partner With Us
                   </GoldButton>

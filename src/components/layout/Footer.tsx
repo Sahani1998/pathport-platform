@@ -74,7 +74,7 @@ export default function Footer() {
                     "Institutions":               "/partners/institutions",
                     "Recruitment Partners":       "/partners/recruitment-partners",
                     "Employers":                  "/partners/employers",
-                    "Apply to Partner With Us":   "/partners/institutions",
+                    "Apply to Partner With Us":   "/partner-with-us",
                   };
                   return (
                     <li key={link}>
