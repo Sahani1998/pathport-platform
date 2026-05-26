@@ -3,10 +3,10 @@ import GoldButton from "@/components/ui/GoldButton";
 import { Instagram, Linkedin, Twitter, Youtube, Mail, Phone } from "lucide-react";
 
 const LINKS = {
-  "Pathways":  ["Diploma", "Advanced Diploma", "Higher Diploma", "Specialist Diploma", "6+6 Internship"],
-  "Platform":  ["Student Portal", "Application Tracker", "Offer Letter Status", "Document Upload", "Advisor Login"],
-  "Company":   ["About PathPort", "Our Team", "Blog", "Careers", "Press"],
-  "Support":   ["Help Centre", "Contact Us", "Privacy Policy", "Terms of Service", "Cookie Policy"],
+  "Students":   ["Register as Student", "Student Login", "Singapore Diplomas", "6+6 Internship", "Arrival Services"],
+  "Destinations": ["India → Singapore", "Study Destination", "Why Singapore", "Diploma Fees", "Student Pass / IPA"],
+  "Partners":   ["Institutions", "Recruitment Partners", "Employers", "Apply to Partner With Us"],
+  "Company":    ["About PathPort", "Blog", "Careers", "Privacy Policy", "Terms of Service"],
 };
 
 const SOCIALS = [
@@ -62,11 +62,26 @@ export default function Footer() {
             <div key={section} className="col-span-1">
               <h4 className="font-body font-semibold text-white/85 text-xs tracking-[0.18em] uppercase mb-4">{section}</h4>
               <ul className="space-y-2.5">
-                {links.map(link => (
-                  <li key={link}>
-                    <Link href="#" className="font-body text-sm text-white/55 hover:text-gold-300 transition-colors">{link}</Link>
-                  </li>
-                ))}
+                {links.map(link => {
+                  const HREF_MAP: Record<string, string> = {
+                    "Register as Student":        "/signup",
+                    "Student Login":              "/login",
+                    "Singapore Diplomas":         "/students",
+                    "6+6 Internship":             "/students#pathway",
+                    "Arrival Services":           "/students#arrival",
+                    "India → Singapore":          "/study-destination",
+                    "Study Destination":          "/study-destination",
+                    "Institutions":               "/partners/institutions",
+                    "Recruitment Partners":       "/partners/recruitment-partners",
+                    "Employers":                  "/partners/employers",
+                    "Apply to Partner With Us":   "/partners/institutions",
+                  };
+                  return (
+                    <li key={link}>
+                      <Link href={HREF_MAP[link] ?? "#"} className="font-body text-sm text-white/55 hover:text-gold-300 transition-colors">{link}</Link>
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           ))}
