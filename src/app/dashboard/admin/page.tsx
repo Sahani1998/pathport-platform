@@ -41,12 +41,12 @@ export default async function AdminDashboardPage() {
     supabase.from("profiles").select("*", { count: "exact", head: true }),
   ]);
 
-  // ── Student inquiry counts (graceful if table not yet created) ───────────
+  // ── Student inquiry counts ────────────────────────────────────────────────
   const [
-    { count: totalInquiries },
-    { count: newInquiries },
-    { count: contactedInquiries },
-    { count: convertedInquiries },
+    { count: totalInquiries,     error: e1 },
+    { count: newInquiries,       error: e2 },
+    { count: contactedInquiries, error: e3 },
+    { count: convertedInquiries, error: e4 },
   ] = await Promise.all([
     supabase.from("student_inquiries").select("*", { count: "exact", head: true }),
     supabase.from("student_inquiries").select("*", { count: "exact", head: true }).eq("status", "new"),
@@ -54,14 +54,30 @@ export default async function AdminDashboardPage() {
     supabase.from("student_inquiries").select("*", { count: "exact", head: true }).eq("status", "converted"),
   ]);
 
-  // ── 5 most recent inquiries ──────────────────────────────────────────────
-  const { data: recentInquiries } = await supabase
+  // Log any query errors so they appear in Vercel Runtime Logs
+  [e1, e2, e3, e4].forEach((e, i) => {
+    if (e) console.error(`[AdminDashboard] inquiry count query #${i + 1} error — code: ${e.code} | msg: ${e.message}`);
+  });
+
+  // tableReady: false only when the table literally doesn't exist (42P01).
+  // RLS-denied queries return an error too but the table IS there — show 0s
+  // not a setup banner.  Permission errors get the real error message below.
+  const inquiryError = e1;
+  const tableMissing = inquiryError?.code === "42P01";         // undefined_table
+  const rlsBlocked   = inquiryError?.code === "42501" ||       // insufficient_privilege
+                       inquiryError?.message?.includes("permission") ||
+                       inquiryError?.message?.includes("policy");
+
+  // ── 5 most recent inquiries ───────────────────────────────────────────────
+  const { data: recentInquiries, error: recentError } = await supabase
     .from("student_inquiries")
     .select("id, full_name, email, country, course_interest, status, created_at")
     .order("created_at", { ascending: false })
     .limit(5);
 
-  const tableReady = totalInquiries !== null;
+  if (recentError) {
+    console.error("[AdminDashboard] recent inquiries error — code:", recentError.code, "| msg:", recentError.message);
+  }
 
   return (
     <div className="space-y-8 max-w-6xl">
@@ -111,11 +127,18 @@ export default async function AdminDashboardPage() {
           </Link>
         </div>
 
-        {!tableReady ? (
+        {tableMissing ? (
           <div className="flex items-center gap-3 m-4 p-4 rounded-xl bg-gold-400/[0.07] border border-gold-400/25">
             <AlertCircle className="w-5 h-5 text-gold-400 flex-shrink-0" />
             <p className="text-white/65 font-body text-sm">
-              Run <code className="text-gold-300 bg-gold-400/10 px-1.5 py-0.5 rounded text-xs">student_inquiries.sql</code> in Supabase SQL Editor to enable inquiry tracking.
+              Run <code className="text-gold-300 bg-gold-400/10 px-1.5 py-0.5 rounded text-xs">student_inquiries.sql</code> in Supabase SQL Editor to create the table.
+            </p>
+          </div>
+        ) : rlsBlocked ? (
+          <div className="flex items-center gap-3 m-4 p-4 rounded-xl bg-red-500/[0.07] border border-red-500/25">
+            <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0" />
+            <p className="text-white/65 font-body text-sm">
+              RLS policy is blocking admin read access. Re-run <code className="text-red-300 bg-red-400/10 px-1.5 py-0.5 rounded text-xs">student_inquiries.sql</code> (updated with SECURITY DEFINER fix).
             </p>
           </div>
         ) : recentInquiries && recentInquiries.length > 0 ? (

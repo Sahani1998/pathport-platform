@@ -49,11 +49,14 @@ export default function AdminInquiriesPage() {
       .order("created_at", { ascending: false });
 
     if (fetchError) {
-      setError(
-        fetchError.message.includes("does not exist")
-          ? "Run student_inquiries.sql in Supabase SQL Editor to enable this page."
-          : fetchError.message
-      );
+      console.error("[Inquiries] fetch error — code:", fetchError.code, "| msg:", fetchError.message);
+      if (fetchError.code === "42P01") {
+        setError("Table not found. Run student_inquiries.sql in Supabase SQL Editor.");
+      } else if (fetchError.code === "42501" || fetchError.message?.includes("permission") || fetchError.message?.includes("policy")) {
+        setError("Permission denied. Re-run student_inquiries.sql (contains updated RLS fix with SECURITY DEFINER).");
+      } else {
+        setError(fetchError.message);
+      }
     } else {
       setInquiries((data ?? []) as StudentInquiry[]);
     }
