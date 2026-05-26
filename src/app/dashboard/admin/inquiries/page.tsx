@@ -41,26 +41,50 @@ export default function AdminInquiriesPage() {
   const fetchInquiries = useCallback(async () => {
     setLoading(true);
     setError(null);
-    const supabase = createClient();
 
-    const { data, error: fetchError } = await supabase
-      .from("student_inquiries")
-      .select("*")
-      .order("created_at", { ascending: false });
+    try {
+      const supabase = createClient();
+      console.log("[Inquiries] querying public.student_inquiries…");
 
-    if (fetchError) {
-      console.error("[Inquiries] fetch error — code:", fetchError.code, "| msg:", fetchError.message);
-      if (fetchError.code === "42P01") {
-        setError("Table not found. Run student_inquiries.sql in Supabase SQL Editor.");
-      } else if (fetchError.code === "42501" || fetchError.message?.includes("permission") || fetchError.message?.includes("policy")) {
-        setError("Permission denied. Re-run student_inquiries.sql (contains updated RLS fix with SECURITY DEFINER).");
+      const { data, error: fetchError } = await supabase
+        .from("student_inquiries")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      console.log(
+        "[Inquiries] result — rows:", data?.length ?? 0,
+        "| error code:", fetchError?.code ?? "none",
+        "| error msg:", fetchError?.message ?? "none"
+      );
+
+      if (fetchError) {
+        if (fetchError.code === "42P01") {
+          setError("Table not found. Run student_inquiries.sql in Supabase SQL Editor.");
+        } else if (
+          fetchError.code === "42501" ||
+          fetchError.message?.includes("permission") ||
+          fetchError.message?.includes("policy") ||
+          fetchError.message?.includes("JWT")
+        ) {
+          setError(
+            `Permission denied (${fetchError.code}). Re-run student_inquiries.sql — ` +
+            "it now includes a SECURITY DEFINER function that fixes admin RLS access."
+          );
+        } else {
+          setError(`Query failed: ${fetchError.message} (${fetchError.code})`);
+        }
       } else {
-        setError(fetchError.message);
+        setInquiries((data ?? []) as StudentInquiry[]);
       }
-    } else {
-      setInquiries((data ?? []) as StudentInquiry[]);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error("[Inquiries] unexpected exception:", msg);
+      setError(`Unexpected error: ${msg}`);
+    } finally {
+      // Always clears loading — even if await throws, network hangs,
+      // or an exception bypasses every other code path.
+      setLoading(false);
     }
-    setLoading(false);
   }, []);
 
   useEffect(() => { fetchInquiries(); }, [fetchInquiries]);
@@ -68,18 +92,25 @@ export default function AdminInquiriesPage() {
   // ── Status update ──────────────────────────────────────────────────────────
   const updateStatus = async (id: string, status: InquiryStatus) => {
     setUpdating(id);
-    const supabase = createClient();
-    const { error: updateError } = await supabase
-      .from("student_inquiries")
-      .update({ status })
-      .eq("id", id);
+    try {
+      const supabase = createClient();
+      const { error: updateError } = await supabase
+        .from("student_inquiries")
+        .update({ status })
+        .eq("id", id);
 
-    if (!updateError) {
-      setInquiries(prev =>
-        prev.map(inq => inq.id === id ? { ...inq, status } : inq)
-      );
+      if (updateError) {
+        console.error("[Inquiries] updateStatus error:", updateError.message);
+      } else {
+        setInquiries(prev =>
+          prev.map(inq => inq.id === id ? { ...inq, status } : inq)
+        );
+      }
+    } catch (err: unknown) {
+      console.error("[Inquiries] updateStatus exception:", err instanceof Error ? err.message : err);
+    } finally {
+      setUpdating(null);
     }
-    setUpdating(null);
   };
 
   // ── Filtered results ───────────────────────────────────────────────────────
