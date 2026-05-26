@@ -32,18 +32,24 @@ export async function updateSession(request: NextRequest) {
   // Refresh session — IMPORTANT: do not remove this call.
   const { data: { user } } = await supabase.auth.getUser();
 
-  const path = request.nextUrl.pathname;
+  const path        = request.nextUrl.pathname;
   const isDashboard = path.startsWith("/dashboard");
+  const isAdminDash = path.startsWith("/dashboard/admin");
   const isAuthPage  = path === "/login" || path === "/signup" || path === "/forgot-password";
 
-  // Unauthenticated user trying to access dashboard → redirect to login
+  // Unauthenticated user trying to access dashboard
   if (isDashboard && !user) {
+    // Admin paths redirect to admin login — prevents the infinite loop:
+    // /dashboard/admin → /login → /dashboard → /dashboard/admin → ...
+    if (isAdminDash) {
+      return NextResponse.redirect(new URL("/admin/login", request.url));
+    }
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("redirectTo", path);
     return NextResponse.redirect(loginUrl);
   }
 
-  // Authenticated user hitting auth pages → redirect to dashboard
+  // Authenticated user hitting public auth pages → go to their dashboard
   if (isAuthPage && user) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }

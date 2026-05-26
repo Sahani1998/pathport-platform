@@ -93,8 +93,20 @@ export default function AdminLoginForm() {
         return;
       }
 
-      // ── 4. Admin confirmed — redirect ─────────────────────────────────────
-      console.log("[AdminLogin] Admin confirmed. Redirecting to /dashboard/admin");
+      // ── 4. Verify session is committed, then redirect ─────────────────────
+      // getSession() reads the cookie written by signInWithPassword.
+      // If it returns null, the cookie hasn't been committed yet —
+      // the server-side layout would see no user and redirect back to login.
+      const { data: { session } } = await supabase.auth.getSession();
+
+      if (!session) {
+        console.error("[AdminLogin] Session not readable after sign-in — cookie may not be committed.");
+        setError("Session could not be established. Please clear your browser cookies and try again.");
+        setLoading(false);
+        return;
+      }
+
+      console.log("[AdminLogin] Session confirmed. Redirecting to /dashboard/admin");
       router.push("/dashboard/admin");
       router.refresh();
       // Keep loading=true — component unmounts on successful navigation.
