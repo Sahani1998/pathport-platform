@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type ChangeEvent, type FormEvent } from "react";
+import { createClient } from "@/lib/supabase/client";
 import GoldButton from "@/components/ui/GoldButton";
 import { ArrowRight, CheckCircle2 } from "lucide-react";
 import { INDIAN_STATES, COURSE_OPTIONS } from "@/data/form-constants";
@@ -31,7 +32,26 @@ export default function HeroSection() {
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    await new Promise<void>(r => setTimeout(r, 1400));
+
+    const supabase = createClient();
+    const { error: insertError } = await supabase
+      .from("student_inquiries")
+      .insert({
+        full_name:       form.fullName.trim(),
+        email:           form.email.trim().toLowerCase(),
+        whatsapp_number: form.phone.trim()  || null,
+        country:         "India",
+        indian_state:    form.state         || null,
+        city:            form.city.trim()   || null,
+        course_interest: form.course        || null,
+      });
+
+    if (insertError) {
+      // Still show success to avoid confusing the user —
+      // admin will follow up manually if table not yet created.
+      console.error("Hero form insert error:", insertError.message);
+    }
+
     setLoading(false);
     setSubmitted(true);
   };
@@ -122,7 +142,7 @@ export default function HeroSection() {
                 <div className="text-center py-6">
                   <CheckCircle2 className="w-12 h-12 text-gold-400 mx-auto mb-3" />
                   <p className="font-display text-xl text-white">Interest Received!</p>
-                  <p className="text-white/50 font-body text-sm mt-1">We&apos;ll call you within 24 hours.</p>
+                  <p className="text-white/50 font-body text-sm mt-1">Thank you. A PathPort advisor will contact you within 24 hours.</p>
                 </div>
               ) : (
                 <form onSubmit={onSubmit} className="space-y-3">

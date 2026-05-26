@@ -9,7 +9,8 @@ import {
   INDIAN_STATES, SUPPORTED_COUNTRIES, COURSE_OPTIONS,
   INTAKE_OPTIONS, BUDGET_RANGES,
 } from "@/data/form-constants";
-import { Send, CheckCircle2, Loader2 } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
+import { Send, CheckCircle2, Loader2, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const INITIAL: StudentInterestFormData = {
@@ -29,6 +30,7 @@ export default function StudentInterestForm() {
   const [form,      setForm]      = useState<StudentInterestFormData>(INITIAL);
   const [loading,   setLoading]   = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [error,     setError]     = useState<string | null>(null);
   const showStateField = form.country === "India";
 
   const onChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
@@ -37,8 +39,28 @@ export default function StudentInterestForm() {
   const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
-    // TODO: POST to /api/interest-form
-    await new Promise<void>(r => setTimeout(r, 1600));
+
+    const supabase = createClient();
+    const { error: insertError } = await supabase
+      .from("student_inquiries")
+      .insert({
+        full_name:       form.fullName.trim(),
+        email:           form.email.trim().toLowerCase(),
+        whatsapp_number: form.whatsapp.trim()    || null,
+        country:         form.country,
+        indian_state:    form.country === "India" ? (form.indianState || null) : null,
+        city:            form.city.trim()          || null,
+        course_interest: form.courseInterest       || null,
+        intended_intake: form.intendedIntake       || null,
+        budget_range:    form.budgetRange          || null,
+      });
+
+    if (insertError) {
+      setError("Something went wrong. Please try again or WhatsApp us at +65 8377 6492.");
+      setLoading(false);
+      return;
+    }
+
     setLoading(false);
     setSubmitted(true);
   };
@@ -63,7 +85,7 @@ export default function StudentInterestForm() {
                 </div>
                 <h3 className="font-display text-3xl text-white mb-3">Application Received!</h3>
                 <p className="text-white/50 font-body text-lg max-w-sm mx-auto">
-                  A PathPort advisor will contact you within 24 hours with your personalised Singapore pathway.
+                  Thank you. A PathPort advisor will contact you within 24 hours.
                 </p>
                 <button
                   onClick={() => { setSubmitted(false); setForm(INITIAL); }}
@@ -74,6 +96,14 @@ export default function StudentInterestForm() {
               </div>
             ) : (
               <form onSubmit={onSubmit} noValidate className="space-y-5">
+
+                {/* Error banner */}
+                {error && (
+                  <div className="flex items-start gap-3 p-4 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 font-body text-sm">
+                    <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                    {error}
+                  </div>
+                )}
 
                 {/* Row 1 — Full Name + WhatsApp */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">

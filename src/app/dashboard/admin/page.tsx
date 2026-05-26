@@ -1,7 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import StatCard from "@/components/dashboard/StatCard";
-import { Users, FileText, Building2, Award, TrendingUp, AlertCircle } from "lucide-react";
+import {
+  Users, FileText, TrendingUp, AlertCircle,
+  MessageSquare, CheckCircle2, Star, Clock,
+} from "lucide-react";
 
 export default async function AdminDashboardPage() {
   const supabase = await createClient();
@@ -16,47 +20,143 @@ export default async function AdminDashboardPage() {
 
   if (profile?.role !== "admin") redirect("/dashboard");
 
-  // Fetch real counts
+  // ── Registered user counts ───────────────────────────────────────────────
   const [{ count: totalStudents }, { count: totalProfiles }] = await Promise.all([
     supabase.from("profiles").select("*", { count: "exact", head: true }).eq("role", "student"),
     supabase.from("profiles").select("*", { count: "exact", head: true }),
   ]);
 
+  // ── Student inquiry counts (graceful if table not yet created) ───────────
+  const [
+    { count: totalInquiries },
+    { count: newInquiries },
+    { count: contactedInquiries },
+    { count: convertedInquiries },
+  ] = await Promise.all([
+    supabase.from("student_inquiries").select("*", { count: "exact", head: true }),
+    supabase.from("student_inquiries").select("*", { count: "exact", head: true }).eq("status", "new"),
+    supabase.from("student_inquiries").select("*", { count: "exact", head: true }).eq("status", "contacted"),
+    supabase.from("student_inquiries").select("*", { count: "exact", head: true }).eq("status", "converted"),
+  ]);
+
+  // ── 5 most recent inquiries ──────────────────────────────────────────────
+  const { data: recentInquiries } = await supabase
+    .from("student_inquiries")
+    .select("id, full_name, email, country, course_interest, status, created_at")
+    .order("created_at", { ascending: false })
+    .limit(5);
+
+  const tableReady = totalInquiries !== null;
+
   return (
     <div className="space-y-8 max-w-6xl">
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <h2 className="font-display text-3xl text-white mb-1">Admin Dashboard</h2>
+          <p className="text-white/45 font-body text-sm">Platform overview and management.</p>
+        </div>
+        <Link
+          href="/dashboard/admin/inquiries"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gold-400/[0.08] border border-gold-400/25 text-gold-400 hover:bg-gold-400/[0.14] font-body text-sm font-semibold transition-all"
+        >
+          View All Inquiries →
+        </Link>
+      </div>
+
+      {/* ── Inquiry stats ────────────────────────────────────────────────── */}
       <div>
-        <h2 className="font-display text-3xl text-white mb-1">Admin Dashboard</h2>
-        <p className="text-white/45 font-body text-sm">Platform overview and management.</p>
+        <p className="text-white/40 font-body text-xs uppercase tracking-widest mb-3">
+          Student Inquiries
+        </p>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatCard label="Total Inquiries"  value={totalInquiries  ?? "—"} icon={MessageSquare} gold />
+          <StatCard label="New"              value={newInquiries    ?? "—"} icon={Clock}              />
+          <StatCard label="Contacted"        value={contactedInquiries ?? "—"} icon={TrendingUp}      />
+          <StatCard label="Converted"        value={convertedInquiries ?? "—"} icon={CheckCircle2}    />
+        </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="Total Students"     value={totalStudents ?? 0} icon={Users}     gold />
-        <StatCard label="Total Users"        value={totalProfiles ?? 0} icon={TrendingUp}     />
-        <StatCard label="Active Colleges"    value="—"                  icon={Building2}      />
-        <StatCard label="Open Applications"  value="—"                  icon={FileText}       />
+      {/* ── Registered users stats ───────────────────────────────────────── */}
+      <div>
+        <p className="text-white/40 font-body text-xs uppercase tracking-widest mb-3">
+          Registered Users
+        </p>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatCard label="Registered Students" value={totalStudents ?? 0} icon={Users}    />
+          <StatCard label="Total Accounts"       value={totalProfiles ?? 0} icon={Star}     />
+        </div>
       </div>
 
-      {/* Recent activity placeholder */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white/[0.04] border border-white/[0.08] rounded-2xl p-6">
-          <h3 className="font-display text-xl text-white mb-4">Recent Registrations</h3>
-          <div className="flex flex-col items-center justify-center py-8 text-white/25">
-            <Users className="w-10 h-10 mb-3" />
-            <p className="font-body text-sm">No recent registrations yet.</p>
-          </div>
+      {/* ── Recent inquiries table ───────────────────────────────────────── */}
+      <div className="bg-white/[0.04] border border-white/[0.08] rounded-2xl overflow-hidden">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.07]">
+          <h3 className="font-display text-xl text-white">Recent Inquiries</h3>
+          <Link href="/dashboard/admin/inquiries" className="text-gold-400 hover:text-gold-300 font-body text-sm transition-colors">
+            View all →
+          </Link>
         </div>
 
-        <div className="bg-white/[0.04] border border-white/[0.08] rounded-2xl p-6">
-          <h3 className="font-display text-xl text-white mb-4">Pending Actions</h3>
-          <div className="flex items-center gap-3 p-4 rounded-xl bg-gold-400/[0.07] border border-gold-400/25">
+        {!tableReady ? (
+          <div className="flex items-center gap-3 m-4 p-4 rounded-xl bg-gold-400/[0.07] border border-gold-400/25">
             <AlertCircle className="w-5 h-5 text-gold-400 flex-shrink-0" />
             <p className="text-white/65 font-body text-sm">
-              Set up your Supabase tables and RLS policies to see live data here.
+              Run <code className="text-gold-300 bg-gold-400/10 px-1.5 py-0.5 rounded text-xs">student_inquiries.sql</code> in Supabase SQL Editor to enable inquiry tracking.
             </p>
           </div>
-        </div>
+        ) : recentInquiries && recentInquiries.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-white/[0.06]">
+                  {["Name", "Email", "Country", "Course", "Status", "Date"].map(h => (
+                    <th key={h} className="text-left px-4 py-3 text-white/35 font-body text-xs uppercase tracking-wider">
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {recentInquiries.map((row) => (
+                  <tr key={row.id} className="border-b border-white/[0.04] hover:bg-white/[0.02] transition-colors">
+                    <td className="px-4 py-3 font-body text-sm text-white/80">{row.full_name}</td>
+                    <td className="px-4 py-3 font-body text-sm text-white/55">{row.email}</td>
+                    <td className="px-4 py-3 font-body text-sm text-white/55">{row.country ?? "—"}</td>
+                    <td className="px-4 py-3 font-body text-xs text-white/45 max-w-[140px] truncate">{row.course_interest ?? "—"}</td>
+                    <td className="px-4 py-3">
+                      <StatusBadge status={row.status as string} />
+                    </td>
+                    <td className="px-4 py-3 font-body text-xs text-white/35">
+                      {new Date(row.created_at).toLocaleDateString("en-SG", { day: "numeric", month: "short" })}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center py-10 text-white/25">
+            <FileText className="w-10 h-10 mb-3" />
+            <p className="font-body text-sm">No inquiries yet.</p>
+          </div>
+        )}
       </div>
     </div>
+  );
+}
+
+function StatusBadge({ status }: { status: string }) {
+  const MAP: Record<string, string> = {
+    new:            "bg-pathBlue-500/15 text-pathBlue-400 border-pathBlue-500/30",
+    contacted:      "bg-gold-400/15 text-gold-400 border-gold-400/30",
+    converted:      "bg-emerald-500/15 text-emerald-400 border-emerald-500/30",
+    not_interested: "bg-white/[0.06] text-white/40 border-white/[0.08]",
+  };
+  const LABELS: Record<string, string> = {
+    new: "New", contacted: "Contacted", converted: "Converted", not_interested: "Not Interested",
+  };
+  return (
+    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full border font-body text-xs font-semibold ${MAP[status] ?? MAP.new}`}>
+      {LABELS[status] ?? status}
+    </span>
   );
 }

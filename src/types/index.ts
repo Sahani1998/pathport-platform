@@ -71,3 +71,23 @@ export interface StudentInterestFormData {
 export type ButtonVariant = "solid-gold" | "solid-blue" | "outline-gold" | "outline-blue" | "ghost";
 export type ButtonSize    = "sm" | "md" | "lg";
 export type BadgeVariant  = "gold" | "blue" | "navy" | "success" | "muted";
+
+// ─── Student Inquiries ────────────────────────────────────────────────────────
+
+export type InquiryStatus = "new" | "contacted" | "converted" | "not_interested";
+
+export interface StudentInquiry {
+  id:              string;
+  full_name:       string;
+  email:           string;
+  whatsapp_number: string | null;
+  country:         string | null;
+  indian_state:    string | null;
+  city:            string | null;
+  course_interest: string | null;
+  intended_intake: string | null;
+  budget_range:    string | null;
+  status:          InquiryStatus;
+  notes:           string | null;
+  created_at:      string;
+}
