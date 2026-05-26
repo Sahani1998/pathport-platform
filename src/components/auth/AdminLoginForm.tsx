@@ -39,50 +39,68 @@ export default function AdminLoginForm() {
 
     try {
 
-      // ── 1. Authenticate with Supabase ──────────────────────────────────
+      // ── 0. Clear any stale cached session ────────────────────────────────
+      // Prevents a previous session's JWT being used for the profile query.
+      await supabase.auth.signOut();
+
+      // ── 1. Authenticate ───────────────────────────────────────────────────
       const { data, error: authError } = await supabase.auth.signInWithPassword({
         email:    email.trim().toLowerCase(),
         password,
       });
 
       if (authError) {
+        console.error("[AdminLogin] signInWithPassword error:", authError.message);
         setError(authError.message);
         setLoading(false);
         return;
       }
 
-      // ── 2. Fetch profile role ──────────────────────────────────────────
+      console.log("[AdminLogin] Auth success. User ID:", data.user.id);
+      console.log("[AdminLogin] User email:", data.user.email);
+
+      // ── 2. Fetch profile from public.profiles ─────────────────────────────
+      // Select id + role + email so we can confirm which row was returned.
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
-        .select("role")
+        .select("id, role, email")
         .eq("id", data.user.id)
         .single();
 
+      console.log("[AdminLogin] Profile query result:", profile);
+      console.log("[AdminLogin] Profile query error:", profileError);
+
       if (profileError || !profile) {
+        console.error("[AdminLogin] Profile not found or RLS blocked:", profileError?.message);
         await supabase.auth.signOut();
-        setError("Could not verify account. Please try again.");
+        setError("Could not load your profile. Ensure the profiles table and RLS policies are set up.");
         setLoading(false);
         return;
       }
 
-      // ── 3. Admin role check ────────────────────────────────────────────
-      if (profile.role !== "admin") {
+      // ── 3. Role check — trimmed + lowercase to catch any whitespace/case ─
+      const rawRole  = profile.role;
+      const normRole = String(rawRole ?? "").trim().toLowerCase();
+
+      console.log("[AdminLogin] Raw role value:", JSON.stringify(rawRole));
+      console.log("[AdminLogin] Normalised role:", JSON.stringify(normRole));
+
+      if (normRole !== "admin") {
+        console.warn("[AdminLogin] Role mismatch — expected 'admin', got:", JSON.stringify(rawRole));
         await supabase.auth.signOut();
-        setError("You do not have admin access.");
+        setError(`You do not have admin access. (role: "${normRole || "empty"}")`);
         setLoading(false);
         return;
       }
 
-      // ── 4. Redirect to admin dashboard ─────────────────────────────────
-      // router.push navigates client-side; router.refresh flushes the
-      // server-component cache so the dashboard sees the live session.
+      // ── 4. Admin confirmed — redirect ─────────────────────────────────────
+      console.log("[AdminLogin] Admin confirmed. Redirecting to /dashboard/admin");
       router.push("/dashboard/admin");
       router.refresh();
-      // Loading stays true — component unmounts on successful navigation.
-      // If navigation never happens the button stays disabled, which is
-      // preferable to flickering back to the ready state.
+      // Keep loading=true — component unmounts on successful navigation.
 
-    } catch {
+    } catch (err) {
+      console.error("[AdminLogin] Unexpected error:", err);
       setError("Sign in failed. Please check your credentials and try again.");
       setLoading(false);
     }
