@@ -38,7 +38,8 @@ export default async function InstitutionDashboardPage() {
   if (!user) redirect("/login");
 
   const { data: profile } = await supabase.from("profiles").select("role, full_name").eq("id", user.id).single();
-  if (profile?.role !== "institution") redirect("/dashboard");
+  // PREVIEW MODE: role guard temporarily disabled so admin can test all dashboards
+  // if (profile?.role !== "institution") redirect("/dashboard");
 
   const institutionName = profile?.full_name ?? "Your Institution";
 

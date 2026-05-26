@@ -47,7 +47,8 @@ export default async function EmployerDashboardPage() {
   if (!user) redirect("/login");
 
   const { data: profile } = await supabase.from("profiles").select("role, full_name").eq("id", user.id).single();
-  if (profile?.role !== "employer") redirect("/dashboard");
+  // PREVIEW MODE: role guard temporarily disabled so admin can test all dashboards
+  // if (profile?.role !== "employer") redirect("/dashboard");
 
   const companyName = profile?.full_name ?? "Your Company";
 

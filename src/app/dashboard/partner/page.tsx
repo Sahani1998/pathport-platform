@@ -35,7 +35,8 @@ export default async function PartnerDashboardPage() {
   if (!user) redirect("/login");
 
   const { data: profile } = await supabase.from("profiles").select("role, full_name").eq("id", user.id).single();
-  if (profile?.role !== "recruitment_partner") redirect("/dashboard");
+  // PREVIEW MODE: role guard temporarily disabled so admin can test all dashboards
+  // if (profile?.role !== "recruitment_partner") redirect("/dashboard");
 
   const partnerName = profile?.full_name ?? "Partner";
   const totalCommission = "S$1,600";

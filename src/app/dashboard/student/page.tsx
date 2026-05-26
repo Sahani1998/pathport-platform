@@ -52,7 +52,8 @@ export default async function StudentDashboardPage() {
 
   const { data: profile } = await supabase
     .from("profiles").select("*").eq("id", user.id).single();
-  if (profile?.role !== "student") redirect("/dashboard");
+  // PREVIEW MODE: role guard temporarily disabled so admin can test all dashboards
+  // if (profile?.role !== "student") redirect("/dashboard");
 
   const firstName = profile?.full_name?.split(" ")[0] ?? "Student";
   const docsUploaded = DOCS.filter(d => d.uploaded).length;
