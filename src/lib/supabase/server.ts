@@ -2,8 +2,11 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
 /**
- * Supabase client for use in Server Components, Server Actions, and Route Handlers.
- * Must be called inside an async context where cookies() is available.
+ * Supabase client for Server Components, Server Actions, and Route Handlers.
+ *
+ * setAll uses REST spread  { name, value, ...options }  — same reason as
+ * middleware: Supabase passes cookie attributes at the TOP LEVEL of each item,
+ * not nested under an "options" key.
  */
 export async function createClient() {
   const cookieStore = await cookies();
@@ -16,14 +19,21 @@ export async function createClient() {
         getAll() {
           return cookieStore.getAll();
         },
-        setAll(cookiesToSet: { name: string; value: string; options?: Record<string, unknown> }[]) {
+
+        setAll(
+          cookiesToSet: Array<{ name: string; value: string; [key: string]: unknown }>
+        ) {
           try {
-            cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
+            cookiesToSet.forEach(({ name, value, ...options }) =>
+              cookieStore.set(
+                name,
+                value,
+                options as Parameters<typeof cookieStore.set>[2]
+              )
             );
           } catch {
-            // setAll called from a Server Component — cookies are read-only.
-            // Middleware handles session refresh instead.
+            // Called from a Server Component where cookies() is read-only.
+            // Middleware handles token refresh; this catch is intentional.
           }
         },
       },
