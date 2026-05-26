@@ -1,0 +1,53 @@
+import { cn } from "@/lib/utils";
+
+interface SectionHeaderProps {
+  eyebrow?: string;
+  title: string;
+  subtitle?: string;
+  centered?: boolean;
+  className?: string;
+  /** Make the title text gold-gradient instead of white */
+  gold?: boolean;
+}
+
+/**
+ * SectionHeader — consistent eyebrow + heading + subtitle pattern used
+ * across all homepage sections.
+ */
+export default function SectionHeader({
+  eyebrow,
+  title,
+  subtitle,
+  centered = true,
+  gold = false,
+  className,
+}: SectionHeaderProps) {
+  return (
+    <div className={cn("mb-16", centered && "text-center", className)}>
+      {eyebrow && (
+        <p className="inline-flex items-center gap-3 text-gold-400 font-body text-xs font-semibold tracking-[0.22em] uppercase mb-5">
+          <span className="w-8 h-px bg-gold-400/50 rounded-full" />
+          {eyebrow}
+          <span className="w-8 h-px bg-gold-400/50 rounded-full" />
+        </p>
+      )}
+
+      <h2
+        className={cn(
+          "font-display text-4xl md:text-[2.9rem] lg:text-5xl leading-[1.08]",
+          gold
+            ? "text-transparent bg-clip-text bg-gradient-to-r from-gold-400 via-gold-300 to-gold-500"
+            : "text-white/95"
+        )}
+      >
+        {title}
+      </h2>
+
+      {subtitle && (
+        <p className="mt-5 font-body text-white/50 text-lg leading-relaxed max-w-2xl mx-auto">
+          {subtitle}
+        </p>
+      )}
+    </div>
+  );
+}
