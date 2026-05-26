@@ -8,17 +8,32 @@ import {
 } from "lucide-react";
 
 export default async function AdminDashboardPage() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  console.log("[AdminDashboard] page loaded — start");
 
-  const { data: profile } = await supabase
+  const supabase = await createClient();
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+
+  console.log("[AdminDashboard] getUser — user:", user ? user.id : "null", "| error:", userError?.message ?? "none");
+
+  if (!user) {
+    console.log("[AdminDashboard] REDIRECT → /login (no user)");
+    redirect("/login");
+  }
+
+  const { data: profile, error: profileError } = await supabase
     .from("profiles")
     .select("role")
-    .eq("id", user.id)
+    .eq("id", user!.id)
     .single();
 
-  if (profile?.role !== "admin") redirect("/dashboard");
+  console.log("[AdminDashboard] profile:", profile, "| profileError:", profileError?.message ?? "none");
+
+  if (profile?.role !== "admin") {
+    console.log("[AdminDashboard] REDIRECT → /dashboard (role is:", profile?.role ?? "null", ")");
+    redirect("/dashboard");
+  }
+
+  console.log("[AdminDashboard] role confirmed admin — loading data");
 
   // ── Registered user counts ───────────────────────────────────────────────
   const [{ count: totalStudents }, { count: totalProfiles }] = await Promise.all([

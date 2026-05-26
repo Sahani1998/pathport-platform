@@ -37,20 +37,23 @@ export async function updateSession(request: NextRequest) {
   const isAdminDash = path.startsWith("/dashboard/admin");
   const isAuthPage  = path === "/login" || path === "/signup" || path === "/forgot-password";
 
+  console.log("[Middleware] path:", path, "| user:", user ? user.id : "null");
+
   // Unauthenticated user trying to access dashboard
   if (isDashboard && !user) {
-    // Admin paths redirect to admin login — prevents the infinite loop:
-    // /dashboard/admin → /login → /dashboard → /dashboard/admin → ...
     if (isAdminDash) {
+      console.log("[Middleware] REDIRECT → /admin/login (no session, admin path)");
       return NextResponse.redirect(new URL("/admin/login", request.url));
     }
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("redirectTo", path);
+    console.log("[Middleware] REDIRECT → /login (no session)");
     return NextResponse.redirect(loginUrl);
   }
 
   // Authenticated user hitting public auth pages → go to their dashboard
   if (isAuthPage && user) {
+    console.log("[Middleware] REDIRECT → /dashboard (auth user on auth page)");
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
