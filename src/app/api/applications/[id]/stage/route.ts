@@ -8,17 +8,18 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  console.log("[Timeline] PATCH /api/applications/", id, "stage");
+  console.log("[Timeline API] request received — PATCH /api/applications/" + id + "/stage");
 
   try {
-    let stage:          ApplicationStage;
+    // ── Parse body ────────────────────────────────────────────────────────────
+    let stage:           ApplicationStage;
     let student_message: string | null;
     let internal_notes:  string | null;
     let next_action:     string | null;
 
     try {
       const body = await request.json() as {
-        stage?:          string;
+        stage?:           string;
         student_message?: string | null;
         internal_notes?:  string | null;
         next_action?:     string | null;
@@ -31,13 +32,20 @@ export async function PATCH(
       return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
     }
 
-    if (!stage) return NextResponse.json({ error: "stage is required" }, { status: 400 });
+    if (!stage) {
+      return NextResponse.json({ error: "stage is required" }, { status: 400 });
+    }
 
+    // ── Auth ──────────────────────────────────────────────────────────────────
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    console.log("[Timeline API] user loaded — id:", user?.id ?? "null", "| authError:", authError?.message ?? "none");
 
-    // Only admin or institution can update stages
+    if (authError || !user) {
+      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    }
+
+    // ── Role check ────────────────────────────────────────────────────────────
     const { data: profile } = await supabase
       .from("profiles").select("role, college_id").eq("id", user.id).single();
 
@@ -45,16 +53,21 @@ export async function PATCH(
       return NextResponse.json({ error: "Insufficient permissions" }, { status: 403 });
     }
 
-    // Fetch the application to verify access + get student_id
+    console.log("[Timeline API] permission checked — role:", profile.role, "| college_id:", profile.college_id ?? "none");
+
+    // ── Fetch application ─────────────────────────────────────────────────────
     const { data: app, error: appError } = await supabase
       .from("applications")
       .select("id, student_id, course_id")
       .eq("id", id)
       .single();
 
-    if (appError || !app) return NextResponse.json({ error: "Application not found" }, { status: 404 });
+    if (appError || !app) {
+      console.error("[Timeline API] application not found:", appError?.message);
+      return NextResponse.json({ error: "Application not found" }, { status: 404 });
+    }
 
-    // Institution: verify the application belongs to their college
+    // ── Institution ownership check ───────────────────────────────────────────
     if (profile.role === "institution" && profile.college_id) {
       const { data: course } = await supabase
         .from("courses").select("college_id").eq("id", app.course_id).single();
@@ -63,9 +76,9 @@ export async function PATCH(
       }
     }
 
-    console.log("[Timeline] updating application", id, "to stage:", stage);
+    // ── Update application ────────────────────────────────────────────────────
+    console.log("[Timeline API] updating stage:", id, "→", stage);
 
-    // ── 1. Update applications table ────────────────────────────────────────
     const { error: updateError } = await supabase
       .from("applications")
       .update({
@@ -78,11 +91,13 @@ export async function PATCH(
       .eq("id", id);
 
     if (updateError) {
-      console.error("[Timeline] update error:", updateError.message);
+      console.error("[Timeline API] update error:", updateError.message);
       return NextResponse.json({ error: updateError.message }, { status: 500 });
     }
 
-    // ── 2. Insert timeline event ─────────────────────────────────────────────
+    console.log("[Timeline API] application updated successfully");
+
+    // ── Timeline event ────────────────────────────────────────────────────────
     const stageMeta = getStageMeta(stage);
     const { error: eventError } = await supabase
       .from("application_timeline_events")
@@ -97,11 +112,11 @@ export async function PATCH(
       });
 
     if (eventError) {
-      // Non-fatal: log but don't fail the request
-      console.error("[Timeline] timeline event insert error:", eventError.message);
+      // Non-fatal — log and continue
+      console.error("[Timeline API] timeline event error (non-fatal):", eventError.message);
     }
 
-    // ── 3. Create student notification ───────────────────────────────────────
+    // ── Student notification ──────────────────────────────────────────────────
     const notifTemplate = STAGE_NOTIFICATION[stage];
     if (notifTemplate) {
       const { error: notifError } = await supabase
@@ -115,18 +130,18 @@ export async function PATCH(
         });
 
       if (notifError) {
-        console.error("[Notifications] insert error:", notifError.message);
+        console.error("[Timeline API] notification error (non-fatal):", notifError.message);
       } else {
-        console.log("[Notifications] notification sent to student:", app.student_id);
+        console.log("[Timeline API] notification created for student:", app.student_id);
       }
     }
 
-    console.log("[Timeline] stage update complete:", id, "→", stage);
+    console.log("[Timeline API] stage update complete:", id, "→", stage);
     return NextResponse.json({ success: true }, { status: 200 });
 
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.error("[Timeline] unexpected error:", msg);
+    console.error("[Timeline API] unexpected error:", msg);
     return NextResponse.json({ error: msg }, { status: 500 });
   }
 }

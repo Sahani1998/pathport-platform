@@ -33,8 +33,15 @@ export default function StageUpdateSelect({
     setError(null);
     setSaved(false);
 
+    // Hard 12-second timeout — prevents infinite spinner
+    const controller = new AbortController();
+    const timeoutId  = setTimeout(() => controller.abort(), 12_000);
+
+    console.log("[Timeline] update clicked — applicationId:", applicationId, "→", stage);
+
     try {
-      console.log("[Timeline] updating stage:", applicationId, "→", stage);
+      console.log("[Timeline] calling API /api/applications/" + applicationId + "/stage");
+
       const res = await fetch(`/api/applications/${applicationId}/stage`, {
         method:  "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -44,10 +51,16 @@ export default function StageUpdateSelect({
           internal_notes:  internalNotes.trim()  || null,
           next_action:     nextAction.trim()      || null,
         }),
+        signal: controller.signal,
       });
 
+      clearTimeout(timeoutId);
+      console.log("[Timeline] API response — status:", res.status);
+
       const json = await res.json() as { error?: string };
+
       if (!res.ok) {
+        console.error("[Timeline] API error:", json.error);
         setError(json.error ?? `Server error (${res.status})`);
         return;
       }
@@ -55,10 +68,18 @@ export default function StageUpdateSelect({
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
       onUpdated?.(stage);
+
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Network error");
+      clearTimeout(timeoutId);
+      const isTimeout = err instanceof Error && err.name === "AbortError";
+      const msg       = isTimeout
+        ? "Request timed out. Please try again."
+        : err instanceof Error ? err.message : "Network error";
+      console.error("[Timeline] caught error:", msg);
+      setError(msg);
     } finally {
       setLoading(false);
+      console.log("[Timeline] finally — loading cleared");
     }
   };
 
