@@ -14,15 +14,15 @@ interface ApplyButtonProps {
   className?:  string;
 }
 
-// Wraps a promise with a hard timeout — rejects if it takes longer than ms.
-function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
-  return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error(`Request timed out after ${ms / 1000}s`)), ms);
-    promise.then(
-      (val) => { clearTimeout(timer); resolve(val); },
-      (err) => { clearTimeout(timer); reject(err); }
-    );
-  });
+// Wraps a promise with a hard timeout using Promise.race so TypeScript
+// correctly infers the return type T from the original promise.
+function withTimeout<T>(promise: Promise<T>, ms = 12_000): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error("Request timed out. Please refresh and try again.")), ms)
+    ),
+  ]);
 }
 
 export default function ApplyButton({
