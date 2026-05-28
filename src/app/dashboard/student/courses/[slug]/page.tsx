@@ -1,15 +1,40 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import ApplyButton from "@/components/courses/ApplyButton";
 import type { CourseWithCollege } from "@/types/courses";
 import {
   ArrowLeft, Building2, Clock, Calendar, Users,
   DollarSign, BookOpen, Globe, CheckCircle2, Info,
+  Play, Download, Briefcase, TrendingUp, Award,
 } from "lucide-react";
 
 function fmtSGD(n: number) {
   return `S$${n.toLocaleString("en-SG")}`;
+}
+
+// Convert a YouTube / Vimeo URL to its embed URL
+function toEmbedUrl(url: string): string | null {
+  try {
+    const u = new URL(url);
+    // YouTube
+    if (u.hostname.includes("youtube.com")) {
+      const v = u.searchParams.get("v");
+      return v ? `https://www.youtube.com/embed/${v}` : null;
+    }
+    if (u.hostname === "youtu.be") {
+      return `https://www.youtube.com/embed${u.pathname}`;
+    }
+    // Vimeo
+    if (u.hostname.includes("vimeo.com")) {
+      const id = u.pathname.replace("/", "");
+      return `https://player.vimeo.com/video/${id}`;
+    }
+    return null;
+  } catch {
+    return null;
+  }
 }
 
 export default async function CourseDetailPage({
@@ -35,9 +60,9 @@ export default async function CourseDetailPage({
     notFound();
   }
 
-  const course = data as CourseWithCollege;
+  const course    = data as CourseWithCollege;
+  const college   = course.colleges as unknown as Record<string, string>;
 
-  // Check if student has already applied
   const { data: existingApp } = await supabase
     .from("applications")
     .select("id, status")
@@ -45,9 +70,23 @@ export default async function CourseDetailPage({
     .eq("course_id", course.id)
     .maybeSingle();
 
-  const hasApplied  = !!existingApp;
-  const seatsLeft   = course.seats_total - course.seats_filled;
-  const fillPct     = Math.round((course.seats_filled / course.seats_total) * 100);
+  const hasApplied = !!existingApp;
+  const seatsLeft  = course.seats_total - course.seats_filled;
+  const fillPct    = Math.round((course.seats_filled / course.seats_total) * 100);
+
+  // Optional section visibility flags
+  const hasThumbnail     = !!course.thumbnail_url;
+  const hasVideo         = !!course.video_url;
+  const hasBrochure      = !!course.brochure_url;
+  const hasGallery       = Array.isArray(course.gallery_images) && course.gallery_images.length > 0;
+  const hasCareerOutcomes= Array.isArray(course.career_outcomes) && course.career_outcomes.length > 0;
+  const hasIndustries    = Array.isArray(course.industries)      && course.industries.length > 0;
+  const hasInternship    = course.internship_available === true;
+  const hasPathway       = !!course.pathway_description;
+  const hasJobOutlook    = !!course.job_outlook_description;
+  const hasCareerSection = hasCareerOutcomes || hasIndustries || hasInternship || hasPathway || hasJobOutlook;
+
+  const embedUrl = hasVideo ? toEmbedUrl(course.video_url ?? "") : null;
 
   return (
     <div className="max-w-5xl space-y-6">
@@ -59,8 +98,22 @@ export default async function CourseDetailPage({
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-        {/* Main content */}
+        {/* ── Main column ─────────────────────────────────────────────────── */}
         <div className="lg:col-span-2 space-y-5">
+
+          {/* Thumbnail — only if exists */}
+          {hasThumbnail && (
+            <div className="relative w-full h-48 rounded-2xl overflow-hidden border border-white/[0.08]">
+              <Image
+                src={course.thumbnail_url!}
+                alt={course.title}
+                fill
+                className="object-cover"
+                unoptimized
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-navy-950/80 via-transparent to-transparent" />
+            </div>
+          )}
 
           {/* Header card */}
           <div className="bg-white/[0.04] border border-white/[0.08] rounded-2xl p-6">
@@ -86,6 +139,11 @@ export default async function CourseDetailPage({
               <span className="px-3 py-1 rounded-full bg-white/[0.06] border border-white/[0.10] text-white/55 font-body text-xs">
                 {course.study_mode.replace("_", "-")}
               </span>
+              {hasInternship && (
+                <span className="px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-400/25 text-emerald-400 font-body text-xs font-semibold">
+                  Internship Included
+                </span>
+              )}
               <span className={`px-3 py-1 rounded-full border font-body text-xs font-semibold ${
                 course.status === "open"
                   ? "bg-emerald-500/10 border-emerald-400/25 text-emerald-400"
@@ -98,9 +156,21 @@ export default async function CourseDetailPage({
             {course.description && (
               <p className="text-white/60 font-body text-sm leading-relaxed">{course.description}</p>
             )}
+
+            {/* Brochure download — only if exists */}
+            {hasBrochure && (
+              <a
+                href={course.brochure_url!}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 mt-4 px-4 py-2 rounded-xl bg-pathBlue-500/10 border border-pathBlue-500/25 text-pathBlue-400 font-body text-xs font-semibold hover:bg-pathBlue-500/20 transition-all"
+              >
+                <Download className="w-3.5 h-3.5" /> Download Brochure (PDF)
+              </a>
+            )}
           </div>
 
-          {/* Quick facts */}
+          {/* Programme details */}
           <div className="bg-white/[0.04] border border-white/[0.08] rounded-2xl p-6">
             <h2 className="font-display text-xl text-white mb-4">Programme Details</h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
@@ -112,11 +182,11 @@ export default async function CourseDetailPage({
                   label: "Intake",
                   value: course.intake_date
                     ? new Date(course.intake_date).toLocaleDateString("en-SG", { day: "numeric", month: "long", year: "numeric" })
-                    : "TBC"
+                    : "TBC",
                 },
-                { icon: DollarSign, label: "Tuition",     value: fmtSGD(course.tuition_fee)     },
-                { icon: DollarSign, label: "App. Fee",     value: fmtSGD(course.application_fee) },
-                { icon: Users,      label: "Seats Left",  value: `${Math.max(0, seatsLeft)} / ${course.seats_total}` },
+                { icon: DollarSign, label: "Tuition",    value: fmtSGD(course.tuition_fee)     },
+                { icon: DollarSign, label: "App. Fee",   value: fmtSGD(course.application_fee) },
+                { icon: Users,      label: "Seats Left", value: `${Math.max(0, seatsLeft)} / ${course.seats_total}` },
               ].map(({ icon: Icon, label, value }) => (
                 <div key={label} className="flex items-start gap-3">
                   <div className="w-8 h-8 rounded-lg bg-white/[0.05] border border-white/[0.09] flex items-center justify-center flex-shrink-0 mt-0.5">
@@ -130,7 +200,6 @@ export default async function CourseDetailPage({
               ))}
             </div>
 
-            {/* Seat fill bar */}
             <div className="mt-4">
               <div className="flex items-center justify-between mb-1">
                 <p className="text-white/35 font-body text-xs">Seats filled</p>
@@ -145,21 +214,143 @@ export default async function CourseDetailPage({
             </div>
           </div>
 
+          {/* Video — only if exists */}
+          {hasVideo && (
+            <div className="bg-white/[0.04] border border-white/[0.08] rounded-2xl p-6">
+              <h2 className="font-display text-xl text-white mb-4 flex items-center gap-2">
+                <Play className="w-5 h-5 text-pathBlue-400" /> Programme Introduction
+              </h2>
+              {embedUrl ? (
+                <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-navy-950">
+                  <iframe
+                    src={embedUrl}
+                    title="Course introduction video"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                    className="absolute inset-0 w-full h-full"
+                  />
+                </div>
+              ) : (
+                <a
+                  href={course.video_url!}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-3 p-4 rounded-xl bg-pathBlue-500/10 border border-pathBlue-500/20 text-pathBlue-400 hover:bg-pathBlue-500/20 transition-all"
+                >
+                  <Play className="w-5 h-5 flex-shrink-0" />
+                  <span className="font-body text-sm font-semibold">Watch Introduction Video →</span>
+                </a>
+              )}
+            </div>
+          )}
+
+          {/* Gallery — only if exists */}
+          {hasGallery && (
+            <div className="bg-white/[0.04] border border-white/[0.08] rounded-2xl p-6">
+              <h2 className="font-display text-xl text-white mb-4">Campus Gallery</h2>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {(course.gallery_images ?? []).map((src, i) => (
+                  <a key={i} href={src} target="_blank" rel="noopener noreferrer">
+                    <div className="relative aspect-video rounded-xl overflow-hidden bg-navy-950 border border-white/[0.06] hover:border-gold-400/30 transition-colors">
+                      <Image src={src} alt={`Gallery ${i + 1}`} fill className="object-cover" unoptimized />
+                    </div>
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Career outcomes — only if any data exists */}
+          {hasCareerSection && (
+            <div className="bg-white/[0.04] border border-white/[0.08] rounded-2xl p-6 space-y-5">
+              <h2 className="font-display text-xl text-white flex items-center gap-2">
+                <Briefcase className="w-5 h-5 text-gold-400/70" /> Career Outcomes
+              </h2>
+
+              {/* Career roles */}
+              {hasCareerOutcomes && (
+                <div>
+                  <p className="text-white/40 font-body text-xs uppercase tracking-widest mb-3">Roles You Can Pursue</p>
+                  <div className="flex flex-wrap gap-2">
+                    {(course.career_outcomes ?? []).map((role, i) => (
+                      <span key={i} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-pathBlue-500/10 border border-pathBlue-500/20 text-pathBlue-300 font-body text-xs">
+                        <Award className="w-3 h-3 flex-shrink-0" /> {role}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Industries */}
+              {hasIndustries && (
+                <div>
+                  <p className="text-white/40 font-body text-xs uppercase tracking-widest mb-3">Industries</p>
+                  <div className="flex flex-wrap gap-2">
+                    {(course.industries ?? []).map((ind, i) => (
+                      <span key={i} className="px-3 py-1 rounded-full bg-white/[0.05] border border-white/[0.09] text-white/55 font-body text-xs">
+                        {ind}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Internship info */}
+              {hasInternship && (
+                <div className="p-4 rounded-xl bg-emerald-500/[0.06] border border-emerald-400/20">
+                  <div className="flex items-center gap-2 mb-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                    <p className="text-emerald-400 font-body text-sm font-semibold">Internship Included</p>
+                  </div>
+                  <div className="flex flex-wrap gap-4">
+                    {course.internship_duration_months && (
+                      <p className="text-white/55 font-body text-xs">
+                        Duration: <span className="text-white/80 font-semibold">{course.internship_duration_months} months</span>
+                      </p>
+                    )}
+                    {course.estimated_internship_allowance && (
+                      <p className="text-white/55 font-body text-xs">
+                        Est. allowance: <span className="text-emerald-400 font-semibold">{fmtSGD(course.estimated_internship_allowance)}/mo</span>
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Pathway */}
+              {hasPathway && (
+                <div>
+                  <p className="text-white/40 font-body text-xs uppercase tracking-widest mb-2">Study Pathway</p>
+                  <p className="text-white/60 font-body text-sm leading-relaxed">{course.pathway_description}</p>
+                </div>
+              )}
+
+              {/* Job outlook */}
+              {hasJobOutlook && (
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <TrendingUp className="w-4 h-4 text-gold-400/70" />
+                    <p className="text-white/40 font-body text-xs uppercase tracking-widest">Job Outlook</p>
+                  </div>
+                  <p className="text-white/60 font-body text-sm leading-relaxed">{course.job_outlook_description}</p>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* About college */}
           <div className="bg-white/[0.04] border border-white/[0.08] rounded-2xl p-6">
             <h2 className="font-display text-xl text-white mb-3">About {course.colleges?.name}</h2>
             <p className="text-white/55 font-body text-sm leading-relaxed mb-4">
-              {(course.colleges as unknown as Record<string, string>)?.description ??
-               "One of Singapore's leading EduTrust-certified private education institutions."}
+              {college?.description ?? "One of Singapore's leading EduTrust-certified private education institutions."}
             </p>
             <div className="flex flex-wrap gap-3">
               {[
-                { icon: Globe,     text: `${(course.colleges as unknown as Record<string,string>)?.city ?? "Singapore"}, Singapore` },
-                { icon: CheckCircle2, text: "EduTrust Certified"  },
+                { icon: Globe,        text: `${college?.city ?? "Singapore"}, Singapore` },
+                { icon: CheckCircle2, text: "EduTrust Certified" },
               ].map(({ icon: Icon, text }) => (
                 <div key={text} className="flex items-center gap-1.5 text-white/45 font-body text-xs">
-                  <Icon className="w-3.5 h-3.5 text-gold-400/60" />
-                  {text}
+                  <Icon className="w-3.5 h-3.5 text-gold-400/60" /> {text}
                 </div>
               ))}
             </div>
@@ -171,7 +362,7 @@ export default async function CourseDetailPage({
           </div>
         </div>
 
-        {/* Sidebar */}
+        {/* ── Sidebar ──────────────────────────────────────────────────────── */}
         <div className="space-y-4">
 
           {/* Apply card */}
@@ -199,6 +390,15 @@ export default async function CourseDetailPage({
                     : "TBC"}
                 </span>
               </div>
+              {hasInternship && course.estimated_internship_allowance && (
+                <>
+                  <div className="h-px bg-white/[0.08] my-2" />
+                  <div className="flex justify-between">
+                    <span className="text-white/45 font-body text-sm">Internship Allowance</span>
+                    <span className="text-emerald-400 font-body text-sm font-semibold">{fmtSGD(course.estimated_internship_allowance)}/mo</span>
+                  </div>
+                </>
+              )}
             </div>
 
             <ApplyButton
@@ -217,7 +417,23 @@ export default async function CourseDetailPage({
             </div>
           </div>
 
-          {/* Contact */}
+          {/* Brochure — sidebar shortcut if exists */}
+          {hasBrochure && (
+            <a
+              href={course.brochure_url!}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-between p-4 rounded-2xl bg-white/[0.04] border border-white/[0.08] hover:border-pathBlue-500/30 hover:bg-pathBlue-500/[0.04] group transition-all"
+            >
+              <div className="flex items-center gap-3">
+                <Download className="w-4 h-4 text-pathBlue-400" />
+                <span className="font-body text-sm text-white/65 group-hover:text-white/85">Download Brochure</span>
+              </div>
+              <ArrowLeft className="w-4 h-4 text-white/25 rotate-[135deg] group-hover:text-pathBlue-400 transition-colors" />
+            </a>
+          )}
+
+          {/* WhatsApp */}
           <div className="bg-white/[0.04] border border-white/[0.08] rounded-2xl p-5">
             <h3 className="font-display text-lg text-white mb-3">Questions?</h3>
             <p className="text-white/45 font-body text-xs mb-3">Talk to a PathPort advisor for personalised guidance on this programme.</p>
@@ -230,7 +446,6 @@ export default async function CourseDetailPage({
               💬 WhatsApp +65 8377 6492
             </a>
           </div>
-
         </div>
       </div>
     </div>

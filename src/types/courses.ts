@@ -50,6 +50,21 @@ export interface Course {
   level:           CourseLevel;
   status:          CourseStatus;
   created_at:      string;
+
+  // ── Optional: Media & Assets ───────────────────────────────────────────────
+  thumbnail_url:   string | null;
+  video_url:       string | null;
+  brochure_url:    string | null;
+  gallery_images:  string[] | null;  // array of image URLs
+
+  // ── Optional: Career Outcomes ──────────────────────────────────────────────
+  career_outcomes:                string[] | null;  // e.g. ["Business Manager", "Marketing Executive"]
+  industries:                     string[] | null;  // e.g. ["Finance", "Consulting"]
+  internship_available:           boolean  | null;
+  internship_duration_months:     number   | null;
+  estimated_internship_allowance: number   | null;
+  pathway_description:            string   | null;
+  job_outlook_description:        string   | null;
 }
 
 // Course joined with college info
