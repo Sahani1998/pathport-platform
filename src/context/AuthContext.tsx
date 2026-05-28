@@ -104,10 +104,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [supabase, fetchProfile]); // stable refs → runs once
 
   // ── Sign-out ───────────────────────────────────────────────────────────────
+  // Wraps supabase.auth.signOut() in a 3-second timeout so a hanging API call
+  // never prevents the user from logging out.  State is always cleared.
   const signOut = async () => {
-    await supabase.auth.signOut();
+    try {
+      await Promise.race([
+        supabase.auth.signOut(),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error("signOut timeout")), 3000)
+        ),
+      ]);
+    } catch (err) {
+      console.error("[AuthContext] signOut error:", err);
+    }
+    // Always clear regardless of whether the API call succeeded
     setUser(null);
     setProfile(null);
+    setLoading(false);
   };
 
   return (

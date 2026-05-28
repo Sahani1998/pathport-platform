@@ -1,46 +1,50 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import ApplicationStageBadge from "@/components/applications/ApplicationStageBadge";
 import {
-  FileText, Briefcase, GraduationCap, Clock, ArrowRight,
-  MapPin, CheckCircle2, Circle, Star, Bell, ChevronRight,
-  Plane, Building2, BookOpen, Shield, Phone,
+  FileText, GraduationCap, Clock, ArrowRight,
+  MapPin, CheckCircle2, Building2, BookOpen,
+  Shield, Bell, ChevronRight, Upload,
 } from "lucide-react";
 import GoldButton from "@/components/ui/GoldButton";
+import type { ApplicationStage } from "@/types/timeline";
+import { TIMELINE_STAGES } from "@/types/timeline";
 
-// ── Mock data ─────────────────────────────────────────────────────────────────
-
-const JOURNEY = [
-  { id: 1, label: "Profile Created",        done: true,  active: false },
-  { id: 2, label: "Advisor Consultation",   done: true,  active: false },
-  { id: 3, label: "College Shortlisted",    done: true,  active: false },
-  { id: 4, label: "Application Submitted",  done: false, active: true  },
-  { id: 5, label: "Offer Letter",           done: false, active: false },
-  { id: 6, label: "Acceptance Confirmed",   done: false, active: false },
-  { id: 7, label: "Student Pass (ICA)",     done: false, active: false },
-  { id: 8, label: "Arrive in Singapore 🇸🇬", done: false, active: false },
+// ── Journey step mapping from current_stage ────────────────────────────────
+// Each step is "done" if the stage is at or past it.
+const STAGE_ORDER: ApplicationStage[] = [
+  "application_submitted", "documents_pending", "documents_uploaded",
+  "documents_under_review", "documents_verified", "offer_letter_processing",
+  "offer_letter_ready", "fee_payment_pending", "ipa_processing",
+  "approved", "arrival_preparation", "arrived_singapore",
 ];
 
-const APPLICATIONS = [
-  { college: "Dimensions International College",  programme: "Business Management Diploma",     status: "Under Review",  statusColor: "text-gold-400  bg-gold-400/10  border-gold-400/25",  date: "12 Jan 2026" },
-  { college: "MDIS",                              programme: "Hospitality & Tourism Diploma",   status: "Shortlisted",   statusColor: "text-pathBlue-400 bg-pathBlue-500/10 border-pathBlue-500/25", date: "08 Jan 2026" },
-  { college: "PSB Academy",                       programme: "IT & Computer Science Diploma",   status: "Docs Required", statusColor: "text-orange-400 bg-orange-500/10 border-orange-400/25",  date: "03 Jan 2026" },
+function stageIndex(stage: ApplicationStage): number {
+  return STAGE_ORDER.indexOf(stage);
+}
+
+const JOURNEY_LABELS = [
+  "Profile Created",
+  "Application Submitted",
+  "Documents Uploaded",
+  "Documents Verified",
+  "Offer Letter Ready",
+  "Fee Paid",
+  "Student Pass (ICA)",
+  "Arrived Singapore 🇸🇬",
 ];
 
-const DOCS = [
-  { name: "10th Marksheet",    uploaded: true  },
-  { name: "12th Marksheet",    uploaded: true  },
-  { name: "Passport Copy",     uploaded: true  },
-  { name: "Passport Photo",    uploaded: false },
-  { name: "Bank Statement",    uploaded: false },
-  { name: "English Proficiency", uploaded: false },
-];
-
-const DEADLINES = [
-  { label: "PSB Academy — Doc Deadline",   date: "20 Apr", urgent: true  },
-  { label: "MDIS Interview Slot",          date: "25 Apr", urgent: true  },
-  { label: "Apr 2026 Intake Closes",       date: "30 Apr", urgent: false },
-  { label: "ICA Pre-Assessment",           date: "15 May", urgent: false },
+// Maps journey step to the minimum stage required to be "done"
+const JOURNEY_STAGE_MAP: ApplicationStage[] = [
+  "application_submitted",  // step 1 — profile + applied
+  "application_submitted",  // step 2 — application submitted
+  "documents_uploaded",     // step 3
+  "documents_verified",     // step 4
+  "offer_letter_ready",     // step 5
+  "fee_payment_pending",    // step 6
+  "ipa_processing",         // step 7
+  "arrived_singapore",      // step 8
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -52,19 +56,101 @@ export default async function StudentDashboardPage() {
 
   const { data: profile } = await supabase
     .from("profiles").select("*").eq("id", user.id).single();
-  // PREVIEW MODE: role guard temporarily disabled so admin can test all dashboards
+  // PREVIEW MODE: role guard disabled — admin can preview student dashboard
   // if (profile?.role !== "student") redirect("/dashboard");
 
   const firstName = profile?.full_name?.split(" ")[0] ?? "Student";
-  const docsUploaded = DOCS.filter(d => d.uploaded).length;
-  const journeyStep = JOURNEY.findIndex(s => s.active) + 1;
+
+  // ── Real data fetches ─────────────────────────────────────────────────────
+  const [{ data: appsRaw }, { data: docsRaw }, { count: unreadCount }] = await Promise.all([
+    supabase
+      .from("applications")
+      .select(`
+        id, status, current_stage, submitted_at, stage_updated_at,
+        courses ( id, title, slug, category, colleges ( name ) )
+      `)
+      .eq("student_id", user.id)
+      .order("submitted_at", { ascending: false }),
+
+    supabase
+      .from("student_documents")
+      .select("id, status, document_type")
+      .eq("student_id", user.id),
+
+    supabase
+      .from("notifications")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .is("read_at", null),
+  ]);
+
+  // ── Normalize applications ────────────────────────────────────────────────
+  type AppData = {
+    id: string;
+    status: string;
+    current_stage: ApplicationStage | null;
+    submitted_at: string;
+    courses: { id: string; title: string; slug: string; category: string; colleges: { name: string } | null } | null;
+  };
+
+  const STATUS_TO_STAGE: Record<string, ApplicationStage> = {
+    approved: "approved", rejected: "rejected", ipa_processing: "ipa_processing",
+    offer_ready: "offer_letter_ready", docs_required: "documents_pending",
+    under_review: "documents_under_review", submitted: "application_submitted",
+  };
+
+  const apps: AppData[] = (appsRaw ?? []).map(a => {
+    const raw        = Array.isArray(a.courses) ? a.courses[0] : a.courses;
+    const rawColleges = raw ? (raw as unknown as { colleges?: unknown }).colleges : null;
+    const col        = Array.isArray(rawColleges) ? (rawColleges as { name: string }[])[0] : (rawColleges as { name: string } | null | undefined) ?? null;
+    return {
+      id:            a.id,
+      status:        a.status ?? "submitted",
+      current_stage: (a.current_stage ?? STATUS_TO_STAGE[a.status ?? "submitted"] ?? "application_submitted") as ApplicationStage,
+      submitted_at:  a.submitted_at,
+      courses: raw ? {
+        id:       (raw as {id:string}).id,
+        title:    (raw as {title:string}).title,
+        slug:     (raw as {slug:string}).slug,
+        category: (raw as {category:string}).category,
+        colleges: col as {name:string}|null,
+      } : null,
+    };
+  });
+
+  // ── Stats ─────────────────────────────────────────────────────────────────
+  const totalApps     = apps.length;
+  const approvedApps  = apps.filter(a => ["approved","arrival_preparation","arrived_singapore"].includes(a.current_stage ?? "")).length;
+  const offerApps     = apps.filter(a => a.current_stage === "offer_letter_ready").length;
+
+  const docs          = docsRaw ?? [];
+  const docsUploaded  = new Set(docs.map(d => d.document_type)).size;
+  const docsVerified  = docs.filter(d => d.status === "verified").length;
+  const DOCS_REQUIRED = 6;
+
+  // ── Journey progress (based on most-advanced active application) ──────────
+  const latestActiveApp = apps.find(a => !["rejected","withdrawn"].includes(a.current_stage ?? ""));
+  const currentStage    = latestActiveApp?.current_stage ?? null;
+  const currentIdx      = currentStage ? stageIndex(currentStage) : -1;
+
+  const journey = JOURNEY_LABELS.map((label, i) => {
+    const requiredStage  = JOURNEY_STAGE_MAP[i];
+    const requiredIdx    = stageIndex(requiredStage);
+    const done           = i === 0 ? true : currentIdx >= requiredIdx;
+    const active         = !done && (i === 0 || currentIdx >= stageIndex(JOURNEY_STAGE_MAP[i - 1]));
+    return { id: i + 1, label, done, active };
+  });
+
+  // Fix: first step is always done if user exists
+  if (journey[0]) journey[0].done = true;
+
+  const journeyStep = journey.filter(s => s.done).length;
 
   return (
     <div className="space-y-7 max-w-6xl">
 
-      {/* ── Welcome banner ──────────────────────────────────────────────────── */}
+      {/* ── Welcome banner ─────────────────────────────────────────────────── */}
       <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-pathBlue-600/20 via-navy-900/60 to-gold-500/10 border border-white/[0.09] p-6 md:p-8">
-        {/* decorative orbs */}
         <div aria-hidden className="absolute -top-8 -right-8 w-48 h-48 bg-gold-400/10 rounded-full blur-2xl pointer-events-none" />
         <div aria-hidden className="absolute -bottom-6 left-16 w-32 h-32 bg-pathBlue-500/15 rounded-full blur-xl pointer-events-none" />
 
@@ -75,7 +161,9 @@ export default async function StudentDashboardPage() {
               {firstName} <span className="text-gold-400">👋</span>
             </h2>
             <p className="text-white/50 font-body text-sm">
-              Step {journeyStep} of {JOURNEY.length} · Your Singapore journey is underway
+              {totalApps === 0
+                ? "Start your Singapore journey — browse courses and apply"
+                : `Step ${journeyStep} of ${journey.length} · Your Singapore journey is underway`}
             </p>
           </div>
           <div className="flex-shrink-0">
@@ -89,45 +177,47 @@ export default async function StudentDashboardPage() {
           </div>
         </div>
 
-        {/* Journey progress */}
-        <div className="relative mt-6">
-          <div className="flex items-center gap-0">
-            {JOURNEY.map((step, i) => (
-              <div key={step.id} className="flex items-center flex-1 min-w-0">
-                <div className={`w-7 h-7 rounded-full flex-shrink-0 flex items-center justify-center font-body font-bold text-[10px] border-2 transition-all z-10 ${
-                  step.done
-                    ? "bg-emerald-500 border-emerald-400 text-white"
-                    : step.active
-                      ? "bg-gold-400 border-gold-300 text-navy-900 ring-4 ring-gold-400/25"
-                      : "bg-white/[0.05] border-white/20 text-white/30"
-                }`}>
-                  {step.done ? <CheckCircle2 className="w-3.5 h-3.5" /> : step.id}
+        {/* Journey progress — only show if has applications */}
+        {totalApps > 0 && (
+          <div className="relative mt-6">
+            <div className="flex items-center gap-0">
+              {journey.map((step, i) => (
+                <div key={step.id} className="flex items-center flex-1 min-w-0">
+                  <div className={`w-7 h-7 rounded-full flex-shrink-0 flex items-center justify-center font-body font-bold text-[10px] border-2 transition-all z-10 ${
+                    step.done
+                      ? "bg-emerald-500 border-emerald-400 text-white"
+                      : step.active
+                        ? "bg-gold-400 border-gold-300 text-navy-900 ring-4 ring-gold-400/25"
+                        : "bg-white/[0.05] border-white/20 text-white/30"
+                  }`}>
+                    {step.done ? <CheckCircle2 className="w-3.5 h-3.5" /> : step.id}
+                  </div>
+                  {i < journey.length - 1 && (
+                    <div className={`h-0.5 flex-1 mx-0.5 ${step.done ? "bg-emerald-500/60" : "bg-white/[0.08]"}`} />
+                  )}
                 </div>
-                {i < JOURNEY.length - 1 && (
-                  <div className={`h-0.5 flex-1 mx-0.5 ${step.done ? "bg-emerald-500/60" : "bg-white/[0.08]"}`} />
-                )}
-              </div>
-            ))}
+              ))}
+            </div>
+            <div className="flex mt-2 gap-0">
+              {journey.map((step) => (
+                <div key={step.id} className="flex-1 min-w-0 px-0.5">
+                  <p className={`font-body text-[9px] leading-tight truncate ${
+                    step.active ? "text-gold-400 font-semibold" : step.done ? "text-emerald-400/70" : "text-white/25"
+                  }`}>{step.label}</p>
+                </div>
+              ))}
+            </div>
           </div>
-          <div className="flex mt-2 gap-0">
-            {JOURNEY.map((step) => (
-              <div key={step.id} className="flex-1 min-w-0 px-0.5">
-                <p className={`font-body text-[9px] leading-tight truncate ${
-                  step.active ? "text-gold-400 font-semibold" : step.done ? "text-emerald-400/70" : "text-white/25"
-                }`}>{step.label}</p>
-              </div>
-            ))}
-          </div>
-        </div>
+        )}
       </div>
 
-      {/* ── Stats row ───────────────────────────────────────────────────────── */}
+      {/* ── Stats row ──────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: "Applications",    value: "3",    icon: FileText,      trend: "active",  gold: true  },
-          { label: "Offer Letters",   value: "0",    icon: GraduationCap, trend: "pending", gold: false },
-          { label: "Docs Uploaded",   value: `${docsUploaded}/${DOCS.length}`, icon: Shield, trend: "",  gold: false },
-          { label: "Days to Intake",  value: "44",   icon: Clock,         trend: "Apr 2026",gold: false },
+          { label: "Applications",  value: String(totalApps),                    icon: FileText,      trend: totalApps > 0 ? "active" : "",      gold: true  },
+          { label: "Approved",      value: String(approvedApps),                 icon: GraduationCap, trend: offerApps > 0 ? `${offerApps} offer` : "pending", gold: false },
+          { label: "Docs Uploaded", value: `${docsUploaded}/${DOCS_REQUIRED}`,   icon: Shield,        trend: docsVerified > 0 ? `${docsVerified} verified` : "", gold: false },
+          { label: "Notifications", value: String(unreadCount ?? 0),             icon: Bell,          trend: "unread",                           gold: false },
         ].map(({ label, value, icon: Icon, trend, gold }) => (
           <div key={label} className={`relative rounded-2xl border p-5 hover:-translate-y-0.5 transition-all duration-200 ${
             gold ? "bg-gold-400/[0.07] border-gold-400/30" : "bg-white/[0.04] border-white/[0.08]"
@@ -144,10 +234,10 @@ export default async function StudentDashboardPage() {
         ))}
       </div>
 
-      {/* ── Main grid ───────────────────────────────────────────────────────── */}
+      {/* ── Main grid ──────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-        {/* Applications table — 2/3 width */}
+        {/* Applications list — 2/3 width */}
         <div className="lg:col-span-2 bg-white/[0.04] border border-white/[0.08] rounded-2xl overflow-hidden">
           <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.07]">
             <h3 className="font-display text-xl text-white">My Applications</h3>
@@ -155,30 +245,43 @@ export default async function StudentDashboardPage() {
               View all <ChevronRight className="w-3.5 h-3.5" />
             </Link>
           </div>
-          <div className="divide-y divide-white/[0.05]">
-            {APPLICATIONS.map((app) => (
-              <div key={app.college} className="px-6 py-4 flex items-start justify-between gap-4 hover:bg-white/[0.02] transition-colors">
-                <div className="flex items-start gap-3 min-w-0">
-                  <div className="w-9 h-9 rounded-xl bg-pathBlue-500/15 border border-pathBlue-500/25 flex items-center justify-center flex-shrink-0">
-                    <Building2 className="w-4 h-4 text-pathBlue-400" />
+
+          {apps.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 px-6">
+              <BookOpen className="w-10 h-10 text-white/20 mb-3" />
+              <p className="font-display text-xl text-white/40 mb-1">No applications yet</p>
+              <p className="text-white/30 font-body text-sm mb-5">Browse Singapore diploma courses and apply online</p>
+              <Link href="/dashboard/student/courses">
+                <GoldButton variant="solid-gold" size="sm">Browse Courses</GoldButton>
+              </Link>
+            </div>
+          ) : (
+            <div className="divide-y divide-white/[0.05]">
+              {apps.slice(0, 4).map((app) => (
+                <div key={app.id} className="px-6 py-4 flex items-start justify-between gap-4 hover:bg-white/[0.02] transition-colors">
+                  <div className="flex items-start gap-3 min-w-0">
+                    <div className="w-9 h-9 rounded-xl bg-pathBlue-500/15 border border-pathBlue-500/25 flex items-center justify-center flex-shrink-0">
+                      <Building2 className="w-4 h-4 text-pathBlue-400" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-body font-semibold text-sm text-white/85 truncate">{app.courses?.colleges?.name ?? "—"}</p>
+                      <p className="font-body text-xs text-white/40 truncate mt-0.5">{app.courses?.title ?? "—"}</p>
+                    </div>
                   </div>
-                  <div className="min-w-0">
-                    <p className="font-body font-semibold text-sm text-white/85 truncate">{app.college}</p>
-                    <p className="font-body text-xs text-white/40 truncate mt-0.5">{app.programme}</p>
+                  <div className="flex-shrink-0 text-right">
+                    <ApplicationStageBadge stage={app.current_stage ?? "application_submitted"} size="sm" showEmoji={false} />
+                    <p className="text-white/30 font-body text-[10px] mt-1">
+                      {new Date(app.submitted_at).toLocaleDateString("en-SG", { day: "numeric", month: "short" })}
+                    </p>
                   </div>
                 </div>
-                <div className="flex-shrink-0 text-right">
-                  <span className={`inline-flex items-center px-2.5 py-1 rounded-full border font-body text-[11px] font-semibold ${app.statusColor}`}>
-                    {app.status}
-                  </span>
-                  <p className="text-white/30 font-body text-[10px] mt-1">{app.date}</p>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
+
           <div className="px-6 py-3 border-t border-white/[0.05]">
             <Link href="/dashboard/student/courses" className="text-pathBlue-400 hover:text-pathBlue-300 font-body text-xs font-semibold flex items-center gap-1 transition-colors">
-              <BookOpen className="w-3.5 h-3.5" /> Browse more colleges
+              <BookOpen className="w-3.5 h-3.5" /> Browse more courses <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
         </div>
@@ -186,75 +289,78 @@ export default async function StudentDashboardPage() {
         {/* Right column */}
         <div className="space-y-4">
 
-          {/* Deadlines */}
+          {/* Document progress */}
           <div className="bg-white/[0.04] border border-white/[0.08] rounded-2xl p-5">
-            <div className="flex items-center gap-2 mb-4">
-              <Bell className="w-4 h-4 text-gold-400" />
-              <h3 className="font-display text-lg text-white">Upcoming Deadlines</h3>
-            </div>
-            <div className="space-y-2.5">
-              {DEADLINES.map((d) => (
-                <div key={d.label} className={`flex items-center justify-between gap-3 p-3 rounded-xl border ${
-                  d.urgent ? "bg-red-500/[0.06] border-red-500/20" : "bg-white/[0.03] border-white/[0.06]"
-                }`}>
-                  <p className={`font-body text-xs leading-snug ${d.urgent ? "text-red-300/80" : "text-white/55"}`}>
-                    {d.label}
-                  </p>
-                  <span className={`flex-shrink-0 font-body text-xs font-bold px-2 py-0.5 rounded-lg ${
-                    d.urgent ? "text-red-400 bg-red-500/15" : "text-white/40 bg-white/[0.05]"
-                  }`}>
-                    {d.date}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Documents */}
-          <div className="bg-white/[0.04] border border-white/[0.08] rounded-2xl p-5">
-            <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center justify-between mb-4">
               <h3 className="font-display text-lg text-white">Documents</h3>
-              <span className="font-body text-xs text-white/40">{docsUploaded}/{DOCS.length}</span>
+              <Link href="/dashboard/student/documents" className="text-gold-400 hover:text-gold-300 font-body text-xs font-semibold transition-colors">
+                Upload →
+              </Link>
             </div>
-            <div className="w-full h-1.5 bg-white/[0.07] rounded-full mb-3">
-              <div className="h-full bg-gradient-to-r from-gold-500 to-gold-400 rounded-full transition-all" style={{ width: `${(docsUploaded / DOCS.length) * 100}%` }} />
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <p className="text-white/50 font-body text-sm">Uploaded</p>
+                <p className="text-white/80 font-body text-sm font-semibold">{docsUploaded} / {DOCS_REQUIRED}</p>
+              </div>
+              <div className="h-2 bg-white/[0.07] rounded-full">
+                <div
+                  className={`h-full rounded-full transition-all ${
+                    docsUploaded >= DOCS_REQUIRED ? "bg-emerald-500" :
+                    docsUploaded > 0 ? "bg-gold-500" : "bg-white/20"
+                  }`}
+                  style={{ width: `${Math.round((docsUploaded / DOCS_REQUIRED) * 100)}%` }}
+                />
+              </div>
+              {docsVerified > 0 && (
+                <p className="text-emerald-400 font-body text-xs flex items-center gap-1">
+                  <CheckCircle2 className="w-3 h-3" /> {docsVerified} verified
+                </p>
+              )}
+              {docsUploaded < DOCS_REQUIRED && (
+                <Link href="/dashboard/student/documents">
+                  <div className="flex items-center gap-1.5 mt-2 text-gold-400 hover:text-gold-300 font-body text-xs font-semibold transition-colors">
+                    <Upload className="w-3.5 h-3.5" />
+                    Upload {DOCS_REQUIRED - docsUploaded} more document{DOCS_REQUIRED - docsUploaded !== 1 ? "s" : ""}
+                  </div>
+                </Link>
+              )}
             </div>
+          </div>
+
+          {/* Quick actions */}
+          <div className="bg-white/[0.04] border border-white/[0.08] rounded-2xl p-5">
+            <h3 className="font-display text-lg text-white mb-3">Quick Links</h3>
             <div className="space-y-1.5">
-              {DOCS.map((doc) => (
-                <div key={doc.name} className="flex items-center gap-2">
-                  {doc.uploaded
-                    ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
-                    : <Circle className="w-3.5 h-3.5 text-white/20 flex-shrink-0" />
-                  }
-                  <p className={`font-body text-xs ${doc.uploaded ? "text-white/55 line-through" : "text-white/65"}`}>{doc.name}</p>
-                </div>
+              {[
+                { icon: BookOpen,  label: "Browse Courses",       href: "/dashboard/student/courses"       },
+                { icon: FileText,  label: "My Applications",      href: "/dashboard/student/applications"  },
+                { icon: Upload,    label: "Upload Documents",      href: "/dashboard/student/documents"     },
+                { icon: Bell,      label: "Notifications",         href: "/dashboard/student/notifications" },
+              ].map(({ icon: Icon, label, href }) => (
+                <Link key={href} href={href} className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-white/[0.05] transition-colors group">
+                  <Icon className="w-4 h-4 text-gold-400/70 flex-shrink-0" />
+                  <span className="font-body text-sm text-white/60 group-hover:text-white/85 transition-colors">{label}</span>
+                  <ChevronRight className="w-3.5 h-3.5 text-white/20 group-hover:text-white/40 ml-auto transition-colors" />
+                </Link>
               ))}
             </div>
-            <Link href="/dashboard/student/documents" className="mt-3 w-full inline-flex items-center justify-center gap-1.5 py-2 rounded-xl bg-gold-400/[0.08] border border-gold-400/25 text-gold-400 font-body text-xs font-semibold hover:bg-gold-400/[0.14] transition-all">
-              Upload Documents <ArrowRight className="w-3 h-3" />
-            </Link>
+          </div>
+
+          {/* Contact advisor */}
+          <div className="bg-gradient-to-br from-pathBlue-600/15 to-transparent border border-pathBlue-500/20 rounded-2xl p-5">
+            <p className="font-display text-lg text-white mb-1">Need help?</p>
+            <p className="text-white/40 font-body text-xs mb-3">Your PathPort advisor is available on WhatsApp</p>
+            <a
+              href="https://wa.me/6583776492"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-emerald-500/10 border border-emerald-400/25 text-emerald-400 font-body text-sm font-semibold hover:bg-emerald-500/20 transition-all"
+            >
+              💬 WhatsApp +65 8377 6492
+            </a>
           </div>
         </div>
       </div>
-
-      {/* ── Advisor CTA ──────────────────────────────────────────────────────── */}
-      <div className="relative overflow-hidden p-6 rounded-2xl bg-gradient-to-r from-gold-500/[0.10] to-pathBlue-600/[0.08] border border-gold-400/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5">
-        <div aria-hidden className="absolute inset-0 bg-[radial-gradient(ellipse_at_right,_rgba(240,165,0,0.06),_transparent_60%)] pointer-events-none" />
-        <div className="relative">
-          <div className="flex items-center gap-2 mb-1">
-            <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <p className="text-emerald-400 font-body text-xs font-semibold">Advisor Online</p>
-          </div>
-          <p className="font-display text-xl md:text-2xl text-white">Need help? Your PathPort Advisor is here.</p>
-          <p className="text-white/45 font-body text-sm mt-1">Free guidance · WhatsApp response within 24 hours · No obligations</p>
-        </div>
-        <div className="relative flex gap-3 flex-shrink-0">
-          <GoldButton variant="solid-gold" size="md">
-            <Phone className="w-4 h-4" /> +65 8377 6492
-          </GoldButton>
-        </div>
-      </div>
-
     </div>
   );
 }

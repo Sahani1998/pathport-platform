@@ -98,17 +98,28 @@ export default function Sidebar() {
 
   const handleSignOut = async () => {
     console.log("[Auth] sign out clicked");
+
+    // Fire signOut but do NOT await it — a hanging Supabase API call must never
+    // block the user from logging out.
+    signOut()
+      .then(() => console.log("[Auth] supabase signOut success"))
+      .catch(err => console.error("[Auth] sign out error:", err));
+
+    // Immediately clear any Supabase session keys from localStorage so the
+    // next page load has no cached session even if the API call timed out.
     try {
-      await signOut();
-      console.log("[Auth] sign out success");
-    } catch (err: unknown) {
-      console.error("[Auth] sign out error:", err);
-      // Continue to redirect even if signOut throws — forces a clean state
-    } finally {
-      // Hard redirect clears all browser-side auth state and Next.js client cache.
-      // router.push() alone does not reliably clear the Supabase session cookie.
-      window.location.href = "/";
+      Object.keys(localStorage)
+        .filter(k => k.startsWith("sb-"))
+        .forEach(k => localStorage.removeItem(k));
+      console.log("[Auth] local state cleared");
+    } catch {
+      // localStorage may not be available in some edge environments
     }
+
+    console.log("[Auth] redirecting home");
+    // window.location.replace does a hard navigation (no history entry) and
+    // forces a full page reload so Next.js re-fetches auth from scratch.
+    window.location.replace("/login");
   };
 
   return (
