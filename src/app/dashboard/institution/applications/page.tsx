@@ -22,13 +22,15 @@ export default async function InstitutionApplicationsPage({
   const { data: profile } = await supabase
     .from("profiles").select("role, college_id").eq("id", user.id).single();
 
-  // PREVIEW MODE: role guard temporarily disabled
-  // if (profile?.role !== "institution") redirect("/dashboard");
-  if (!profile?.college_id) redirect("/dashboard/institution/courses");
+  const isAdmin = profile?.role === "admin";
 
-  console.log("[InstitutionPortal] loading applications for college:", profile.college_id);
+  // Institution users require a linked college. Admins bypass this requirement
+  // and see all applications across every college.
+  if (!isAdmin && !profile?.college_id) redirect("/dashboard/institution/courses");
 
-  // Build query — get all applications for courses owned by this college
+  console.log("[InstitutionPortal] loading applications — role:", profile?.role, "| college_id:", profile?.college_id ?? "all (admin)");
+
+  // Build query — admin gets all applications, institution gets only their college
   let query = supabase
     .from("applications")
     .select(`
@@ -40,28 +42,29 @@ export default async function InstitutionApplicationsPage({
     `)
     .order("submitted_at", { ascending: false });
 
-  // Filter by courses belonging to this institution's college
-  // (Uses RLS to enforce, but we also filter here for correctness)
-  const { data: myCourseIds } = await supabase
-    .from("courses").select("id").eq("college_id", profile.college_id);
+  // Scope to college for institution users; admin sees everything
+  let courseIds: string[] = [];
+  if (!isAdmin && profile?.college_id) {
+    const { data: myCourseIds } = await supabase
+      .from("courses").select("id").eq("college_id", profile.college_id);
+    courseIds = (myCourseIds ?? []).map(c => c.id);
 
-  const courseIds = (myCourseIds ?? []).map(c => c.id);
-  if (courseIds.length === 0) {
-    // No courses yet
-    return (
-      <div className="max-w-4xl">
-        <h2 className="font-display text-3xl text-white mb-2">Applications</h2>
-        <div className="mt-6 flex flex-col items-center justify-center py-16 bg-white/[0.03] border border-white/[0.07] rounded-2xl">
-          <FileText className="w-12 h-12 text-white/20 mb-4" />
-          <p className="font-display text-2xl text-white/40 mb-1">No applications yet</p>
-          <p className="text-white/30 font-body text-sm">Create courses first so students can apply</p>
+    if (courseIds.length === 0) {
+      return (
+        <div className="max-w-4xl">
+          <h2 className="font-display text-3xl text-white mb-2">Applications</h2>
+          <div className="mt-6 flex flex-col items-center justify-center py-16 bg-white/[0.03] border border-white/[0.07] rounded-2xl">
+            <FileText className="w-12 h-12 text-white/20 mb-4" />
+            <p className="font-display text-2xl text-white/40 mb-1">No applications yet</p>
+            <p className="text-white/30 font-body text-sm">Create courses first so students can apply</p>
+          </div>
         </div>
-      </div>
-    );
+      );
+    }
+    query = query.in("course_id", courseIds);
   }
 
   if (params.status) query = query.eq("status", params.status);
-  query = query.in("course_id", courseIds);
 
   const { data, error } = await query;
 
@@ -69,11 +72,10 @@ export default async function InstitutionApplicationsPage({
 
   const applications = (data ?? []) as ApplicationWithCourse[];
 
-  // Stats
-  const allApps = await supabase
-    .from("applications")
-    .select("status")
-    .in("course_id", courseIds);
+  // Stats — scoped to college for institution, all for admin
+  const statsQuery = supabase.from("applications").select("status");
+  if (!isAdmin && courseIds.length > 0) statsQuery.in("course_id", courseIds);
+  const allApps = await statsQuery;
 
   const allData   = allApps.data ?? [];
   const statsMap  = allData.reduce<Record<string, number>>((acc, a) => {

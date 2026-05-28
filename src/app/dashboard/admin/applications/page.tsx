@@ -31,15 +31,17 @@ export default async function AdminApplicationsPage({
   const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
   if (profile?.role !== "admin") redirect("/dashboard");
 
-  console.log("[Applications] admin loading, filters:", params);
+  console.log("[AdminApplications] active filter:", params.stage ?? "none (all)");
 
-  // Stage stats
+  // Stage stats — NULL current_stage is treated as application_submitted
   const stageCounts: Record<string, number> = {};
   const { data: allApps } = await supabase.from("applications").select("current_stage");
   for (const a of allApps ?? []) {
     const s = a.current_stage ?? "application_submitted";
     stageCounts[s] = (stageCounts[s] ?? 0) + 1;
   }
+
+  console.log("[AdminApplications] total rows:", allApps?.length ?? 0, "| stageCounts:", JSON.stringify(stageCounts));
 
   // Main query
   let query = supabase
@@ -52,10 +54,20 @@ export default async function AdminApplicationsPage({
     .order("submitted_at", { ascending: false })
     .limit(100);
 
-  if (params.stage)   query = query.eq("current_stage", params.stage);
+  if (params.stage) {
+    // "application_submitted" must also match NULL rows (pre-migration rows default there)
+    if (params.stage === "application_submitted") {
+      query = query.or("current_stage.eq.application_submitted,current_stage.is.null");
+    } else {
+      query = query.eq("current_stage", params.stage);
+    }
+  }
+  // No params.stage → All Stages tab → no filter applied
 
   const { data, error } = await query;
-  if (error) console.error("[Applications] admin fetch error:", error.message);
+  if (error) console.error("[AdminApplications] fetch error:", error.message);
+
+  console.log("[AdminApplications] filtered rows:", data?.length ?? 0);
 
   const apps = (data ?? []).map(row => {
     const rawCourses = Array.isArray(row.courses) ? row.courses[0] : row.courses;

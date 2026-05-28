@@ -97,8 +97,18 @@ export default function Sidebar() {
   // Only the name/avatar in the user-info strip shows a skeleton while loading.
 
   const handleSignOut = async () => {
-    await signOut();
-    router.push("/login");
+    console.log("[Auth] sign out clicked");
+    try {
+      await signOut();
+      console.log("[Auth] sign out success");
+    } catch (err: unknown) {
+      console.error("[Auth] sign out error:", err);
+      // Continue to redirect even if signOut throws — forces a clean state
+    } finally {
+      // Hard redirect clears all browser-side auth state and Next.js client cache.
+      // router.push() alone does not reliably clear the Supabase session cookie.
+      window.location.href = "/";
+    }
   };
 
   return (
