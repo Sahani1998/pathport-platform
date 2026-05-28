@@ -3,15 +3,33 @@ import { createClient } from "@/lib/supabase/server";
 import type { ApplicationStage } from "@/types/timeline";
 import { getStageMeta, STAGE_NOTIFICATION } from "@/types/timeline";
 
+// Bidirectional mapping: current_stage → legacy status
+// Used so the old status column always reflects the latest stage.
+const STAGE_TO_STATUS: Record<ApplicationStage, string> = {
+  application_submitted:   "submitted",
+  documents_pending:       "docs_required",
+  documents_uploaded:      "under_review",
+  documents_under_review:  "under_review",
+  documents_verified:      "under_review",
+  offer_letter_processing: "under_review",
+  offer_letter_ready:      "offer_ready",
+  fee_payment_pending:     "offer_ready",
+  ipa_processing:          "ipa_processing",
+  approved:                "approved",
+  arrival_preparation:     "approved",
+  arrived_singapore:       "approved",
+  rejected:                "rejected",
+  withdrawn:               "rejected",
+};
+
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  console.log("[Timeline API] request received — PATCH /api/applications/" + id + "/stage");
+  console.log("[Applications API] PATCH /api/applications/" + id + "/stage — request received");
 
   try {
-    // ── Parse body ────────────────────────────────────────────────────────────
     let stage:           ApplicationStage;
     let student_message: string | null;
     let internal_notes:  string | null;
@@ -32,20 +50,12 @@ export async function PATCH(
       return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
     }
 
-    if (!stage) {
-      return NextResponse.json({ error: "stage is required" }, { status: 400 });
-    }
+    if (!stage) return NextResponse.json({ error: "stage is required" }, { status: 400 });
 
-    // ── Auth ──────────────────────────────────────────────────────────────────
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
-    console.log("[Timeline API] user loaded — id:", user?.id ?? "null", "| authError:", authError?.message ?? "none");
+    if (authError || !user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
 
-    if (authError || !user) {
-      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-    }
-
-    // ── Role check ────────────────────────────────────────────────────────────
     const { data: profile } = await supabase
       .from("profiles").select("role, college_id").eq("id", user.id).single();
 
@@ -53,21 +63,17 @@ export async function PATCH(
       return NextResponse.json({ error: "Insufficient permissions" }, { status: 403 });
     }
 
-    console.log("[Timeline API] permission checked — role:", profile.role, "| college_id:", profile.college_id ?? "none");
-
-    // ── Fetch application ─────────────────────────────────────────────────────
+    // Fetch current application values
     const { data: app, error: appError } = await supabase
       .from("applications")
-      .select("id, student_id, course_id")
+      .select("id, student_id, course_id, status, current_stage")
       .eq("id", id)
       .single();
 
     if (appError || !app) {
-      console.error("[Timeline API] application not found:", appError?.message);
       return NextResponse.json({ error: "Application not found" }, { status: 404 });
     }
 
-    // ── Institution ownership check ───────────────────────────────────────────
     if (profile.role === "institution" && profile.college_id) {
       const { data: course } = await supabase
         .from("courses").select("college_id").eq("id", app.course_id).single();
@@ -76,34 +82,38 @@ export async function PATCH(
       }
     }
 
-    // ── Update application ────────────────────────────────────────────────────
-    console.log("[Timeline API] updating stage:", id, "→", stage);
+    // Compute the matching legacy status for this stage
+    const newStatus = STAGE_TO_STATUS[stage] ?? "submitted";
+
+    console.log("[Applications API] old status:", app.status,       "| old stage:", app.current_stage);
+    console.log("[Applications API] new status:", newStatus,         "| new stage:", stage);
 
     const { error: updateError } = await supabase
       .from("applications")
       .update({
         current_stage:    stage,
+        status:           newStatus,
         stage_updated_at: new Date().toISOString(),
-        student_message:  student_message,
-        internal_notes:   internal_notes,
-        next_action:      next_action,
+        student_message,
+        internal_notes,
+        next_action,
       })
       .eq("id", id);
 
     if (updateError) {
-      console.error("[Timeline API] update error:", updateError.message);
+      console.error("[Applications API] update error:", updateError.message);
       return NextResponse.json({ error: updateError.message }, { status: 500 });
     }
 
-    console.log("[Timeline API] application updated successfully");
+    console.log("[Applications API] synced status/stage —", newStatus, "/", stage);
 
-    // ── Timeline event ────────────────────────────────────────────────────────
+    // Timeline event
     const stageMeta = getStageMeta(stage);
     const { error: eventError } = await supabase
       .from("application_timeline_events")
       .insert({
         application_id:     id,
-        stage:              stage,
+        stage,
         title:              stageMeta.label,
         description:        student_message || stageMeta.description,
         created_by:         user.id,
@@ -112,11 +122,10 @@ export async function PATCH(
       });
 
     if (eventError) {
-      // Non-fatal — log and continue
-      console.error("[Timeline API] timeline event error (non-fatal):", eventError.message);
+      console.error("[Applications API] timeline event error (non-fatal):", eventError.message);
     }
 
-    // ── Student notification ──────────────────────────────────────────────────
+    // Student notification
     const notifTemplate = STAGE_NOTIFICATION[stage];
     if (notifTemplate) {
       const { error: notifError } = await supabase
@@ -128,20 +137,19 @@ export async function PATCH(
           message:        student_message || notifTemplate.message,
           type:           notifTemplate.type,
         });
-
       if (notifError) {
-        console.error("[Timeline API] notification error (non-fatal):", notifError.message);
+        console.error("[Applications API] notification error (non-fatal):", notifError.message);
       } else {
-        console.log("[Timeline API] notification created for student:", app.student_id);
+        console.log("[Applications API] notification sent to student:", app.student_id);
       }
     }
 
-    console.log("[Timeline API] stage update complete:", id, "→", stage);
+    console.log("[Applications API] stage update complete:", id, "→", stage);
     return NextResponse.json({ success: true }, { status: 200 });
 
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.error("[Timeline API] unexpected error:", msg);
+    console.error("[Applications API] unexpected error:", msg);
     return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
