@@ -7,7 +7,7 @@ import { useAuth } from "@/context/AuthContext";
 import GoldButton from "@/components/ui/GoldButton";
 import {
   Menu, X, ChevronDown, Building2, Users, Briefcase,
-  GraduationCap, LayoutDashboard, LogOut, Loader2,
+  LayoutDashboard, LogOut, Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -36,20 +36,70 @@ const PARTNER_ITEMS = [
   },
 ];
 
-// ─── Login dropdown items (NO admin) ──────────────────────────────────────────
-const LOGIN_ITEMS = [
-  { label: "Student Login",             href: "/login", emoji: "🎓" },
-  { label: "Institution Login",         href: "/login", emoji: "🏫" },
-  { label: "Recruitment Partner Login", href: "/login", emoji: "🤝" },
-  { label: "Employer Login",            href: "/login", emoji: "💼" },
-];
+// ─── Context-aware CTA config ──────────────────────────────────────────────────
+// Returns the correct primary/secondary button labels and hrefs based on
+// which public page the visitor is currently on.
+interface CTAConfig {
+  primaryLabel: string;
+  primaryHref:  string;
+  loginLabel:   string;
+  loginHref:    string;
+}
+
+function getPageCTA(pathname: string): CTAConfig {
+  if (pathname.startsWith("/partners/institutions")) {
+    return {
+      primaryLabel: "Register as Institution",
+      primaryHref:  "/partner-with-us?type=institution",
+      loginLabel:   "Institution Login",
+      loginHref:    "/login?role=institution",
+    };
+  }
+  if (pathname.startsWith("/partners/employers")) {
+    return {
+      primaryLabel: "Register as Employer",
+      primaryHref:  "/partner-with-us?type=employer",
+      loginLabel:   "Employer Login",
+      loginHref:    "/login?role=employer",
+    };
+  }
+  if (pathname.startsWith("/partners/recruitment-partners")) {
+    return {
+      primaryLabel: "Register as Partner",
+      primaryHref:  "/partner-with-us?type=recruitment_partner",
+      loginLabel:   "Partner Login",
+      loginHref:    "/login?role=partner",
+    };
+  }
+  if (pathname === "/partner-with-us") {
+    return {
+      primaryLabel: "Apply as Partner",
+      primaryHref:  "/partner-with-us",
+      loginLabel:   "Login",
+      loginHref:    "/login",
+    };
+  }
+  // Default: student-focused (homepage, /students, /study-destination, unknown)
+  return {
+    primaryLabel: "Register as Student",
+    primaryHref:  "/signup?role=student",
+    loginLabel:   "Login",
+    loginHref:    "/login",
+  };
+}
 
 type OpenDropdown = "partners" | "login" | null;
 
-// ─── Sub-component: Partners dropdown panel ────────────────────────────────────
+// ─── Partners dropdown panel ───────────────────────────────────────────────────
+// z-[201] ensures it always floats above all page content and the hero form.
 function PartnersPanel({ onClose }: { onClose: () => void }) {
   return (
-    <div className="absolute top-full left-0 mt-2 w-[340px] bg-navy-800/98 border border-white/[0.10] rounded-2xl shadow-[0_16px_48px_rgba(0,0,0,0.6)] backdrop-blur-xl overflow-hidden z-50 animate-slide-up">
+    <div className={cn(
+      "absolute top-full left-0 mt-2 w-[340px]",
+      "bg-navy-900/[0.98] border border-white/[0.12] rounded-2xl",
+      "shadow-[0_24px_64px_rgba(0,0,0,0.75)] backdrop-blur-2xl",
+      "z-[201] animate-slide-up"
+    )}>
       <div className="p-2">
         {PARTNER_ITEMS.map(({ label, href, description, emoji }) => (
           <Link
@@ -79,10 +129,22 @@ function PartnersPanel({ onClose }: { onClose: () => void }) {
   );
 }
 
-// ─── Sub-component: Login dropdown panel ──────────────────────────────────────
-function LoginPanel({ onClose }: { onClose: () => void }) {
+// ─── Login dropdown panel ──────────────────────────────────────────────────────
+function LoginPanel({ loginHref, onClose }: { loginHref: string; onClose: () => void }) {
+  const LOGIN_ITEMS = [
+    { label: "Student Login",             href: "/login",              emoji: "🎓" },
+    { label: "Institution Login",         href: "/login?role=institution", emoji: "🏫" },
+    { label: "Recruitment Partner Login", href: "/login?role=partner", emoji: "🤝" },
+    { label: "Employer Login",            href: "/login?role=employer", emoji: "💼" },
+  ];
+
   return (
-    <div className="absolute top-full right-0 mt-2 w-[260px] bg-navy-800/98 border border-white/[0.10] rounded-2xl shadow-[0_16px_48px_rgba(0,0,0,0.6)] backdrop-blur-xl overflow-hidden z-50 animate-slide-up">
+    <div className={cn(
+      "absolute top-full right-0 mt-2 w-[260px]",
+      "bg-navy-900/[0.98] border border-white/[0.12] rounded-2xl",
+      "shadow-[0_24px_64px_rgba(0,0,0,0.75)] backdrop-blur-2xl",
+      "z-[201] animate-slide-up"
+    )}>
       <div className="p-2">
         {LOGIN_ITEMS.map(({ label, href, emoji }) => (
           <Link
@@ -102,26 +164,28 @@ function LoginPanel({ onClose }: { onClose: () => void }) {
 
 // ─── Main Navbar ───────────────────────────────────────────────────────────────
 export default function Navbar() {
-  const pathname               = usePathname();
-  const { user, profile, loading, signOut } = useAuth();
+  const pathname = usePathname();
+  const { user, loading, signOut } = useAuth();
 
-  // After 2.5 s, show Login/Sign Up even if auth state is still loading.
-  // This prevents the spinner appearing forever on slow connections.
+  // Auth-ready: after 2.5 s, show buttons even if auth state is still loading.
+  // Prevents the spinner appearing forever on slow connections.
   const [authReady, setAuthReady] = useState(false);
   useEffect(() => {
     if (!loading) { setAuthReady(true); return; }
     const t = setTimeout(() => setAuthReady(true), 2500);
     return () => clearTimeout(t);
   }, [loading]);
-
-  // Show auth buttons once we have a real answer OR the timeout fired
   const showAuth = authReady || !loading;
-  const [scrolled,     setScrolled]     = useState(false);
-  const [mobileOpen,   setMobileOpen]   = useState(false);
-  const [openDropdown, setOpenDropdown] = useState<OpenDropdown>(null);
-  const [mobilePartnersOpen, setMobilePartnersOpen] = useState(false);
+
+  const [scrolled,            setScrolled]            = useState(false);
+  const [mobileOpen,          setMobileOpen]          = useState(false);
+  const [openDropdown,        setOpenDropdown]        = useState<OpenDropdown>(null);
+  const [mobilePartnersOpen,  setMobilePartnersOpen]  = useState(false);
   const partnersRef = useRef<HTMLLIElement>(null);
   const loginRef    = useRef<HTMLDivElement>(null);
+
+  // Context-aware CTA buttons
+  const cta = getPageCTA(pathname);
 
   // Scroll detection
   useEffect(() => {
@@ -130,13 +194,13 @@ export default function Navbar() {
     return () => window.removeEventListener("scroll", fn);
   }, []);
 
-  // Body scroll lock for mobile
+  // Body scroll lock for mobile drawer
   useEffect(() => {
     document.body.style.overflow = mobileOpen ? "hidden" : "";
     return () => { document.body.style.overflow = ""; };
   }, [mobileOpen]);
 
-  // Close dropdown on outside click
+  // Close dropdowns on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (
@@ -150,7 +214,7 @@ export default function Navbar() {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  // Escape key closes dropdowns
+  // Escape key closes everything
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === "Escape") { setOpenDropdown(null); setMobileOpen(false); }
@@ -174,9 +238,11 @@ export default function Navbar() {
   };
 
   return (
+    // z-[200]: high enough so header + dropdowns always sit above all page
+    // content, hero forms, and any fixed/sticky elements that use z-50.
     <header
       className={cn(
-        "fixed top-0 left-0 right-0 z-50 transition-all duration-500",
+        "fixed top-0 left-0 right-0 z-[200] transition-all duration-500",
         scrolled
           ? "bg-navy-900/92 backdrop-blur-2xl border-b border-white/[0.07] shadow-[0_4px_30px_rgba(0,0,0,0.6)]"
           : "bg-navy-900/70 backdrop-blur-md"
@@ -184,7 +250,7 @@ export default function Navbar() {
     >
       <nav className="max-w-7xl mx-auto px-5 md:px-10 h-[68px] flex items-center justify-between gap-4">
 
-        {/* ── Logo ──────────────────────────────────────────────────── */}
+        {/* ── Logo ──────────────────────────────────────────────────────── */}
         <Link href="/" className="flex items-center gap-2.5 flex-shrink-0 group" onClick={closeAll}>
           <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-pathBlue-500 to-pathBlue-700 flex items-center justify-center shadow-blue-sm group-hover:shadow-blue transition-shadow duration-300">
             <span className="font-display font-bold text-white text-sm leading-none">PP</span>
@@ -194,12 +260,14 @@ export default function Navbar() {
           </span>
         </Link>
 
-        {/* ── Desktop Centre Nav ─────────────────────────────────────── */}
+        {/* ── Desktop Centre Nav ─────────────────────────────────────────── */}
         <ul className="hidden lg:flex items-center gap-1 flex-1 justify-center">
+
           {/* Students */}
           <li>
             <Link
               href="/students"
+              onClick={closeAll}
               className={cn(
                 "px-4 py-2 rounded-xl font-body text-sm tracking-wide transition-all duration-200",
                 isActive("/students")
@@ -215,6 +283,7 @@ export default function Navbar() {
           <li>
             <Link
               href="/study-destination"
+              onClick={closeAll}
               className={cn(
                 "px-4 py-2 rounded-xl font-body text-sm tracking-wide transition-all duration-200",
                 isActive("/study-destination")
@@ -226,14 +295,14 @@ export default function Navbar() {
             </Link>
           </li>
 
-          {/* Partners dropdown */}
+          {/* Partners dropdown — li is relative, dropdown is z-[201] */}
           <li className="relative" ref={partnersRef}>
             <button
               onClick={() => setOpenDropdown(v => v === "partners" ? null : "partners")}
               onMouseEnter={() => setOpenDropdown("partners")}
               className={cn(
                 "flex items-center gap-1.5 px-4 py-2 rounded-xl font-body text-sm tracking-wide transition-all duration-200",
-                isActive("/partners")
+                isActive("/partners") || pathname === "/partner-with-us"
                   ? "text-gold-300 bg-gold-400/[0.08]"
                   : "text-white/60 hover:text-white/90 hover:bg-white/[0.05]"
               )}
@@ -243,7 +312,9 @@ export default function Navbar() {
               Partners
               <ChevronDown className={cn("w-3.5 h-3.5 transition-transform duration-200", openDropdown === "partners" && "rotate-180")} />
             </button>
+
             {openDropdown === "partners" && (
+              // onMouseLeave wrapper so hovering off the dropdown closes it
               <div onMouseLeave={() => setOpenDropdown(null)}>
                 <PartnersPanel onClose={closeAll} />
               </div>
@@ -251,13 +322,13 @@ export default function Navbar() {
           </li>
         </ul>
 
-        {/* ── Desktop Right CTAs ─────────────────────────────────────── */}
+        {/* ── Desktop Right CTAs ─────────────────────────────────────────── */}
         <div className="hidden lg:flex items-center gap-2.5 flex-shrink-0">
           {!showAuth ? (
-            /* Spinner only during the 2.5 s grace period */
+            // Brief spinner during auth initialisation (max 2.5 s)
             <Loader2 className="w-4 h-4 text-white/30 animate-spin" />
           ) : user ? (
-            /* Authenticated */
+            // Authenticated: Dashboard + sign-out
             <>
               <Link href="/dashboard">
                 <GoldButton variant="outline-gold" size="sm" className="gap-1.5">
@@ -274,11 +345,11 @@ export default function Navbar() {
               </button>
             </>
           ) : (
-            /* Unauthenticated — no standalone "Partner With Us" here; it lives in Partners dropdown */
+            // Unauthenticated: context-aware primary CTA + Login dropdown
             <>
-              {/* Register as Student */}
-              <Link href="/signup">
-                <GoldButton variant="solid-gold" size="sm">Register Free</GoldButton>
+              {/* Primary CTA — label/href driven by current page */}
+              <Link href={cta.primaryHref}>
+                <GoldButton variant="solid-gold" size="sm">{cta.primaryLabel}</GoldButton>
               </Link>
 
               {/* Login dropdown */}
@@ -294,16 +365,18 @@ export default function Navbar() {
                   aria-expanded={openDropdown === "login"}
                   aria-haspopup="true"
                 >
-                  Login
+                  {cta.loginLabel}
                   <ChevronDown className={cn("w-3.5 h-3.5 transition-transform duration-200", openDropdown === "login" && "rotate-180")} />
                 </button>
-                {openDropdown === "login" && <LoginPanel onClose={closeAll} />}
+                {openDropdown === "login" && (
+                  <LoginPanel loginHref={cta.loginHref} onClose={closeAll} />
+                )}
               </div>
             </>
           )}
         </div>
 
-        {/* ── Mobile Hamburger ───────────────────────────────────────── */}
+        {/* ── Mobile Hamburger ───────────────────────────────────────────── */}
         <button
           aria-label={mobileOpen ? "Close menu" : "Open menu"}
           onClick={() => setMobileOpen(v => !v)}
@@ -313,7 +386,7 @@ export default function Navbar() {
         </button>
       </nav>
 
-      {/* ── Mobile Drawer ──────────────────────────────────────────────── */}
+      {/* ── Mobile Drawer ──────────────────────────────────────────────────── */}
       <div
         className={cn(
           "lg:hidden overflow-hidden transition-all duration-300",
@@ -323,6 +396,7 @@ export default function Navbar() {
         aria-hidden={!mobileOpen}
       >
         <div className="px-5 pt-3 pb-8 space-y-1">
+
           {/* Main links */}
           <Link href="/students" onClick={closeAll}
             className="block py-3 px-4 rounded-xl font-body text-base text-white/70 hover:text-white hover:bg-white/[0.05] transition-all">
@@ -351,6 +425,10 @@ export default function Navbar() {
                     <p className="font-body text-xs text-white/35 mt-0.5">{description}</p>
                   </Link>
                 ))}
+                <Link href="/partner-with-us" onClick={closeAll}
+                  className="block py-2.5 px-3 rounded-xl transition-all hover:bg-white/[0.04]">
+                  <span className="font-body text-sm text-gold-400 font-semibold">✨ Apply to Partner With Us</span>
+                </Link>
               </div>
             )}
           </div>
@@ -375,27 +453,16 @@ export default function Navbar() {
             </>
           ) : (
             <>
-              {/* Login options */}
-              <p className="px-4 pt-2 pb-1 text-white/30 font-body text-xs uppercase tracking-widest">Login As</p>
-              {LOGIN_ITEMS.map(({ label, href, emoji }) => (
-                <Link key={label} href={href} onClick={closeAll}
-                  className="block py-2.5 px-4 rounded-xl font-body text-sm text-white/60 hover:text-white hover:bg-white/[0.05] transition-all">
-                  {emoji} {label}
-                </Link>
-              ))}
-
-              <div className="h-px bg-white/[0.07] my-2 mx-4" />
-
-              {/* Register + Partner */}
+              {/* Context-aware register CTA */}
               <div className="pt-2 space-y-2.5 px-0">
-                <Link href="/signup" onClick={closeAll}>
+                <Link href={cta.primaryHref} onClick={closeAll}>
                   <GoldButton variant="solid-gold" size="md" className="w-full">
-                    Register as Student
+                    {cta.primaryLabel}
                   </GoldButton>
                 </Link>
-                <Link href="/partner-with-us" onClick={closeAll}>
+                <Link href={cta.loginHref} onClick={closeAll}>
                   <GoldButton variant="outline-gold" size="md" className="w-full">
-                    Partner With Us
+                    {cta.loginLabel}
                   </GoldButton>
                 </Link>
               </div>
