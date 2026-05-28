@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 import { CheckCircle2, Loader2, Send, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -12,19 +11,6 @@ interface ApplyButtonProps {
   hasApplied:  boolean;
   seatsLeft:   number;
   className?:  string;
-}
-
-// Wraps a PromiseLike (covers both native Promises and Supabase's
-// PostgrestBuilder which is PromiseLike but not a full Promise) with a hard
-// timeout using Promise.race.  Promise.resolve() promotes the PromiseLike
-// to a real Promise so TypeScript and the runtime are both happy.
-function withTimeout<T>(promise: PromiseLike<T>, ms = 12_000): Promise<T> {
-  return Promise.race([
-    Promise.resolve(promise),
-    new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error("Request timed out. Please refresh and try again.")), ms)
-    ),
-  ]);
 }
 
 export default function ApplyButton({
@@ -40,85 +26,63 @@ export default function ApplyButton({
   const [error,    setError]    = useState<string | null>(null);
 
   const handleApply = async () => {
-    // FIRST LINE — confirms handler is running and latest code is deployed
+    // First line — confirms handler fires and latest code is deployed
     console.log("[Applications] button clicked — courseId:", courseId);
 
     setError(null);
     setLoading(true);
 
     try {
-      const supabase = createClient();
+      // Call the server API route instead of Supabase directly.
+      // The server route uses createClient() which reads cookies reliably,
+      // avoiding the browser-client auth hang.
+      console.log("[Applications] calling /api/applications/apply");
 
-      // ── Step 1: verify auth ────────────────────────────────────────────
-      const authResult = await withTimeout(supabase.auth.getUser(), 12_000);
-      const user       = authResult.data?.user ?? null;
-      const authError  = authResult.error;
-      console.log("[Applications] auth check — user:", user?.id ?? "null", "| error:", authError?.message ?? "none");
+      const response = await fetch("/api/applications/apply", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ courseId }),
+      });
 
-      if (authError || !user) {
-        setError("You must be signed in to apply.");
+      console.log("[Applications] fetch response — status:", response.status);
+
+      const json = await response.json() as {
+        success?:       boolean;
+        alreadyApplied?: boolean;
+        applicationId?: string;
+        error?:         string;
+      };
+
+      console.log("[Applications] response body:", JSON.stringify(json));
+
+      if (!response.ok) {
+        // Server returned 4xx / 5xx with an error message
+        setError(json.error ?? `Server error (${response.status})`);
         return;
       }
 
-      // ── Step 2: duplicate check ────────────────────────────────────────
-      const checkResult = await withTimeout(
-        supabase
-          .from("applications")
-          .select("id, status")
-          .eq("student_id", user.id)
-          .eq("course_id", courseId)
-          .maybeSingle(),
-        12_000
-      );
-      const existing   = checkResult.data;
-      const checkError = checkResult.error;
-      console.log("[Applications] duplicate check — existing:", existing?.id ?? "none", "| error:", checkError?.message ?? "none");
-
-      if (existing) {
-        console.log("[Applications] already applied — showing Applied state");
+      if (json.alreadyApplied || json.success) {
+        console.log("[Applications] success — showing Applied state");
         setApplied(true);
+        router.refresh();
         return;
       }
 
-      // ── Step 3: insert ─────────────────────────────────────────────────
-      const insertResult = await withTimeout(
-        supabase
-          .from("applications")
-          .insert({ student_id: user.id, course_id: courseId, status: "submitted" })
-          .select("id")
-          .single(),
-        12_000
-      );
-      const inserted    = insertResult.data;
-      const insertError = insertResult.error;
-      console.log("[Applications] insert result — id:", inserted?.id ?? "null", "| code:", insertError?.code ?? "none", "| msg:", insertError?.message ?? "none");
-
-      if (insertError) {
-        if (insertError.code === "23505") {
-          setApplied(true);
-          return;
-        }
-        setError(`Could not submit: ${insertError.message}`);
-        return;
-      }
-
-      // ── Success ────────────────────────────────────────────────────────
-      console.log("[Applications] success — application submitted");
-      setApplied(true);
-      router.refresh();
+      // Unexpected response shape
+      setError("Unexpected response from server. Please try again.");
 
     } catch (err: unknown) {
+      // Network error, JSON parse error, etc.
       const msg = err instanceof Error ? err.message : String(err);
-      console.error("[Applications] caught error:", msg);
-      setError(msg);
+      console.error("[Applications] fetch error:", msg);
+      setError(`Network error: ${msg}`);
     } finally {
-      // Guaranteed to run — clears Submitting… state no matter what
       setLoading(false);
       console.log("[Applications] finally — loading cleared");
     }
   };
 
-  // ── Applied state ──────────────────────────────────────────────────────────
+  // ── Applied ────────────────────────────────────────────────────────────────
   if (applied) {
     return (
       <div className={cn(
@@ -146,14 +110,9 @@ export default function ApplyButton({
     );
   }
 
-  // ── Default button ─────────────────────────────────────────────────────────
+  // ── Default ────────────────────────────────────────────────────────────────
   return (
     <div className={cn("space-y-2", className)}>
-      {/*
-        type="button" is explicit to prevent any parent <form> from treating
-        this as a submit button and triggering a page navigation instead of
-        the onClick handler.
-      */}
       <button
         type="button"
         onClick={handleApply}
