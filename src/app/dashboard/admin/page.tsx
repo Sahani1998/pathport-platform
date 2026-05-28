@@ -8,7 +8,6 @@ import {
   Globe, UserPlus, Activity, ArrowRight, ChevronRight,
   Building2, BookOpen,
 } from "lucide-react";
-
 // ── Status badge helper ────────────────────────────────────────────────────────
 function StatusBadge({ status }: { status: string }) {
   const MAP: Record<string, string> = {
@@ -59,11 +58,15 @@ export default async function AdminDashboardPage() {
     { count: totalCourses },
     { count: openCourses },
     { count: totalApplications },
+    { count: totalDocuments },
+    { count: pendingDocuments },
   ] = await Promise.all([
-    supabase.from("colleges").select("*",     { count: "exact", head: true }),
-    supabase.from("courses").select("*",      { count: "exact", head: true }),
-    supabase.from("courses").select("*",      { count: "exact", head: true }).eq("status", "open"),
-    supabase.from("applications").select("*", { count: "exact", head: true }),
+    supabase.from("colleges").select("*",          { count: "exact", head: true }),
+    supabase.from("courses").select("*",           { count: "exact", head: true }),
+    supabase.from("courses").select("*",           { count: "exact", head: true }).eq("status", "open"),
+    supabase.from("applications").select("*",      { count: "exact", head: true }),
+    supabase.from("student_documents").select("*", { count: "exact", head: true }),
+    supabase.from("student_documents").select("*", { count: "exact", head: true }).eq("status", "pending"),
   ]);
 
   const [
@@ -243,10 +246,12 @@ export default async function AdminDashboardPage() {
             <h3 className="font-display text-xl text-white mb-4">Platform</h3>
             <div className="space-y-2">
               {[
-                { label: "Colleges",         value: totalColleges     ?? "—", icon: Building2    },
+                { label: "Colleges",          value: totalColleges     ?? "—", icon: Building2    },
                 { label: "Courses",          value: totalCourses      ?? "—", icon: BookOpen      },
                 { label: "Open Courses",     value: openCourses       ?? "—", icon: TrendingUp    },
                 { label: "Applications",     value: totalApplications ?? "—", icon: FileText      },
+                { label: "Documents",        value: totalDocuments    ?? "—", icon: FileText      },
+                { label: "Docs Pending",     value: pendingDocuments  ?? "—", icon: Clock         },
               ].map(({ label, value, icon: Icon }) => (
                 <div key={label} className="flex items-center justify-between p-3 bg-white/[0.03] border border-white/[0.06] rounded-xl">
                   <div className="flex items-center gap-2.5">
@@ -257,6 +262,9 @@ export default async function AdminDashboardPage() {
                 </div>
               ))}
             </div>
+            <Link href="/dashboard/admin/documents" className="mt-3 flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-gold-400/[0.07] border border-gold-400/20 text-gold-400 font-body text-xs font-semibold hover:bg-gold-400/[0.12] transition-all">
+              Review Documents →
+            </Link>
           </div>
 
           {/* Registered users */}

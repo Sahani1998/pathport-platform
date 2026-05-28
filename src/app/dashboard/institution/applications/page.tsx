@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import StatusUpdateSelect from "@/components/courses/StatusUpdateSelect";
 import type { ApplicationWithCourse } from "@/types/courses";
 import { APPLICATION_STATUSES } from "@/types/courses";
@@ -182,10 +183,18 @@ export default async function InstitutionApplicationsPage({
                         </span>
                       </td>
                       <td className="px-5 py-4">
-                        <StatusUpdateSelect
-                          applicationId={app.id}
-                          currentStatus={app.status}
-                        />
+                        <div className="flex items-center gap-2">
+                          <StatusUpdateSelect
+                            applicationId={app.id}
+                            currentStatus={app.status}
+                          />
+                          <Link
+                            href={`/dashboard/institution/applications/${app.id}`}
+                            className="px-3 py-1.5 rounded-xl bg-white/[0.05] border border-white/[0.09] text-white/45 font-body text-xs hover:border-gold-400/30 hover:text-gold-400 transition-all whitespace-nowrap"
+                          >
+                            View Docs →
+                          </Link>
+                        </div>
                       </td>
                     </tr>
                   );

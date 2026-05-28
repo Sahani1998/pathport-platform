@@ -3,7 +3,8 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import type { ApplicationWithCourse } from "@/types/courses";
 import { APPLICATION_STATUSES } from "@/types/courses";
-import { FileText, Building2, ChevronRight, BookOpen, CheckCircle2, XCircle } from "lucide-react";
+import { REQUIRED_DOC_TYPES } from "@/types/documents";
+import { FileText, Building2, ChevronRight, BookOpen, CheckCircle2, XCircle, Upload } from "lucide-react";
 
 function fmtSGD(n: number) {
   return `S$${n.toLocaleString("en-SG")}`;
@@ -36,6 +37,22 @@ export default async function StudentApplicationsPage() {
   }
 
   const applications = (data ?? []) as ApplicationWithCourse[];
+
+  // Fetch document upload counts for each application
+  const { data: docCounts } = await supabase
+    .from("student_documents")
+    .select("application_id, document_type, status")
+    .eq("student_id", user.id);
+
+  // Build a map: applicationId → { uploaded: Set<docType>, verified: number }
+  const docMap = new Map<string, { types: Set<string>; verified: number }>();
+  for (const doc of docCounts ?? []) {
+    if (!doc.application_id) continue;
+    if (!docMap.has(doc.application_id)) docMap.set(doc.application_id, { types: new Set(), verified: 0 });
+    const entry = docMap.get(doc.application_id)!;
+    entry.types.add(doc.document_type);
+    if (doc.status === "verified") entry.verified++;
+  }
 
   const stats = {
     total:       applications.length,
@@ -188,13 +205,38 @@ export default async function StudentApplicationsPage() {
                 )}
 
                 {/* Footer */}
-                <div className="px-5 py-3 border-t border-white/[0.06] flex items-center justify-between">
-                  <p className="text-white/25 font-body text-xs">
-                    Applied {new Date(app.submitted_at).toLocaleDateString("en-SG", { day: "numeric", month: "short", year: "numeric" })}
-                  </p>
-                  <p className="text-white/25 font-body text-xs">
-                    Updated {new Date(app.updated_at).toLocaleDateString("en-SG", { day: "numeric", month: "short" })}
-                  </p>
+                <div className="px-5 py-3 border-t border-white/[0.06] flex items-center justify-between flex-wrap gap-2">
+                  <div className="flex items-center gap-4">
+                    <p className="text-white/25 font-body text-xs">
+                      Applied {new Date(app.submitted_at).toLocaleDateString("en-SG", { day: "numeric", month: "short", year: "numeric" })}
+                    </p>
+                    <p className="text-white/25 font-body text-xs">
+                      Updated {new Date(app.updated_at).toLocaleDateString("en-SG", { day: "numeric", month: "short" })}
+                    </p>
+                  </div>
+                  {/* Document summary */}
+                  {(() => {
+                    const docs     = docMap.get(app.id);
+                    const uploaded = docs?.types.size ?? 0;
+                    const required = REQUIRED_DOC_TYPES.length;
+                    return (
+                      <Link href="/dashboard/student/documents"
+                        className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border font-body text-xs font-semibold transition-all ${
+                          uploaded === 0
+                            ? "bg-white/[0.04] border-white/[0.09] text-white/35 hover:border-gold-400/30 hover:text-gold-400"
+                            : uploaded >= required
+                              ? "bg-emerald-500/10 border-emerald-400/25 text-emerald-400"
+                              : "bg-gold-400/10 border-gold-400/25 text-gold-400"
+                        }`}
+                      >
+                        <Upload className="w-3 h-3" />
+                        {uploaded === 0 ? "Upload docs" : `Docs: ${uploaded}/${required}`}
+                        {(docs?.verified ?? 0) > 0 && (
+                          <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                        )}
+                      </Link>
+                    );
+                  })()}
                 </div>
               </div>
             );
