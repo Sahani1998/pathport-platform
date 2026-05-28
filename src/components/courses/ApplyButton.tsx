@@ -14,11 +14,13 @@ interface ApplyButtonProps {
   className?:  string;
 }
 
-// Wraps a promise with a hard timeout using Promise.race so TypeScript
-// correctly infers the return type T from the original promise.
-function withTimeout<T>(promise: Promise<T>, ms = 12_000): Promise<T> {
+// Wraps a PromiseLike (covers both native Promises and Supabase's
+// PostgrestBuilder which is PromiseLike but not a full Promise) with a hard
+// timeout using Promise.race.  Promise.resolve() promotes the PromiseLike
+// to a real Promise so TypeScript and the runtime are both happy.
+function withTimeout<T>(promise: PromiseLike<T>, ms = 12_000): Promise<T> {
   return Promise.race([
-    promise,
+    Promise.resolve(promise),
     new Promise<never>((_, reject) =>
       setTimeout(() => reject(new Error("Request timed out. Please refresh and try again.")), ms)
     ),
@@ -48,11 +50,9 @@ export default function ApplyButton({
       const supabase = createClient();
 
       // ── Step 1: verify auth ────────────────────────────────────────────
-      const { data: authData, error: authError } = await withTimeout(
-        supabase.auth.getUser(),
-        12_000
-      );
-      const user = authData?.user ?? null;
+      const authResult = await withTimeout(supabase.auth.getUser(), 12_000);
+      const user       = authResult.data?.user ?? null;
+      const authError  = authResult.error;
       console.log("[Applications] auth check — user:", user?.id ?? "null", "| error:", authError?.message ?? "none");
 
       if (authError || !user) {
@@ -61,7 +61,7 @@ export default function ApplyButton({
       }
 
       // ── Step 2: duplicate check ────────────────────────────────────────
-      const { data: existing, error: checkError } = await withTimeout(
+      const checkResult = await withTimeout(
         supabase
           .from("applications")
           .select("id, status")
@@ -70,6 +70,8 @@ export default function ApplyButton({
           .maybeSingle(),
         12_000
       );
+      const existing   = checkResult.data;
+      const checkError = checkResult.error;
       console.log("[Applications] duplicate check — existing:", existing?.id ?? "none", "| error:", checkError?.message ?? "none");
 
       if (existing) {
@@ -79,7 +81,7 @@ export default function ApplyButton({
       }
 
       // ── Step 3: insert ─────────────────────────────────────────────────
-      const { data: inserted, error: insertError } = await withTimeout(
+      const insertResult = await withTimeout(
         supabase
           .from("applications")
           .insert({ student_id: user.id, course_id: courseId, status: "submitted" })
@@ -87,6 +89,8 @@ export default function ApplyButton({
           .single(),
         12_000
       );
+      const inserted    = insertResult.data;
+      const insertError = insertResult.error;
       console.log("[Applications] insert result — id:", inserted?.id ?? "null", "| code:", insertError?.code ?? "none", "| msg:", insertError?.message ?? "none");
 
       if (insertError) {
