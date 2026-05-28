@@ -104,6 +104,18 @@ function LoginPanel({ onClose }: { onClose: () => void }) {
 export default function Navbar() {
   const pathname               = usePathname();
   const { user, profile, loading, signOut } = useAuth();
+
+  // After 2.5 s, show Login/Sign Up even if auth state is still loading.
+  // This prevents the spinner appearing forever on slow connections.
+  const [authReady, setAuthReady] = useState(false);
+  useEffect(() => {
+    if (!loading) { setAuthReady(true); return; }
+    const t = setTimeout(() => setAuthReady(true), 2500);
+    return () => clearTimeout(t);
+  }, [loading]);
+
+  // Show auth buttons once we have a real answer OR the timeout fired
+  const showAuth = authReady || !loading;
   const [scrolled,     setScrolled]     = useState(false);
   const [mobileOpen,   setMobileOpen]   = useState(false);
   const [openDropdown, setOpenDropdown] = useState<OpenDropdown>(null);
@@ -241,7 +253,8 @@ export default function Navbar() {
 
         {/* ── Desktop Right CTAs ─────────────────────────────────────── */}
         <div className="hidden lg:flex items-center gap-2.5 flex-shrink-0">
-          {loading ? (
+          {!showAuth ? (
+            /* Spinner only during the 2.5 s grace period */
             <Loader2 className="w-4 h-4 text-white/30 animate-spin" />
           ) : user ? (
             /* Authenticated */
@@ -261,18 +274,11 @@ export default function Navbar() {
               </button>
             </>
           ) : (
-            /* Unauthenticated */
+            /* Unauthenticated — no standalone "Partner With Us" here; it lives in Partners dropdown */
             <>
-              {/* Partner With Us */}
-              <Link href="/partner-with-us">
-                <button className="px-4 py-2 rounded-xl border border-white/[0.15] text-white/55 hover:text-white/90 hover:border-white/30 font-body text-sm tracking-wide transition-all duration-200">
-                  Partner With Us
-                </button>
-              </Link>
-
               {/* Register as Student */}
               <Link href="/signup">
-                <GoldButton variant="solid-gold" size="sm">Register as Student</GoldButton>
+                <GoldButton variant="solid-gold" size="sm">Register Free</GoldButton>
               </Link>
 
               {/* Login dropdown */}
@@ -352,7 +358,11 @@ export default function Navbar() {
           <div className="h-px bg-white/[0.07] my-2 mx-4" />
 
           {/* Auth section */}
-          {loading ? null : user ? (
+          {!showAuth ? (
+            <div className="flex justify-center py-4">
+              <Loader2 className="w-4 h-4 text-white/30 animate-spin" />
+            </div>
+          ) : user ? (
             <>
               <Link href="/dashboard" onClick={closeAll}
                 className="block py-3 px-4 rounded-xl font-body text-base text-white/70 hover:text-white hover:bg-white/[0.05] transition-all">

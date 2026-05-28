@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type ChangeEvent, type FormEvent } from "react";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import GoldButton from "@/components/ui/GoldButton";
 import { ArrowRight, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
@@ -118,13 +119,17 @@ export default function HeroSection() {
 
             {/* CTAs */}
             <div className="flex flex-col sm:flex-row gap-3 mb-12">
-              <GoldButton variant="solid-gold" size="lg" className="group">
-                Explore Opportunities
-                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform duration-200" />
-              </GoldButton>
-              <GoldButton variant="outline-gold" size="lg">
-                Partner With Us
-              </GoldButton>
+              <Link href="/dashboard/student/courses">
+                <GoldButton variant="solid-gold" size="lg" className="group">
+                  Explore Courses
+                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform duration-200" />
+                </GoldButton>
+              </Link>
+              <Link href="/students">
+                <GoldButton variant="outline-gold" size="lg">
+                  How It Works
+                </GoldButton>
+              </Link>
             </div>
 
             {/* Stats */}

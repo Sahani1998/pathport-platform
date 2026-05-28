@@ -4,6 +4,7 @@ import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import InternshipPathway from "@/components/sections/InternshipPathway";
 import ArrivalServices from "@/components/sections/ArrivalServices";
+import StudentInterestForm from "@/components/sections/StudentInterestForm";
 import GoldButton from "@/components/ui/GoldButton";
 import GlassCard from "@/components/ui/GlassCard";
 import Badge from "@/components/ui/Badge";
@@ -136,12 +137,12 @@ export default function StudentsPage() {
               </p>
 
               <div className="flex flex-col sm:flex-row gap-3">
-                <Link href="/signup">
+                <a href="#apply">
                   <GoldButton variant="solid-gold" size="lg" className="group">
-                    Register as Student — Free
+                    Start Your Singapore Journey
                     <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                   </GoldButton>
-                </Link>
+                </a>
                 <Link href="/login">
                   <GoldButton variant="outline-gold" size="lg">
                     Student Login
@@ -149,6 +150,25 @@ export default function StudentsPage() {
                 </Link>
               </div>
             </div>
+          </div>
+        </section>
+
+        {/* ── Interest Form — visible without scrolling ──────────────── */}
+        {/* Same form as homepage hero; saves to public.student_inquiries  */}
+        <section className="py-16 border-t border-white/[0.06]" id="apply">
+          <div className="max-w-7xl mx-auto px-5 md:px-10">
+            <div className="max-w-2xl mx-auto text-center mb-10">
+              <span className="inline-block px-3 py-1 rounded-full bg-gold-400/10 border border-gold-400/25 text-gold-400 font-body text-xs font-semibold uppercase tracking-wider mb-4">
+                Free — No Commitment
+              </span>
+              <h2 className="font-display text-3xl sm:text-4xl text-white mb-3">
+                Register Your Interest
+              </h2>
+              <p className="text-white/45 font-body text-base">
+                Fill this form and a PathPort advisor will call you within 24 hours to guide you through courses, fees, and the application process.
+              </p>
+            </div>
+            <StudentInterestForm />
           </div>
         </section>
 
