@@ -90,18 +90,10 @@ export default function Sidebar() {
   const role  = (profile?.role as UserRole) ?? inferredRole;
   const items = NAV_ITEMS[role] ?? NAV_ITEMS.student;
 
-  // Show a minimal skeleton while profile is still loading so nav never flickers
-  if (loading && !profile) {
-    return (
-      <aside className={`${collapsed ? "w-16" : "w-64"} h-screen bg-navy-900 border-r border-white/[0.07] flex-shrink-0 transition-all duration-300`}>
-        <div className="p-4 space-y-2 mt-4">
-          {[...Array(5)].map((_, i) => (
-            <div key={i} className="h-9 rounded-xl bg-white/[0.05] animate-pulse" />
-          ))}
-        </div>
-      </aside>
-    );
-  }
+  // NOTE: We never block the whole sidebar on loading.
+  // The role is already known from the URL (the server already verified it),
+  // so nav items render immediately from inferredRole.
+  // Only the name/avatar in the user-info strip shows a skeleton while loading.
 
   const handleSignOut = async () => {
     await signOut();
@@ -131,17 +123,28 @@ export default function Sidebar() {
         )}
       </div>
 
-      {/* User info */}
+      {/* User info — name/avatar pulse while loading; role badge always visible */}
       {!collapsed && (
         <div className="px-4 py-4 border-b border-white/[0.07]">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-gold-500 to-gold-600 flex items-center justify-center flex-shrink-0 text-navy-900 font-display font-bold text-sm">
-              {(profile?.full_name ?? "U")[0].toUpperCase()}
-            </div>
+            {/* Avatar: pulse until profile loads, then show initial */}
+            {loading && !profile ? (
+              <div className="w-9 h-9 rounded-full bg-white/[0.08] animate-pulse flex-shrink-0" />
+            ) : (
+              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-gold-500 to-gold-600 flex items-center justify-center flex-shrink-0 text-navy-900 font-display font-bold text-sm">
+                {(profile?.full_name ?? "U")[0].toUpperCase()}
+              </div>
+            )}
             <div className="min-w-0">
-              <p className="text-white/90 font-body text-sm font-semibold truncate">
-                {profile?.full_name ?? "User"}
-              </p>
+              {/* Name: pulse until loaded */}
+              {loading && !profile ? (
+                <div className="h-4 w-24 rounded-lg bg-white/[0.08] animate-pulse mb-1.5" />
+              ) : (
+                <p className="text-white/90 font-body text-sm font-semibold truncate">
+                  {profile?.full_name ?? "User"}
+                </p>
+              )}
+              {/* Role badge: always visible from inferredRole */}
               <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-gold-400/15 border border-gold-400/30 text-gold-400 font-body text-[10px] font-semibold tracking-wider uppercase">
                 {ROLE_LABEL[role]}
               </span>
