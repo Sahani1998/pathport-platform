@@ -25,10 +25,12 @@ export default async function InstitutionCoursesPage() {
   // PREVIEW MODE: role guard temporarily disabled
   // if (profile?.role !== "institution") redirect("/dashboard");
 
-  console.log("[InstitutionPortal] loading courses, college_id:", profile?.college_id);
+  const isAdmin = profile?.role === "admin";
+  console.log("[InstitutionPortal] loading courses, role:", profile?.role, "| college_id:", profile?.college_id);
 
-  // If no college linked, show setup prompt
-  if (!profile?.college_id) {
+  // Institution users MUST have a college linked.
+  // Admin users bypass this requirement and see all courses.
+  if (!profile?.college_id && !isAdmin) {
     return (
       <div className="max-w-2xl">
         <h2 className="font-display text-3xl text-white mb-2">Course Management</h2>
@@ -38,9 +40,9 @@ export default async function InstitutionCoursesPage() {
             <div>
               <p className="font-display text-xl text-white mb-2">College not linked</p>
               <p className="text-white/55 font-body text-sm mb-3">
-                Your account is not linked to a college yet. An admin needs to run:
+                Your institution account is not linked to a college yet. An admin needs to run:
               </p>
-              <code className="block p-3 rounded-xl bg-navy-950 border border-white/[0.09] text-gold-300 font-mono text-xs">
+              <code className="block p-3 rounded-xl bg-navy-950 border border-white/[0.09] text-gold-300 font-mono text-xs break-all">
                 UPDATE public.profiles SET college_id = &apos;&lt;college-uuid&gt;&apos; WHERE id = &apos;{user.id}&apos;;
               </code>
               <p className="text-white/40 font-body text-xs mt-3">
@@ -53,14 +55,35 @@ export default async function InstitutionCoursesPage() {
     );
   }
 
-  // Fetch college info + courses
-  const [{ data: college }, { data: courses, error }] = await Promise.all([
-    supabase.from("colleges").select("*").eq("id", profile.college_id).single(),
-    supabase.from("courses").select("*").eq("college_id", profile.college_id).order("created_at", { ascending: false }),
-  ]);
+  // ── Fetch college + courses ────────────────────────────────────────────────
+  // Admin with no college_id → fetch ALL colleges and ALL courses for oversight.
+  // Institution user → fetch only their college and its courses.
+  let college = null;
+  let courses = null;
+  let fetchError = null;
 
-  if (error) {
-    console.error("[InstitutionPortal] courses fetch error:", error.code, error.message);
+  if (isAdmin && !profile?.college_id) {
+    // Admin overview: all courses joined with college name
+    const { data, error } = await supabase
+      .from("courses")
+      .select("*, colleges(id, name)")
+      .order("created_at", { ascending: false });
+    courses     = data;
+    fetchError  = error;
+    college     = { name: "All Colleges (Admin View)" };
+  } else {
+    // Institution user (or admin with college_id): scoped to their college
+    const [colRes, courseRes] = await Promise.all([
+      supabase.from("colleges").select("*").eq("id", profile!.college_id!).single(),
+      supabase.from("courses").select("*").eq("college_id", profile!.college_id!).order("created_at", { ascending: false }),
+    ]);
+    college    = colRes.data;
+    courses    = courseRes.data;
+    fetchError = courseRes.error;
+  }
+
+  if (fetchError) {
+    console.error("[InstitutionPortal] courses fetch error:", fetchError.code, fetchError.message);
   }
 
   const courseList = (courses ?? []) as Course[];
@@ -80,7 +103,9 @@ export default async function InstitutionCoursesPage() {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <Building2 className="w-4 h-4 text-pathBlue-400" />
-            <span className="text-pathBlue-400 font-body text-xs font-semibold uppercase tracking-wider">{college?.name}</span>
+            <span className="text-pathBlue-400 font-body text-xs font-semibold uppercase tracking-wider">
+              {isAdmin && !profile?.college_id ? "Admin View · All Colleges" : (college as { name: string })?.name}
+            </span>
           </div>
           <h2 className="font-display text-3xl text-white">Course Management</h2>
         </div>
