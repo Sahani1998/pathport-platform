@@ -2,7 +2,8 @@
 
 import { useAuth } from "@/context/AuthContext";
 import { usePathname } from "next/navigation";
-import { Bell, Search } from "lucide-react";
+import NotificationBell from "@/components/notifications/NotificationBell";
+import { Search } from "lucide-react";
 import type { UserRole } from "@/types/auth";
 
 const PAGE_TITLES: Record<string, string> = {
@@ -58,12 +59,15 @@ export default function DashboardHeader({ title }: DashboardHeaderProps) {
           />
         </div>
 
-        {/* Notifications */}
-        <button className="relative w-9 h-9 rounded-xl bg-white/[0.05] border border-white/[0.08] flex items-center justify-center text-white/50 hover:text-white/80 hover:border-white/20 transition-all">
-          <Bell className="w-4 h-4" />
-          {/* Dot */}
-          <span className="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-gold-400" />
-        </button>
+        {/* Notifications — only for students; others get a plain bell */}
+        {role === "student"
+          ? <NotificationBell userId={profile?.id} />
+          : (
+            <button className="relative w-9 h-9 rounded-xl bg-white/[0.05] border border-white/[0.08] flex items-center justify-center text-white/50 hover:text-white/80 hover:border-white/20 transition-all">
+              <span className="text-base">🔔</span>
+            </button>
+          )
+        }
 
         {/* Role badge + name */}
         <div className="flex items-center gap-2.5">

@@ -10,7 +10,7 @@ import {
   LayoutDashboard, FileText, BookOpen, Briefcase, Building2,
   Users, Settings, LogOut, ChevronLeft, ChevronRight,
   GraduationCap, BarChart2, UserCircle, ClipboardList,
-  Globe, Award, MessageSquare,
+  Globe, Award, MessageSquare, Bell,
 } from "lucide-react";
 
 // ─── Role-specific nav items ──────────────────────────────────────────────────
@@ -19,6 +19,7 @@ const NAV_ITEMS: Record<UserRole, { label: string; href: string; icon: React.Ele
   student: [
     { label: "Dashboard",        href: "/dashboard/student",              icon: LayoutDashboard },
     { label: "My Applications",  href: "/dashboard/student/applications", icon: FileText        },
+    { label: "Notifications",    href: "/dashboard/student/notifications",icon: Bell            },
     { label: "Course Browser",   href: "/dashboard/student/courses",      icon: BookOpen        },
     { label: "Internships",      href: "/dashboard/student/internships",  icon: Briefcase       },
     { label: "My Documents",     href: "/dashboard/student/documents",    icon: ClipboardList   },

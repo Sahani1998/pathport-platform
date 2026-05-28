@@ -3,7 +3,10 @@ import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import DocumentStatusBadge from "@/components/documents/DocumentStatusBadge";
 import DocumentReviewActions from "@/components/documents/DocumentReviewActions";
+import ApplicationStageBadge from "@/components/applications/ApplicationStageBadge";
+import StageUpdateSelect from "@/components/applications/StageUpdateSelect";
 import { APPLICATION_STATUSES } from "@/types/courses";
+import type { ApplicationStage } from "@/types/timeline";
 import { DOCUMENT_TYPES, fmtFileSize } from "@/types/documents";
 import type { StudentDocument } from "@/types/documents";
 import {
@@ -113,10 +116,14 @@ export default async function InstitutionApplicationDetailPage({
                 <p className="font-body text-xs text-white/40">{course.colleges.name}</p>
               </div>
               <div>
-                <p className="text-white/35 font-body text-[10px] uppercase tracking-wider mb-1">Status</p>
+                <p className="text-white/35 font-body text-[10px] uppercase tracking-wider mb-1">Legacy Status</p>
                 <span className={`inline-flex items-center px-2.5 py-1 rounded-full border font-body text-xs font-semibold ${statusMeta?.color ?? ""}`}>
                   {statusMeta?.label ?? app.status}
                 </span>
+              </div>
+              <div>
+                <p className="text-white/35 font-body text-[10px] uppercase tracking-wider mb-1">Timeline Stage</p>
+                <ApplicationStageBadge stage={(app as unknown as { current_stage?: string }).current_stage as ApplicationStage ?? "application_submitted"} size="sm" />
               </div>
               <div>
                 <p className="text-white/35 font-body text-[10px] uppercase tracking-wider mb-1">Submitted</p>
@@ -126,6 +133,12 @@ export default async function InstitutionApplicationDetailPage({
               </div>
             </div>
           </div>
+
+          {/* Stage update control */}
+          <StageUpdateSelect
+            applicationId={id}
+            currentStage={(app as unknown as { current_stage?: string }).current_stage as ApplicationStage ?? "application_submitted"}
+          />
 
           {/* Student info */}
           <div className="bg-white/[0.04] border border-white/[0.08] rounded-2xl p-5">

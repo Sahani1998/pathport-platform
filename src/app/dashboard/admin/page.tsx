@@ -7,8 +7,7 @@ import {
   MessageSquare, CheckCircle2, Star, Clock,
   Globe, UserPlus, Activity, ArrowRight, ChevronRight,
   Building2, BookOpen,
-} from "lucide-react";
-// ── Status badge helper ────────────────────────────────────────────────────────
+} from "lucide-react";// ── Status badge helper ────────────────────────────────────────────────────────
 function StatusBadge({ status }: { status: string }) {
   const MAP: Record<string, string> = {
     new:            "bg-pathBlue-500/15 text-pathBlue-400 border-pathBlue-500/30",
@@ -60,13 +59,19 @@ export default async function AdminDashboardPage() {
     { count: totalApplications },
     { count: totalDocuments },
     { count: pendingDocuments },
+    { count: offerReadyApps },
+    { count: ipaApps },
+    { count: approvedApps },
   ] = await Promise.all([
-    supabase.from("colleges").select("*",          { count: "exact", head: true }),
-    supabase.from("courses").select("*",           { count: "exact", head: true }),
-    supabase.from("courses").select("*",           { count: "exact", head: true }).eq("status", "open"),
-    supabase.from("applications").select("*",      { count: "exact", head: true }),
-    supabase.from("student_documents").select("*", { count: "exact", head: true }),
-    supabase.from("student_documents").select("*", { count: "exact", head: true }).eq("status", "pending"),
+    supabase.from("colleges").select("*",              { count: "exact", head: true }),
+    supabase.from("courses").select("*",               { count: "exact", head: true }),
+    supabase.from("courses").select("*",               { count: "exact", head: true }).eq("status", "open"),
+    supabase.from("applications").select("*",          { count: "exact", head: true }),
+    supabase.from("student_documents").select("*",     { count: "exact", head: true }),
+    supabase.from("student_documents").select("*",     { count: "exact", head: true }).eq("status", "pending"),
+    supabase.from("applications").select("*",          { count: "exact", head: true }).eq("current_stage", "offer_letter_ready"),
+    supabase.from("applications").select("*",          { count: "exact", head: true }).eq("current_stage", "ipa_processing"),
+    supabase.from("applications").select("*",          { count: "exact", head: true }).eq("current_stage", "approved"),
   ]);
 
   const [
@@ -250,6 +255,9 @@ export default async function AdminDashboardPage() {
                 { label: "Courses",          value: totalCourses      ?? "—", icon: BookOpen      },
                 { label: "Open Courses",     value: openCourses       ?? "—", icon: TrendingUp    },
                 { label: "Applications",     value: totalApplications ?? "—", icon: FileText      },
+                { label: "Offer Letters",    value: offerReadyApps    ?? "—", icon: FileText      },
+                { label: "IPA Processing",   value: ipaApps           ?? "—", icon: Clock         },
+                { label: "Approved",         value: approvedApps      ?? "—", icon: CheckCircle2  },
                 { label: "Documents",        value: totalDocuments    ?? "—", icon: FileText      },
                 { label: "Docs Pending",     value: pendingDocuments  ?? "—", icon: Clock         },
               ].map(({ label, value, icon: Icon }) => (
