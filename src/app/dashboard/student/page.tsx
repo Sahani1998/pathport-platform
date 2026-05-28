@@ -22,9 +22,9 @@ const JOURNEY = [
 ];
 
 const APPLICATIONS = [
-  { college: "Dimensions International College",  programme: "Business Management Diploma",     status: "Under Review",  statusColor: "text-gold-400  bg-gold-400/10  border-gold-400/25",  date: "12 Jan 2025" },
-  { college: "MDIS",                              programme: "Hospitality & Tourism Diploma",   status: "Shortlisted",   statusColor: "text-pathBlue-400 bg-pathBlue-500/10 border-pathBlue-500/25", date: "08 Jan 2025" },
-  { college: "PSB Academy",                       programme: "IT & Computer Science Diploma",   status: "Docs Required", statusColor: "text-orange-400 bg-orange-500/10 border-orange-400/25",  date: "03 Jan 2025" },
+  { college: "Dimensions International College",  programme: "Business Management Diploma",     status: "Under Review",  statusColor: "text-gold-400  bg-gold-400/10  border-gold-400/25",  date: "12 Jan 2026" },
+  { college: "MDIS",                              programme: "Hospitality & Tourism Diploma",   status: "Shortlisted",   statusColor: "text-pathBlue-400 bg-pathBlue-500/10 border-pathBlue-500/25", date: "08 Jan 2026" },
+  { college: "PSB Academy",                       programme: "IT & Computer Science Diploma",   status: "Docs Required", statusColor: "text-orange-400 bg-orange-500/10 border-orange-400/25",  date: "03 Jan 2026" },
 ];
 
 const DOCS = [
@@ -37,10 +37,10 @@ const DOCS = [
 ];
 
 const DEADLINES = [
-  { label: "PSB Academy — Doc Deadline",   date: "20 Jan", urgent: true  },
-  { label: "MDIS Interview Slot",          date: "25 Jan", urgent: true  },
-  { label: "Feb 2025 Intake Closes",       date: "31 Jan", urgent: false },
-  { label: "ICA Pre-Assessment",           date: "15 Feb", urgent: false },
+  { label: "PSB Academy — Doc Deadline",   date: "20 Apr", urgent: true  },
+  { label: "MDIS Interview Slot",          date: "25 Apr", urgent: true  },
+  { label: "Apr 2026 Intake Closes",       date: "30 Apr", urgent: false },
+  { label: "ICA Pre-Assessment",           date: "15 May", urgent: false },
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -127,7 +127,7 @@ export default async function StudentDashboardPage() {
           { label: "Applications",    value: "3",    icon: FileText,      trend: "active",  gold: true  },
           { label: "Offer Letters",   value: "0",    icon: GraduationCap, trend: "pending", gold: false },
           { label: "Docs Uploaded",   value: `${docsUploaded}/${DOCS.length}`, icon: Shield, trend: "",  gold: false },
-          { label: "Days to Intake",  value: "62",   icon: Clock,         trend: "Feb 2025",gold: false },
+          { label: "Days to Intake",  value: "44",   icon: Clock,         trend: "Apr 2026",gold: false },
         ].map(({ label, value, icon: Icon, trend, gold }) => (
           <div key={label} className={`relative rounded-2xl border p-5 hover:-translate-y-0.5 transition-all duration-200 ${
             gold ? "bg-gold-400/[0.07] border-gold-400/30" : "bg-white/[0.04] border-white/[0.08]"

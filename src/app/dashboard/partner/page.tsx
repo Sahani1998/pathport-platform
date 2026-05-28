@@ -209,8 +209,8 @@ export default async function PartnerDashboardPage() {
           <h3 className="font-display text-xl text-white mb-2">Upcoming Intakes</h3>
           <div className="space-y-2">
             {[
-              { intake: "Feb 2025", colleges: "All colleges", seats: "42 seats left", urgent: true  },
-              { intake: "Jul 2025", colleges: "All colleges", seats: "Open soon",     urgent: false },
+              { intake: "Apr 2026", colleges: "All colleges", seats: "42 seats left", urgent: true  },
+              { intake: "Jul 2026", colleges: "All colleges", seats: "Open soon",     urgent: false },
             ].map((i) => (
               <div key={i.intake} className={`flex items-center justify-between p-3 rounded-xl border ${i.urgent ? "border-gold-400/25 bg-gold-400/[0.06]" : "border-white/[0.07] bg-white/[0.03]"}`}>
                 <div>

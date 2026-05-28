@@ -139,4 +139,4 @@ npm run type-check   # TypeScript type checking (no emit)
 
 ## 📄 License
 
-Private & Proprietary — PathPort Pte. Ltd. © 2026
+Private & Proprietary — PathPort Pte. Ltd. © 2025

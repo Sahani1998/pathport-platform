@@ -17,10 +17,10 @@ const INTAKE_PIPELINE = [
 ];
 
 const PROGRAMMES = [
-  { name: "Business Management",    enrolled: 42, cap: 60, intake: "Feb 2025", status: "Open"   },
-  { name: "IT & Computer Science",  enrolled: 28, cap: 40, intake: "Feb 2025", status: "Open"   },
-  { name: "Hospitality & Tourism",  enrolled: 35, cap: 40, intake: "Feb 2025", status: "Almost Full" },
-  { name: "Engineering (Mech)",     enrolled: 18, cap: 30, intake: "Jul 2025", status: "Open"   },
+  { name: "Business Management",    enrolled: 42, cap: 60, intake: "Jan 2026", status: "Open"   },
+  { name: "IT & Computer Science",  enrolled: 28, cap: 40, intake: "Jan 2026", status: "Open"   },
+  { name: "Hospitality & Tourism",  enrolled: 35, cap: 40, intake: "Jan 2026", status: "Almost Full" },
+  { name: "Engineering (Mech)",     enrolled: 18, cap: 30, intake: "Jul 2026", status: "Open"   },
 ];
 
 const RECENT_APPS = [
@@ -57,7 +57,7 @@ export default async function InstitutionDashboardPage() {
             <span className="text-pathBlue-400 font-body text-xs font-semibold tracking-wider uppercase">Institution Portal</span>
           </div>
           <h2 className="font-display text-4xl text-white mb-1">{institutionName}</h2>
-          <p className="text-white/45 font-body text-sm">Feb 2025 intake is open · 3 programmes accepting applications</p>
+          <p className="text-white/45 font-body text-sm">Jan 2026 intake is open · 3 programmes accepting applications</p>
         </div>
         <div className="relative mt-5 grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
@@ -84,7 +84,7 @@ export default async function InstitutionDashboardPage() {
         <div className="lg:col-span-2 bg-white/[0.04] border border-white/[0.08] rounded-2xl p-6">
           <div className="flex items-center gap-2 mb-5">
             <BarChart2 className="w-4 h-4 text-gold-400" />
-            <h3 className="font-display text-xl text-white">Feb 2025 Pipeline</h3>
+            <h3 className="font-display text-xl text-white">Jan 2026 Pipeline</h3>
           </div>
           <div className="space-y-3">
             {INTAKE_PIPELINE.map((s) => (
