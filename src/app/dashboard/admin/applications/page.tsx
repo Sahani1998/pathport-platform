@@ -2,20 +2,10 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import ApplicationStageBadge from "@/components/applications/ApplicationStageBadge";
 import StageUpdateSelect from "@/components/applications/StageUpdateSelect";
-import { STAGE_META, TIMELINE_STAGES } from "@/types/timeline";
+import { TIMELINE_STAGES } from "@/types/timeline";
 import type { ApplicationStage } from "@/types/timeline";
+import { STATUS_TO_STAGE } from "@/lib/application-stage-mapping";
 import { FileText, CheckCircle2, TrendingUp, Clock } from "lucide-react";
-
-// Legacy status → current_stage normalisation (applied when current_stage is null)
-const STATUS_TO_STAGE: Record<string, ApplicationStage> = {
-  approved:      "approved",
-  rejected:      "rejected",
-  ipa_processing:"ipa_processing",
-  offer_ready:   "offer_letter_ready",
-  docs_required: "documents_pending",
-  under_review:  "documents_under_review",
-  submitted:     "application_submitted",
-};
 
 interface AppRow {
   id:              string;

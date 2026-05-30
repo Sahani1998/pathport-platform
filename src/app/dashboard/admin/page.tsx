@@ -5,9 +5,10 @@ import StatCard from "@/components/dashboard/StatCard";
 import {
   Users, FileText, TrendingUp, AlertCircle,
   MessageSquare, CheckCircle2, Star, Clock,
-  Globe, UserPlus, Activity, ArrowRight, ChevronRight,
+  Activity, ArrowRight, ChevronRight,
   Building2, BookOpen,
-} from "lucide-react";// ── Status badge helper ────────────────────────────────────────────────────────
+} from "lucide-react";
+
 function StatusBadge({ status }: { status: string }) {
   const MAP: Record<string, string> = {
     new:            "bg-pathBlue-500/15 text-pathBlue-400 border-pathBlue-500/30",
@@ -25,14 +26,15 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-// ── Mock activity feed (shown alongside live data) ─────────────────────────────
-const ACTIVITY = [
-  { icon: UserPlus,    text: "New inquiry from Priya Sharma (Maharashtra)",      time: "2 min ago",  color: "text-pathBlue-400" },
-  { icon: CheckCircle2,text: "Arjun Mehta converted → enrolled at MDIS",         time: "1 hr ago",   color: "text-emerald-400"  },
-  { icon: MessageSquare,text: "3 new inquiries overnight from hero form",         time: "8 hrs ago",  color: "text-gold-400"     },
-  { icon: FileText,    text: "PSB Academy intake closes in 5 days",              time: "Yesterday",  color: "text-white/40"     },
-  { icon: Globe,       text: "Sri Lanka corridor officially launched",            time: "2 days ago", color: "text-pathBlue-400" },
-];
+function timeAgo(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins  = Math.floor(diff / 60000);
+  if (mins < 60)  return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days  = Math.floor(hours / 24);
+  return `${days}d ago`;
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -101,6 +103,29 @@ export default async function AdminDashboardPage() {
     .limit(6);
 
   if (recentError) console.error("[AdminDashboard] recent error:", recentError.code, recentError.message);
+
+  // ── Real activity feed from timeline events ───────────────────────────────
+  const { data: recentEvents } = await supabase
+    .from("application_timeline_events")
+    .select("id, stage, title, created_at, created_by_role")
+    .order("created_at", { ascending: false })
+    .limit(6);
+
+  const activityItems = (recentEvents ?? []).map(e => ({
+    emoji: e.stage === "approved" ? "🎉"
+         : e.stage === "offer_letter_ready" ? "📩"
+         : e.stage === "documents_verified" ? "✅"
+         : e.stage === "ipa_processing"     ? "🪪"
+         : e.stage === "arrived_singapore"  ? "🇸🇬"
+         : "📋",
+    text: e.title,
+    time: timeAgo(e.created_at as string),
+    color: e.stage === "approved" || e.stage === "documents_verified" || e.stage === "arrived_singapore"
+      ? "text-emerald-400"
+      : e.stage === "offer_letter_ready" || e.stage === "ipa_processing"
+        ? "text-gold-400"
+        : "text-pathBlue-400",
+  }));
 
   // ── Compute pipeline percentages from live counts ─────────────────────────
   const total = totalInquiries ?? 0;
@@ -294,22 +319,26 @@ export default async function AdminDashboardPage() {
             </div>
           </div>
 
-          {/* Activity feed */}
+          {/* Activity feed — real timeline events */}
           <div className="bg-white/[0.04] border border-white/[0.08] rounded-2xl p-5">
-            <h3 className="font-display text-xl text-white mb-4">Activity Feed</h3>
-            <div className="space-y-3">
-              {ACTIVITY.map(({ icon: Icon, text, time, color }) => (
-                <div key={text} className="flex items-start gap-3">
-                  <div className={`w-7 h-7 rounded-lg bg-white/[0.05] border border-white/[0.09] flex items-center justify-center flex-shrink-0 mt-0.5`}>
-                    <Icon className={`w-3.5 h-3.5 ${color}`} />
+            <h3 className="font-display text-xl text-white mb-4">Recent Activity</h3>
+            {activityItems.length === 0 ? (
+              <p className="text-white/25 font-body text-sm text-center py-4">No activity yet</p>
+            ) : (
+              <div className="space-y-3">
+                {activityItems.map((item: { emoji: string; text: string; time: string; color: string }, i: number) => (
+                  <div key={i} className="flex items-start gap-3">
+                    <div className="w-7 h-7 rounded-lg bg-white/[0.05] border border-white/[0.09] flex items-center justify-center flex-shrink-0 mt-0.5 text-sm">
+                      {item.emoji}
+                    </div>
+                    <div className="min-w-0">
+                      <p className={`font-body text-xs leading-relaxed ${item.color}`}>{item.text}</p>
+                      <p className="font-body text-[10px] text-white/25 mt-0.5">{item.time}</p>
+                    </div>
                   </div>
-                  <div className="min-w-0">
-                    <p className="font-body text-xs text-white/65 leading-relaxed">{text}</p>
-                    <p className="font-body text-[10px] text-white/25 mt-0.5">{time}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Quick links */}

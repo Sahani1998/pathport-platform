@@ -2,25 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import type { ApplicationStage } from "@/types/timeline";
 import { getStageMeta, STAGE_NOTIFICATION } from "@/types/timeline";
-
-// Bidirectional mapping: current_stage → legacy status
-// Used so the old status column always reflects the latest stage.
-const STAGE_TO_STATUS: Record<ApplicationStage, string> = {
-  application_submitted:   "submitted",
-  documents_pending:       "docs_required",
-  documents_uploaded:      "under_review",
-  documents_under_review:  "under_review",
-  documents_verified:      "under_review",
-  offer_letter_processing: "under_review",
-  offer_letter_ready:      "offer_ready",
-  fee_payment_pending:     "offer_ready",
-  ipa_processing:          "ipa_processing",
-  approved:                "approved",
-  arrival_preparation:     "approved",
-  arrived_singapore:       "approved",
-  rejected:                "rejected",
-  withdrawn:               "rejected",
-};
+import { STAGE_TO_STATUS } from "@/lib/application-stage-mapping";
 
 export async function PATCH(
   request: NextRequest,
