@@ -3,13 +3,13 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import ApplicationStageBadge from "@/components/applications/ApplicationStageBadge";
 import {
-  FileText, GraduationCap, Clock, ArrowRight,
+  FileText, GraduationCap, ArrowRight,
   MapPin, CheckCircle2, Building2, BookOpen,
   Shield, Bell, ChevronRight, Upload,
 } from "lucide-react";
 import GoldButton from "@/components/ui/GoldButton";
 import type { ApplicationStage } from "@/types/timeline";
-import { TIMELINE_STAGES } from "@/types/timeline";
+import { STATUS_TO_STAGE } from "@/lib/application-stage-mapping";
 
 // ── Journey step mapping from current_stage ────────────────────────────────
 // Each step is "done" if the stage is at or past it.
@@ -91,12 +91,6 @@ export default async function StudentDashboardPage() {
     current_stage: ApplicationStage | null;
     submitted_at: string;
     courses: { id: string; title: string; slug: string; category: string; colleges: { name: string } | null } | null;
-  };
-
-  const STATUS_TO_STAGE: Record<string, ApplicationStage> = {
-    approved: "approved", rejected: "rejected", ipa_processing: "ipa_processing",
-    offer_ready: "offer_letter_ready", docs_required: "documents_pending",
-    under_review: "documents_under_review", submitted: "application_submitted",
   };
 
   const apps: AppData[] = (appsRaw ?? []).map(a => {

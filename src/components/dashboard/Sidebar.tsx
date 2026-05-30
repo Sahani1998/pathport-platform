@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { cn } from "@/lib/utils";
 import type { UserRole } from "@/types/auth";
@@ -70,7 +70,6 @@ const ROLE_LABEL: Record<UserRole, string> = {
 export default function Sidebar() {
   const { profile, loading, signOut } = useAuth();
   const pathname = usePathname();
-  const router   = useRouter();
   const [collapsed, setCollapsed] = useState(false);
 
   // Derive role with three priority levels:
@@ -97,29 +96,33 @@ export default function Sidebar() {
   // Only the name/avatar in the user-info strip shows a skeleton while loading.
 
   const handleSignOut = async () => {
-    console.log("[Auth] sign out clicked");
+    console.log("[Auth] signOut start");
 
-    // Fire signOut but do NOT await it — a hanging Supabase API call must never
-    // block the user from logging out.
-    signOut()
-      .then(() => console.log("[Auth] supabase signOut success"))
-      .catch(err => console.error("[Auth] sign out error:", err));
-
-    // Immediately clear any Supabase session keys from localStorage so the
-    // next page load has no cached session even if the API call timed out.
+    // 1. Attempt Supabase signOut — AuthContext has a built-in 3-second timeout
+    //    so this will never hang indefinitely.
     try {
-      Object.keys(localStorage)
-        .filter(k => k.startsWith("sb-"))
-        .forEach(k => localStorage.removeItem(k));
-      console.log("[Auth] local state cleared");
-    } catch {
-      // localStorage may not be available in some edge environments
+      await signOut();
+      console.log("[Auth] signOut success");
+    } catch (err) {
+      console.error("[Auth] signOut error:", err);
     }
 
-    console.log("[Auth] redirecting home");
-    // window.location.replace does a hard navigation (no history entry) and
-    // forces a full page reload so Next.js re-fetches auth from scratch.
-    window.location.replace("/login");
+    // 2. Clear all Supabase session keys from localStorage.
+    //    AuthContext clears React state; we wipe the browser cache too so the
+    //    next page load has no stale session even if the API call timed out.
+    try {
+      Object.keys(localStorage)
+        .filter(k => k.startsWith("sb-") || k.startsWith("supabase-"))
+        .forEach(k => localStorage.removeItem(k));
+      console.log("[Auth] local storage cleared");
+    } catch {
+      // localStorage unavailable in some environments — safe to ignore
+    }
+
+    // 3. Hard redirect — no history entry, forces full page reload so
+    //    Next.js middleware re-validates auth from scratch.
+    console.log("[Auth] redirecting");
+    window.location.replace("/");
   };
 
   return (
