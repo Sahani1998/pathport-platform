@@ -9,43 +9,8 @@ import {
 } from "lucide-react";
 import GoldButton from "@/components/ui/GoldButton";
 import type { ApplicationStage } from "@/types/timeline";
+import { TIMELINE_STAGES, getStageMeta } from "@/types/timeline";
 import { STATUS_TO_STAGE } from "@/lib/application-stage-mapping";
-
-// ── Journey step mapping from current_stage ────────────────────────────────
-// Each step is "done" if the stage is at or past it.
-const STAGE_ORDER: ApplicationStage[] = [
-  "application_submitted", "documents_pending", "documents_uploaded",
-  "documents_under_review", "documents_verified", "offer_letter_processing",
-  "offer_letter_ready", "fee_payment_pending", "ipa_processing",
-  "approved", "arrival_preparation", "arrived_singapore",
-];
-
-function stageIndex(stage: ApplicationStage): number {
-  return STAGE_ORDER.indexOf(stage);
-}
-
-const JOURNEY_LABELS = [
-  "Profile Created",
-  "Application Submitted",
-  "Documents Uploaded",
-  "Documents Verified",
-  "Offer Letter Ready",
-  "Fee Paid",
-  "Student Pass (ICA)",
-  "Arrived Singapore 🇸🇬",
-];
-
-// Maps journey step to the minimum stage required to be "done"
-const JOURNEY_STAGE_MAP: ApplicationStage[] = [
-  "application_submitted",  // step 1 — profile + applied
-  "application_submitted",  // step 2 — application submitted
-  "documents_uploaded",     // step 3
-  "documents_verified",     // step 4
-  "offer_letter_ready",     // step 5
-  "fee_payment_pending",    // step 6
-  "ipa_processing",         // step 7
-  "arrived_singapore",      // step 8
-];
 
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -122,23 +87,26 @@ export default async function StudentDashboardPage() {
   const docsVerified  = docs.filter(d => d.status === "verified").length;
   const DOCS_REQUIRED = 6;
 
-  // ── Journey progress (based on most-advanced active application) ──────────
+  // ── Journey progress — single source of truth: TIMELINE_STAGES + getStageMeta
+  // Renders the same 12 happy-path stages as the My Applications page so
+  // labels and step numbers stay consistent across the app. The currently
+  // active stage is the one matching the latest application's current_stage;
+  // earlier stages are done, later stages are upcoming. No local rewrites.
   const latestActiveApp = apps.find(a => !["rejected","withdrawn"].includes(a.current_stage ?? ""));
   const currentStage    = latestActiveApp?.current_stage ?? null;
-  const currentIdx      = currentStage ? stageIndex(currentStage) : -1;
+  const currentStep     = currentStage ? getStageMeta(currentStage).step : 0;  // 1..12, or 0 if no app / off-path
 
-  const journey = JOURNEY_LABELS.map((label, i) => {
-    const requiredStage  = JOURNEY_STAGE_MAP[i];
-    const requiredIdx    = stageIndex(requiredStage);
-    const done           = i === 0 ? true : currentIdx >= requiredIdx;
-    const active         = !done && (i === 0 || currentIdx >= stageIndex(JOURNEY_STAGE_MAP[i - 1]));
-    return { id: i + 1, label, done, active };
-  });
+  const journey = TIMELINE_STAGES.map(meta => ({
+    id:     meta.step,
+    label:  meta.label,
+    emoji:  meta.emoji,
+    done:   currentStep > meta.step,
+    active: currentStep === meta.step,
+  }));
 
-  // Fix: first step is always done if user exists
-  if (journey[0]) journey[0].done = true;
-
-  const journeyStep = journey.filter(s => s.done).length;
+  const journeyTotal = TIMELINE_STAGES.length;  // 12
+  const journeyStep  = currentStep;             // current canonical step (e.g. 10 = Approved)
+  const currentStageLabel = currentStage ? getStageMeta(currentStage).label : null;
 
   return (
     <div className="space-y-7 max-w-6xl">
@@ -157,7 +125,9 @@ export default async function StudentDashboardPage() {
             <p className="text-white/50 font-body text-sm">
               {totalApps === 0
                 ? "Start your Singapore journey — browse courses and apply"
-                : `Step ${journeyStep} of ${journey.length} · Your Singapore journey is underway`}
+                : currentStageLabel
+                  ? `Step ${journeyStep} of ${journeyTotal} · ${currentStageLabel}`
+                  : "Your Singapore journey is underway"}
             </p>
           </div>
           <div className="flex-shrink-0">
@@ -171,35 +141,40 @@ export default async function StudentDashboardPage() {
           </div>
         </div>
 
-        {/* Journey progress — only show if has applications */}
+        {/* Journey progress — only show if has applications.
+            Renders all 12 canonical TIMELINE_STAGES — same source as the
+            My Applications page so labels stay consistent. Horizontal
+            scroll on narrow viewports keeps the pip strip readable. */}
         {totalApps > 0 && (
-          <div className="relative mt-6">
-            <div className="flex items-center gap-0">
-              {journey.map((step, i) => (
-                <div key={step.id} className="flex items-center flex-1 min-w-0">
-                  <div className={`w-7 h-7 rounded-full flex-shrink-0 flex items-center justify-center font-body font-bold text-[10px] border-2 transition-all z-10 ${
-                    step.done
-                      ? "bg-emerald-500 border-emerald-400 text-white"
-                      : step.active
-                        ? "bg-gold-400 border-gold-300 text-navy-900 ring-4 ring-gold-400/25"
-                        : "bg-white/[0.05] border-white/20 text-white/30"
-                  }`}>
-                    {step.done ? <CheckCircle2 className="w-3.5 h-3.5" /> : step.id}
+          <div className="relative mt-6 -mx-1 overflow-x-auto pb-1">
+            <div className="min-w-[640px]">
+              <div className="flex items-center gap-0">
+                {journey.map((step, i) => (
+                  <div key={step.id} className="flex items-center flex-1 min-w-0">
+                    <div className={`w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center font-body font-bold text-[10px] border-2 transition-all z-10 ${
+                      step.done
+                        ? "bg-emerald-500 border-emerald-400 text-white"
+                        : step.active
+                          ? "bg-gold-400 border-gold-300 text-navy-900 ring-4 ring-gold-400/25"
+                          : "bg-white/[0.05] border-white/20 text-white/30"
+                    }`}>
+                      {step.done ? <CheckCircle2 className="w-3 h-3" /> : step.id}
+                    </div>
+                    {i < journey.length - 1 && (
+                      <div className={`h-0.5 flex-1 mx-0.5 ${step.done ? "bg-emerald-500/60" : "bg-white/[0.08]"}`} />
+                    )}
                   </div>
-                  {i < journey.length - 1 && (
-                    <div className={`h-0.5 flex-1 mx-0.5 ${step.done ? "bg-emerald-500/60" : "bg-white/[0.08]"}`} />
-                  )}
-                </div>
-              ))}
-            </div>
-            <div className="flex mt-2 gap-0">
-              {journey.map((step) => (
-                <div key={step.id} className="flex-1 min-w-0 px-0.5">
-                  <p className={`font-body text-[9px] leading-tight truncate ${
-                    step.active ? "text-gold-400 font-semibold" : step.done ? "text-emerald-400/70" : "text-white/25"
-                  }`}>{step.label}</p>
-                </div>
-              ))}
+                ))}
+              </div>
+              <div className="flex mt-2 gap-0">
+                {journey.map((step) => (
+                  <div key={step.id} className="flex-1 min-w-0 px-0.5">
+                    <p className={`font-body text-[9px] leading-tight truncate ${
+                      step.active ? "text-gold-400 font-semibold" : step.done ? "text-emerald-400/70" : "text-white/25"
+                    }`}>{step.label}</p>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         )}
