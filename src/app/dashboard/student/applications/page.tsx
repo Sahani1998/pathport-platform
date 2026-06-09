@@ -3,8 +3,10 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import ApplicationTimeline from "@/components/applications/ApplicationTimeline";
 import ApplicationStageBadge from "@/components/applications/ApplicationStageBadge";
+import StudentOfferLetterCard from "@/components/offer-letters/StudentOfferLetterCard";
 import type { ApplicationWithCourse } from "@/types/courses";
 import type { ApplicationTimelineEvent, ApplicationStage } from "@/types/timeline";
+import type { OfferLetter } from "@/types/offer-letters";
 import { REQUIRED_DOC_TYPES } from "@/types/documents";
 import {
   FileText, Building2, BookOpen, CheckCircle2, XCircle,
@@ -30,7 +32,7 @@ export default async function StudentApplicationsPage() {
 
   console.log("[Applications] loading student applications for:", user.id);
 
-  const [{ data, error }, { data: docCounts }, { data: events }] = await Promise.all([
+  const [{ data, error }, { data: docCounts }, { data: events }, { data: offerLetterRows }] = await Promise.all([
     supabase
       .from("applications")
       .select(`
@@ -53,6 +55,11 @@ export default async function StudentApplicationsPage() {
       .select("*")
       .eq("visible_to_student", true)
       .order("created_at", { ascending: false }),
+
+    supabase
+      .from("offer_letters")
+      .select("id, application_id, version, file_name, file_size, expiry_date, created_at, updated_at, notes, file_path, uploaded_by")
+      .order("version", { ascending: false }),
   ]);
 
   if (error) console.error("[Applications] fetch error:", error.code, error.message);
@@ -67,6 +74,13 @@ export default async function StudentApplicationsPage() {
     const entry = docMap.get(doc.application_id)!;
     entry.types.add(doc.document_type);
     if (doc.status === "verified") entry.verified++;
+  }
+
+  // Offer letters map: applicationId → sorted letters (RLS ensures student-own)
+  const offerLettersMap = new Map<string, OfferLetter[]>();
+  for (const ol of (offerLetterRows ?? []) as OfferLetter[]) {
+    if (!offerLettersMap.has(ol.application_id)) offerLettersMap.set(ol.application_id, []);
+    offerLettersMap.get(ol.application_id)!.push(ol);
   }
 
   // Timeline events map
@@ -154,6 +168,7 @@ export default async function StudentApplicationsPage() {
         const isApproved    = ["approved", "arrived_singapore"].includes(currentStage);
         const canWithdraw   = !isRejected && !isApproved && !["ipa_processing", "offer_letter_ready", "fee_payment_pending"].includes(currentStage);
         const appEvents     = eventsMap.get(app.id) ?? [];
+        const appOfferLetters = offerLettersMap.get(app.id) ?? [];
         const docs          = docMap.get(app.id);
         const uploaded      = docs?.types.size ?? 0;
         const reqTotal      = REQUIRED_DOC_TYPES.length;
@@ -193,7 +208,7 @@ export default async function StudentApplicationsPage() {
             </div>
 
             {/* Timeline */}
-            <div className="px-5 pb-5">
+            <div className="px-5 pb-3">
               <ApplicationTimeline
                 currentStage={currentStage}
                 events={appEvents}
@@ -201,6 +216,13 @@ export default async function StudentApplicationsPage() {
                 studentMessage={app.student_message}
               />
             </div>
+
+            {/* Offer letter card — only when letters exist */}
+            {appOfferLetters.length > 0 && (
+              <div className="px-5 pb-4">
+                <StudentOfferLetterCard letters={appOfferLetters} />
+              </div>
+            )}
 
             {/* Footer */}
             <div className="px-5 py-3 border-t border-white/[0.06] flex items-center justify-between flex-wrap gap-2">
