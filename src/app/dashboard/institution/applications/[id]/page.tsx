@@ -5,10 +5,12 @@ import DocumentStatusBadge from "@/components/documents/DocumentStatusBadge";
 import DocumentReviewActions from "@/components/documents/DocumentReviewActions";
 import ApplicationStageBadge from "@/components/applications/ApplicationStageBadge";
 import StageUpdateSelect from "@/components/applications/StageUpdateSelect";
+import IssueOfferLetterForm from "@/components/offer-letters/IssueOfferLetterForm";
 import { APPLICATION_STATUSES } from "@/types/courses";
 import type { ApplicationStage } from "@/types/timeline";
 import { DOCUMENT_TYPES, fmtFileSize } from "@/types/documents";
 import type { StudentDocument } from "@/types/documents";
+import type { OfferLetterWithUploader } from "@/types/offer-letters";
 import {
   ArrowLeft, User, FileText, Building2, Calendar,
   Download, AlertCircle, CheckCircle2,
@@ -63,26 +65,39 @@ export default async function InstitutionApplicationDetailPage({
     if (course.college_id !== profile?.college_id) redirect("/dashboard/institution/applications");
   }
 
-  // Fetch student profile
-  const { data: studentProfile } = await supabase
-    .from("profiles")
-    .select("full_name, email, country")
-    .eq("id", app.student_id)
-    .single();
-
-  // Fetch documents for this application
-  const { data: docs, error: docsError } = await supabase
-    .from("student_documents")
-    .select("*")
-    .eq("application_id", id)
-    .order("uploaded_at", { ascending: false });
+  // Fetch student profile, documents, and offer letters in parallel
+  const [
+    { data: studentProfile },
+    { data: docs, error: docsError },
+    { data: offerLetterRows },
+  ] = await Promise.all([
+    supabase.from("profiles").select("full_name, email, country").eq("id", app.student_id).single(),
+    supabase.from("student_documents").select("*").eq("application_id", id).order("uploaded_at", { ascending: false }),
+    supabase
+      .from("offer_letters")
+      .select(`
+        id, application_id, uploaded_by, file_path, file_name,
+        file_size, version, notes, expiry_date, created_at, updated_at,
+        profiles!offer_letters_uploaded_by_fkey (full_name)
+      `)
+      .eq("application_id", id)
+      .order("version", { ascending: false }),
+  ]);
 
   if (docsError) {
     console.error("[DocumentReview] docs fetch error:", docsError.message);
   }
 
+  if (docsError) console.error("[InstitutionApp] docs fetch error:", docsError.message);
+
   const documents = (docs ?? []) as StudentDocument[];
   const statusMeta = APPLICATION_STATUSES.find(s => s.value === app.status);
+
+  const offerLetters: OfferLetterWithUploader[] = (offerLetterRows ?? []).map((row: Record<string, unknown>) => {
+    const uploaderProfile = row.profiles as { full_name: string | null } | null;
+    const { profiles: _p, ...rest } = row;
+    return { ...rest, uploader_name: uploaderProfile?.full_name ?? null } as OfferLetterWithUploader;
+  });
 
   // Group: latest doc per type
   const latestByType = new Map<string, StudentDocument>();
@@ -181,6 +196,12 @@ export default async function InstitutionApplicationDetailPage({
               </div>
             )}
           </div>
+
+          {/* Offer Letter */}
+          <IssueOfferLetterForm
+            applicationId={id}
+            existingLetters={offerLetters}
+          />
         </div>
 
         {/* Right — Documents */}
