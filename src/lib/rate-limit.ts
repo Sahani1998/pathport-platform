@@ -114,4 +114,5 @@ export const LIMITS = {
   withdraw:        { limit: 5,   windowMs: 60_000  },
   stage:           { limit: 30,  windowMs: 60_000  },
   collegeWrite:    { limit: 20,  windowMs: 60_000  },
+  courseWrite:     { limit: 30,  windowMs: 60_000  },
 } as const;

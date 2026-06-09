@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Plus, Building2, Globe, Pencil, Power, Trash2, X, Save, Loader2 } from "lucide-react";
+import { Plus, Building2, Globe, Pencil, Power, Trash2, X, Save, Loader2, BookOpen, ArrowRight } from "lucide-react";
 
 interface College {
   id: string;
@@ -219,9 +220,14 @@ export default function CollegeManagementClient({ colleges: initial, courseCount
               </div>
 
               <div className="flex items-center justify-between">
-                <span className="font-body text-xs text-white/40">
+                <Link
+                  href={`/dashboard/admin/courses?college=${c.id}`}
+                  className="flex items-center gap-1.5 text-gold-400/80 hover:text-gold-300 font-body text-xs transition-colors"
+                >
+                  <BookOpen className="w-3 h-3" />
                   {courseCounts[c.id] ?? 0} course{(courseCounts[c.id] ?? 0) !== 1 ? "s" : ""}
-                </span>
+                  <ArrowRight className="w-3 h-3" />
+                </Link>
                 {c.website && (
                   <a href={c.website} target="_blank" rel="noopener noreferrer"
                     className="flex items-center gap-1 text-pathBlue-400 font-body text-xs hover:text-pathBlue-300 transition-colors">
