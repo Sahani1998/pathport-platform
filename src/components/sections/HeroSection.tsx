@@ -173,6 +173,29 @@ export default function HeroSection() {
                 </div>
               ))}
             </div>
+
+            {/* Student photo — aspirational human element, fills vertical space below stats */}
+            <div className="relative mt-6 rounded-2xl overflow-hidden h-44 hidden lg:block">
+              <img
+                src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=900&q=75"
+                alt=""
+                loading="lazy"
+                className="absolute inset-0 w-full h-full object-cover object-[center_35%]"
+              />
+              {/* Left + right edge blends into page background */}
+              <div aria-hidden className="absolute inset-0 bg-gradient-to-r from-[#06142E] via-transparent to-[#06142E]/70 pointer-events-none" />
+              {/* Top + bottom fades */}
+              <div aria-hidden className="absolute inset-0 bg-gradient-to-b from-[#06142E]/65 via-transparent to-[#06142E] pointer-events-none" />
+              {/* Navy brand tint — ties to dark background */}
+              <div aria-hidden className="absolute inset-0 bg-pathBlue-900/20 pointer-events-none" />
+              {/* Caption badge */}
+              <div className="absolute bottom-4 left-5">
+                <span className="inline-flex items-center gap-2 bg-black/50 backdrop-blur-sm border border-white/[0.10] rounded-full px-3 py-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-gold-400 flex-shrink-0" />
+                  <span className="text-white/65 font-body text-xs tracking-wide">India → Singapore diploma students</span>
+                </span>
+              </div>
+            </div>
           </div>
 
           {/* ── RIGHT: Quick Form + Dashboard Widget ────────────────── */}
