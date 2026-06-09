@@ -26,7 +26,7 @@ export async function PATCH(
       return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
     }
 
-    if (!["pending", "verified", "rejected"].includes(status)) {
+    if (!["pending", "verified", "rejected", "reupload_required"].includes(status)) {
       return NextResponse.json({ error: "Invalid status value" }, { status: 400 });
     }
 

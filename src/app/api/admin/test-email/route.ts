@@ -5,16 +5,19 @@ import { checkRateLimit, getClientIp, rateLimitResponse } from "@/lib/rate-limit
 import type { EmailTemplate, TemplateContext } from "@/lib/email/templates";
 
 const SAMPLE_CONTEXTS: Record<EmailTemplate, TemplateContext> = {
-  application_submitted:   { name: "Priya Sharma", courseName: "Diploma in Business Management", collegeName: "PSB Academy" },
-  documents_requested:     { name: "Priya Sharma", courseName: "Diploma in Business Management", message: "Please upload your academic transcripts, passport copy, and financial statement." },
-  documents_approved:      { name: "Priya Sharma", courseName: "Diploma in Business Management" },
-  offer_letter_available:  { name: "Priya Sharma", courseName: "Diploma in Business Management", collegeName: "PSB Academy" },
-  fee_payment_reminder:    { name: "Priya Sharma", courseName: "Diploma in Business Management", amount: "SGD 2,400", dueDate: "30 July 2025" },
-  ipa_processing:          { name: "Priya Sharma", courseName: "Diploma in Business Management" },
-  ipa_approved:            { name: "Priya Sharma", courseName: "Diploma in Business Management" },
-  arrival_preparation:     { name: "Priya Sharma", courseName: "Diploma in Business Management" },
-  application_withdrawn:   { name: "Priya Sharma", courseName: "Diploma in Business Management", reason: "Accepted at another institution" },
-  withdrawal_notice_internal: { studentName: "Priya Sharma", courseName: "Diploma in Business Management", collegeName: "PSB Academy", reason: "Accepted at another institution", message: "Found a more suitable course locally." },
+  application_submitted:        { name: "Priya Sharma", courseName: "Diploma in Business Management", collegeName: "PSB Academy" },
+  documents_requested:          { name: "Priya Sharma", courseName: "Diploma in Business Management", message: "Please upload your academic transcripts, passport copy, and financial statement." },
+  documents_approved:           { name: "Priya Sharma", courseName: "Diploma in Business Management" },
+  document_verified:            { name: "Priya Sharma", documentType: "Passport", collegeName: "PSB Academy", comment: "Clear photo page — accepted." },
+  document_rejected:            { name: "Priya Sharma", documentType: "Financial Proof", comment: "Bank statement is older than 3 months. Please upload a more recent one." },
+  document_reupload_requested:  { name: "Priya Sharma", documentType: "Education Certificate", comment: "Please upload the original certificate — photos are blurry." },
+  offer_letter_available:       { name: "Priya Sharma", courseName: "Diploma in Business Management", collegeName: "PSB Academy" },
+  fee_payment_reminder:         { name: "Priya Sharma", courseName: "Diploma in Business Management", amount: "SGD 2,400", dueDate: "30 July 2025" },
+  ipa_processing:               { name: "Priya Sharma", courseName: "Diploma in Business Management" },
+  ipa_approved:                 { name: "Priya Sharma", courseName: "Diploma in Business Management" },
+  arrival_preparation:          { name: "Priya Sharma", courseName: "Diploma in Business Management" },
+  application_withdrawn:        { name: "Priya Sharma", courseName: "Diploma in Business Management", reason: "Accepted at another institution" },
+  withdrawal_notice_internal:   { studentName: "Priya Sharma", courseName: "Diploma in Business Management", collegeName: "PSB Academy", reason: "Accepted at another institution", message: "Found a more suitable course locally." },
 };
 
 export async function POST(request: Request) {

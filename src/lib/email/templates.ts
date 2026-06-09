@@ -50,6 +50,9 @@ export type EmailTemplate =
   | "application_submitted"
   | "documents_requested"
   | "documents_approved"
+  | "document_verified"
+  | "document_rejected"
+  | "document_reupload_requested"
   | "offer_letter_available"
   | "fee_payment_reminder"
   | "ipa_processing"
@@ -68,6 +71,8 @@ export interface TemplateContext {
   amount?: string;
   dueDate?: string;
   studentName?: string;
+  documentType?: string;
+  comment?: string | null;
 }
 
 export interface RenderedEmail {
@@ -112,6 +117,39 @@ export const TEMPLATES: Record<EmailTemplate, (ctx: TemplateContext) => Rendered
       highlight("Next Step", "Offer letter is being prepared") +
       p("We'll notify you the moment your offer letter is ready to download.") +
       cta(dashboardUrl, "View Application →")
+    ),
+  }),
+
+  document_verified: ctx => ({
+    subject: `Document verified — ${ctx.documentType ?? "your document"}`,
+    html: shell(
+      h1("Document verified ✅") +
+      p(`Hi ${ctx.name ?? "there"}, your <strong style="color:#fff">${ctx.documentType ?? "document"}</strong> has been reviewed and verified by ${ctx.collegeName ?? "the institution"}.`) +
+      (ctx.comment ? quote(ctx.comment) : "") +
+      p("Keep uploading any remaining documents to keep your application moving forward.") +
+      cta(documentsUrl, "View My Documents →")
+    ),
+  }),
+
+  document_rejected: ctx => ({
+    subject: `Action required — document not accepted`,
+    html: shell(
+      h1("Document not accepted") +
+      p(`Hi ${ctx.name ?? "there"}, your <strong style="color:#fff">${ctx.documentType ?? "document"}</strong> could not be accepted.`) +
+      (ctx.comment ? highlight("Reviewer Comment", ctx.comment) : "") +
+      p("Please review the feedback above and upload a corrected version through your dashboard.") +
+      cta(documentsUrl, "Upload Corrected Document →")
+    ),
+  }),
+
+  document_reupload_requested: ctx => ({
+    subject: `Please re-upload — ${ctx.documentType ?? "document"}`,
+    html: shell(
+      h1("Re-upload requested") +
+      p(`Hi ${ctx.name ?? "there"}, the institution has requested a new version of your <strong style="color:#fff">${ctx.documentType ?? "document"}</strong>.`) +
+      (ctx.comment ? quote(ctx.comment) : "") +
+      p("Your original file has been archived. Please upload a fresh copy through your documents page.") +
+      cta(documentsUrl, "Upload Document →")
     ),
   }),
 

@@ -1,6 +1,6 @@
 // ─── Document types ────────────────────────────────────────────────────────────
 
-export type DocumentStatus = "pending" | "verified" | "rejected";
+export type DocumentStatus = "pending" | "verified" | "rejected" | "reupload_required";
 
 export type DocumentType =
   | "passport"
@@ -60,10 +60,23 @@ export interface StudentDocumentWithReviewer extends StudentDocument {
 // ─── Status metadata ──────────────────────────────────────────────────────────
 
 export const DOCUMENT_STATUS_META: Record<DocumentStatus, { label: string; color: string }> = {
-  pending:  { label: "Pending Review", color: "text-gold-400   bg-gold-400/10    border-gold-400/25"    },
-  verified: { label: "Verified",       color: "text-emerald-400 bg-emerald-500/10 border-emerald-400/25" },
-  rejected: { label: "Rejected",       color: "text-red-400    bg-red-500/10     border-red-400/25"      },
+  pending:           { label: "Pending Review",    color: "text-gold-400    bg-gold-400/10    border-gold-400/25"    },
+  verified:          { label: "Verified",          color: "text-emerald-400 bg-emerald-500/10 border-emerald-400/25" },
+  rejected:          { label: "Rejected",          color: "text-red-400     bg-red-500/10     border-red-400/25"      },
+  reupload_required: { label: "Re-upload Required",color: "text-orange-400  bg-orange-500/10  border-orange-400/25"  },
 };
+
+// ─── Review history row ───────────────────────────────────────────────────────
+
+export interface DocumentReview {
+  id:          string;
+  document_id: string;
+  reviewer_id: string | null;
+  status:      DocumentStatus;
+  comment:     string | null;
+  created_at:  string;
+  reviewer?:   { full_name: string | null } | null;
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
