@@ -36,9 +36,23 @@ export default function LoginForm() {
     let navigating = false;
 
     try {
+      const normalizedEmail = email.trim().toLowerCase();
+
+      // ── Step 0: Server-side rate limit guard ──────────────────────────────
+      const guardRes = await fetch("/api/auth/check", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: normalizedEmail }),
+      });
+      if (guardRes.status === 429) {
+        const data = await guardRes.json().catch(() => ({})) as { retryAfterSeconds?: number };
+        setError(`Too many login attempts. Try again in ${data.retryAfterSeconds ?? 60}s.`);
+        return;
+      }
+
       // ── Step 1: Authenticate ──────────────────────────────────────────────
       const { data, error: authError } = await supabase.auth.signInWithPassword({
-        email:    email.trim().toLowerCase(),
+        email:    normalizedEmail,
         password,
       });
 
