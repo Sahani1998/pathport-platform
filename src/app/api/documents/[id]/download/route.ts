@@ -1,11 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { checkRateLimit, getClientIp, rateLimitResponse, LIMITS } from "@/lib/rate-limit";
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
+
+  const ip = getClientIp(request);
+  const rl = checkRateLimit(`doc-dl:${ip}`, LIMITS.documentDownload.limit, LIMITS.documentDownload.windowMs);
+  if (!rl.success) return rateLimitResponse(rl.resetAt);
+
   const supabase = await createClient();
 
   const { data: { user } } = await supabase.auth.getUser();

@@ -36,6 +36,20 @@ export default function AdminLoginForm() {
     setLoading(true);
 
     try {
+      const normalizedEmail = email.trim().toLowerCase();
+
+      // ── -1. Rate limit guard ─────────────────────────────────────────────
+      const guardRes = await fetch("/api/auth/check", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: normalizedEmail }),
+      });
+      if (guardRes.status === 429) {
+        const data = await guardRes.json().catch(() => ({})) as { retryAfterSeconds?: number };
+        setError(`Too many login attempts. Try again in ${data.retryAfterSeconds ?? 60}s.`);
+        setLoading(false);
+        return;
+      }
 
       // ── 0. Clear any stale cached session ────────────────────────────────
       // Prevents a previous session's JWT being used for the profile query.
@@ -43,7 +57,7 @@ export default function AdminLoginForm() {
 
       // ── 1. Authenticate ───────────────────────────────────────────────────
       const { data, error: authError } = await supabase.auth.signInWithPassword({
-        email:    email.trim().toLowerCase(),
+        email:    normalizedEmail,
         password,
       });
 

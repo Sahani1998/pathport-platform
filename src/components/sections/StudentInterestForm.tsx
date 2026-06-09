@@ -9,7 +9,6 @@ import {
   INDIAN_STATES, SUPPORTED_COUNTRIES, COURSE_OPTIONS,
   INTAKE_OPTIONS, BUDGET_RANGES,
 } from "@/data/form-constants";
-import { createClient } from "@/lib/supabase/client";
 import { Send, CheckCircle2, Loader2, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -42,36 +41,36 @@ export default function StudentInterestForm() {
     setLoading(true);
 
     try {
-      const supabase = createClient();
-      console.log("[InquirySubmit] interest form — inserting into public.student_inquiries");
-
-      const { error: insertError } = await supabase
-        .from("student_inquiries")
-        .insert({
-          full_name:       form.fullName.trim(),
-          email:           form.email.trim().toLowerCase(),
-          whatsapp_number: form.whatsapp.trim()    || null,
+      const res = await fetch("/api/inquiries", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          full_name:       form.fullName,
+          email:           form.email,
+          whatsapp_number: form.whatsapp,
           country:         form.country,
-          indian_state:    form.country === "India" ? (form.indianState || null) : null,
-          city:            form.city.trim()          || null,
-          course_interest: form.courseInterest       || null,
-          intended_intake: form.intendedIntake       || null,
-          budget_range:    form.budgetRange          || null,
-          status:          "new",
-        });
+          indian_state:    form.country === "India" ? form.indianState : null,
+          city:            form.city,
+          course_interest: form.courseInterest,
+          intended_intake: form.intendedIntake,
+          budget_range:    form.budgetRange,
+        }),
+      });
 
-      console.log("[InquirySubmit] interest form result — error:", insertError?.message ?? "none");
+      if (res.status === 429) {
+        setError("Too many submissions. Please wait a moment before trying again.");
+        return;
+      }
 
-      if (insertError) {
-        console.error("[InquirySubmit] interest insert error:", insertError.code, insertError.message);
-        setError("Something went wrong. Please try again or WhatsApp us at +65 8377 6492.");
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({})) as { error?: string };
+        setError(data.error ?? "Something went wrong. Please try again or WhatsApp us at +65 8377 6492.");
         return;
       }
 
       setSubmitted(true);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      console.error("[InquirySubmit] interest form exception:", msg);
+      console.error("[InquirySubmit] interest form exception:", err);
       setError("Something went wrong. Please try again or WhatsApp us at +65 8377 6492.");
     } finally {
       setLoading(false);

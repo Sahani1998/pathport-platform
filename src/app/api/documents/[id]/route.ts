@@ -1,11 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { checkRateLimit, getClientIp, rateLimitResponse, LIMITS } from "@/lib/rate-limit";
 
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
+
+  const ip = getClientIp(request);
+  const rl = checkRateLimit(`doc-review:${ip}`, LIMITS.documentReview.limit, LIMITS.documentReview.windowMs);
+  if (!rl.success) return rateLimitResponse(rl.resetAt);
+
   console.log("[DocumentReview] PATCH /api/documents/", id);
 
   try {

@@ -22,6 +22,29 @@ export interface Profile {
   avatar_url: string | null;
   created_at: string;
   updated_at: string;
+
+  // Sprint 8 — production-grade student profile
+  date_of_birth:                  string | null;
+  nationality:                    string | null;
+  passport_number:                string | null;
+  passport_country:               string | null;
+  passport_expiry:                string | null;
+  emergency_contact_name:         string | null;
+  emergency_contact_phone:        string | null;
+  emergency_contact_relationship: string | null;
+}
+
+export interface StudentEducation {
+  id:               string;
+  user_id:          string;
+  institution_name: string;
+  qualification:    string;
+  field_of_study:   string | null;
+  start_year:       number | null;
+  end_year:         number | null;
+  grade:            string | null;
+  is_current:       boolean;
+  created_at:       string;
 }
 
 // ─── Auth state ───────────────────────────────────────────────────────────────
