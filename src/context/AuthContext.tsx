@@ -109,7 +109,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = async () => {
     try {
       await Promise.race([
-        supabase.auth.signOut(),
+        // scope: "global" invalidates the JWT across every device, not just
+        // this browser. Without it, copies of the access token elsewhere
+        // would remain valid until expiry.
+        supabase.auth.signOut({ scope: "global" }),
         new Promise<never>((_, reject) =>
           setTimeout(() => reject(new Error("signOut timeout")), 3000)
         ),

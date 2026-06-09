@@ -5,13 +5,13 @@ import StageUpdateSelect from "@/components/applications/StageUpdateSelect";
 import { TIMELINE_STAGES } from "@/types/timeline";
 import type { ApplicationStage } from "@/types/timeline";
 import { STATUS_TO_STAGE } from "@/lib/application-stage-mapping";
-import { FileText, CheckCircle2, TrendingUp, Clock } from "lucide-react";
+import { FileText, CheckCircle2, TrendingUp, Clock, AlertTriangle } from "lucide-react";
 
 interface AppRow {
   id:              string;
   student_id:      string;
   status:          string;
-  current_stage:   ApplicationStage;   // always set after normalisation
+  current_stage:   ApplicationStage;
   submitted_at:    string;
   stage_updated_at:string | null;
   courses:  { title: string; colleges?: { name: string } | null } | null;
@@ -31,23 +31,47 @@ export default async function AdminApplicationsPage({
   const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
   if (profile?.role !== "admin") redirect("/dashboard");
 
-  // ── Fetch ALL rows with joins — no SQL filter ─────────────────────────────
-  // Filtering in SQL against current_stage misses NULL rows that should be
-  // treated as application_submitted.  We normalise in code instead.
-  const { data: rawRows, error } = await supabase
+  // ── Fetch applications WITHOUT profile join ────────────────────────────────
+  // applications.student_id references auth.users(id), NOT profiles(id), so
+  // PostgREST can't resolve `profiles:student_id (...)` and the whole query
+  // fails silently with a relationship error.  We fetch profiles separately
+  // by IN(student_ids) and merge in code.
+  const { data: rawRows, error: appsError } = await supabase
     .from("applications")
     .select(`
       id, student_id, status, current_stage, submitted_at, stage_updated_at,
-      courses ( title, colleges ( name ) ),
-      profiles:student_id ( full_name, email )
+      courses ( title, colleges ( name ) )
     `)
     .order("submitted_at", { ascending: false });
 
-  if (error) console.error("[AdminApplications] fetch error:", error.message);
-
+  if (appsError) console.error("[AdminApplications] applications fetch error:", appsError.code, appsError.message);
   console.log("[AdminApplications] raw rows:", rawRows?.length ?? 0);
 
-  // ── Normalise in code ─────────────────────────────────────────────────────
+  // ── Fetch student profiles separately ──────────────────────────────────────
+  const studentIds = Array.from(new Set((rawRows ?? []).map(r => r.student_id).filter(Boolean) as string[]));
+  let profileMap = new Map<string, { full_name: string | null; email: string | null }>();
+  let profilesError: { code?: string; message: string } | null = null;
+
+  if (studentIds.length > 0) {
+    const { data: profileRows, error: pErr } = await supabase
+      .from("profiles")
+      .select("id, full_name, email")
+      .in("id", studentIds);
+
+    if (pErr) {
+      console.error("[AdminApplications] profiles fetch error:", pErr.code, pErr.message);
+      profilesError = { code: pErr.code, message: pErr.message };
+    }
+
+    profileMap = new Map(
+      (profileRows ?? []).map(p => [p.id, { full_name: p.full_name, email: p.email }]),
+    );
+  }
+
+  console.log("[AdminApplications] unique student ids:", studentIds.length);
+  console.log("[AdminApplications] profiles fetched:", profileMap.size);
+
+  // ── Normalise in code ──────────────────────────────────────────────────────
   const normalized: AppRow[] = (rawRows ?? []).map(row => {
     const rawCourse  = Array.isArray(row.courses)  ? row.courses[0]  : row.courses;
     const rawCollege = rawCourse
@@ -55,7 +79,6 @@ export default async function AdminApplicationsPage({
           ? ((rawCourse as { colleges: unknown[] }).colleges)[0]
           : (rawCourse as { colleges?: unknown }).colleges)
       : null;
-    const rawProfile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
 
     const stage: ApplicationStage =
       (row.current_stage as ApplicationStage) ||
@@ -70,7 +93,7 @@ export default async function AdminApplicationsPage({
       submitted_at:     row.submitted_at,
       stage_updated_at: row.stage_updated_at,
       courses:  rawCourse  ? { title: (rawCourse  as { title:  string }).title,  colleges: rawCollege as { name: string } | null } : null,
-      profiles: rawProfile ? { full_name: (rawProfile as { full_name: string | null }).full_name, email: (rawProfile as { email: string | null }).email } : null,
+      profiles: profileMap.get(row.student_id) ?? null,
     };
   });
 
@@ -82,14 +105,11 @@ export default async function AdminApplicationsPage({
     stageCounts[a.current_stage] = (stageCounts[a.current_stage] ?? 0) + 1;
   }
 
-  // ── Filter in code — guarantees stats and table use identical rows ─────────
+  // ── Filter in code ─────────────────────────────────────────────────────────
   const activeFilter = params.stage ?? "";
   const visible      = activeFilter
     ? normalized.filter(a => a.current_stage === activeFilter)
     : normalized;
-
-  console.log("[AdminApplications] active filter:", activeFilter || "all");
-  console.log("[AdminApplications] visible rows:", visible.length);
 
   const totalApps    = normalized.length;
   const approvedApps = stageCounts["approved"]          ?? 0;
@@ -104,6 +124,30 @@ export default async function AdminApplicationsPage({
         <h2 className="font-display text-3xl text-white mb-1">All Applications</h2>
         <p className="text-white/45 font-body text-sm">Manage and update application stages across all colleges</p>
       </div>
+
+      {/* RLS error banner — surfaces fetch errors instead of showing silent 0 */}
+      {(appsError || profilesError) && (
+        <div className="flex items-start gap-3 p-4 rounded-2xl bg-red-500/[0.07] border border-red-500/30">
+          <AlertTriangle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+          <div className="min-w-0">
+            <p className="font-display text-base text-red-300 mb-1">Data fetch error</p>
+            {appsError && (
+              <p className="text-white/65 font-body text-xs">
+                applications: <code className="text-red-300">{appsError.code}</code> {appsError.message}
+              </p>
+            )}
+            {profilesError && (
+              <p className="text-white/65 font-body text-xs">
+                profiles: <code className="text-red-300">{profilesError.code}</code> {profilesError.message}
+              </p>
+            )}
+            <p className="text-white/45 font-body text-xs mt-1.5">
+              Run <code className="text-gold-300">src/lib/supabase/admin_rls_fix.sql</code> in Supabase, then check{" "}
+              <a className="underline" href="/dashboard/admin/diagnostic">/dashboard/admin/diagnostic</a>.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">

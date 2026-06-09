@@ -58,6 +58,14 @@ export default async function AdminDiagnosticPage() {
     runCount(supabase, "offer_letters"),
   ]);
 
+  // Replicate the EXACT shape the admin/applications page now uses.
+  // If RLS is fine but the page still shows 0, this confirms it.
+  const { data: appsSample, error: appsSampleErr } = await supabase
+    .from("applications")
+    .select("id, student_id, current_stage, submitted_at, courses ( title, colleges ( name ) )")
+    .order("submitted_at", { ascending: false })
+    .limit(5);
+
   const rows: { label: string; result: CountResult; critical?: boolean }[] = [
     { label: "profiles (all)",                  result: profilesAll,        critical: true },
     { label: "profiles role = student",         result: profilesStudents,   critical: true },
@@ -191,6 +199,27 @@ export default async function AdminDiagnosticPage() {
             })}
           </tbody>
         </table>
+      </div>
+
+      {/* Sample admin-scoped applications query */}
+      <div className="bg-white/[0.04] border border-white/[0.08] rounded-2xl overflow-hidden">
+        <div className="px-5 py-3 border-b border-white/[0.07] flex items-center gap-2">
+          <Database className="w-4 h-4 text-pathBlue-400" />
+          <h3 className="font-display text-lg text-white">applications query — top 5</h3>
+        </div>
+        <div className="p-5">
+          {appsSampleErr ? (
+            <p className="font-body text-sm text-red-400">
+              <code className="text-red-300">{appsSampleErr.code}</code> · {appsSampleErr.message}
+            </p>
+          ) : (appsSample?.length ?? 0) === 0 ? (
+            <p className="font-body text-sm text-white/45">No rows returned (RLS may be blocking, or table is empty).</p>
+          ) : (
+            <pre className="font-mono text-xs text-white/70 overflow-x-auto">
+              {JSON.stringify(appsSample, null, 2)}
+            </pre>
+          )}
+        </div>
       </div>
 
       {/* Fix banner */}
