@@ -4,7 +4,7 @@ import { useState, type ChangeEvent, type FormEvent } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import GoldButton from "@/components/ui/GoldButton";
-import { ArrowRight, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
+import { ArrowRight, CheckCircle2, AlertCircle, Loader2, Check } from "lucide-react";
 import { INDIAN_STATES, COURSE_OPTIONS } from "@/data/form-constants";
 import { cn } from "@/lib/utils";
 
@@ -15,11 +15,19 @@ const STATS = [
   { value: "24hrs", label: "Offer Letter"        },
 ];
 
+const TRUST_BADGES = [
+  "Application Tracking",
+  "Offer Letter Support",
+  "Internship Pathways",
+  "Arrival Services",
+];
+
 const INPUT = cn(
-  "w-full bg-navy-800/70 border border-white/[0.10] rounded-xl px-4 py-3",
+  "w-full bg-navy-900/60 border border-white/[0.12] rounded-xl px-4 py-3",
   "font-body text-sm text-white placeholder-white/30",
-  "focus:outline-none focus:border-gold-400/60 focus:ring-1 focus:ring-gold-400/20",
-  "transition-all duration-200 [&>option]:bg-navy-800 [&>option]:text-white"
+  "focus:outline-none focus:border-gold-400/70 focus:ring-2 focus:ring-gold-400/15 focus:bg-navy-900/80",
+  "hover:border-white/[0.18]",
+  "transition-all duration-200 [&>option]:bg-navy-900 [&>option]:text-white"
 );
 
 export default function HeroSection() {
@@ -74,18 +82,23 @@ export default function HeroSection() {
 
   return (
     <section className="relative min-h-screen flex items-center overflow-hidden pt-[68px]">
-      {/* Singapore skyline background image */}
+      {/* Singapore skyline — kept very subtle for depth without distraction */}
       <div aria-hidden className="absolute inset-0 pointer-events-none">
         <img
           src="https://images.unsplash.com/photo-1525625293386-3f8f99389edd?auto=format&fit=crop&w=1800&q=60"
           alt=""
-          className="absolute bottom-0 left-0 w-full h-[55%] object-cover object-top opacity-[0.08]"
+          className="absolute bottom-0 left-0 w-full h-[55%] object-cover object-top opacity-[0.05]"
         />
-        <div className="absolute bottom-0 left-0 w-full h-[55%] bg-gradient-to-t from-navy-900 via-navy-900/80 to-transparent" />
+        <div className="absolute bottom-0 left-0 w-full h-[55%] bg-gradient-to-t from-[#06142E] via-[#06142E]/85 to-transparent" />
       </div>
-      <div aria-hidden className="absolute inset-0 bg-grid-subtle bg-[size:60px_60px] opacity-70 pointer-events-none" />
-      <div aria-hidden className="absolute top-[30%] left-[5%] w-[500px] h-[500px] rounded-full bg-pathBlue-500/[0.05] blur-[130px] animate-float pointer-events-none" />
-      <div aria-hidden className="absolute bottom-[10%] right-[5%] w-[400px] h-[400px] rounded-full bg-gold-400/[0.05] blur-[110px] animate-float pointer-events-none" style={{ animationDelay: "3s" }} />
+
+      {/* Grid pattern — reduced to ~8% opacity per spec */}
+      <div aria-hidden className="absolute inset-0 bg-grid-subtle bg-[size:60px_60px] opacity-[0.08] pointer-events-none" />
+
+      {/* Radial glow accents — premium SaaS depth */}
+      <div aria-hidden className="absolute top-[20%] left-[8%] w-[520px] h-[520px] rounded-full bg-pathBlue-500/[0.10] blur-[140px] pointer-events-none" />
+      <div aria-hidden className="absolute bottom-[15%] right-[8%] w-[420px] h-[420px] rounded-full bg-gold-400/[0.06] blur-[120px] pointer-events-none" />
+      <div aria-hidden className="absolute top-[10%] right-[20%] w-[300px] h-[300px] rounded-full bg-pathBlue-700/[0.18] blur-[100px] pointer-events-none" />
 
       <div className="relative max-w-7xl mx-auto px-5 md:px-10 py-16 md:py-20 w-full">
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_420px] xl:grid-cols-[1fr_460px] gap-12 xl:gap-16 items-center">
@@ -100,22 +113,38 @@ export default function HeroSection() {
               </span>
             </div>
 
-            {/* Headline */}
-            <h1 className="font-display text-5xl sm:text-6xl lg:text-[3.8rem] xl:text-[4.2rem] text-white leading-[1.05] mb-6">
-              Study{" "}
-              <span className="relative inline-block">
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-pathBlue-400 to-pathBlue-300">+</span>
-              </span>{" "}
-              Earn in{" "}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-gold-400 via-gold-300 to-gold-400">
-                Singapore
-              </span>
-            </h1>
+            {/* Headline with subtle glow behind */}
+            <div className="relative mb-6">
+              <div aria-hidden className="absolute -inset-x-8 -inset-y-4 bg-gradient-to-r from-pathBlue-500/[0.10] via-transparent to-gold-400/[0.08] blur-3xl pointer-events-none" />
+              <h1 className="relative font-display text-5xl sm:text-6xl lg:text-[3.8rem] xl:text-[4.2rem] text-white leading-[1.05] tracking-tight">
+                Study{" "}
+                <span className="relative inline-block">
+                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-pathBlue-400 to-pathBlue-300">+</span>
+                </span>{" "}
+                Earn in{" "}
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-gold-400 via-gold-300 to-gold-400">
+                  Singapore
+                </span>
+              </h1>
+            </div>
 
             {/* Subheadline */}
-            <p className="text-white/52 font-body text-lg leading-relaxed mb-10 max-w-xl">
-              Apply to Singapore <strong className="text-white/80">diploma, advanced diploma, higher diploma,</strong> and <strong className="text-white/80">specialist diploma</strong> programmes from India — with <strong className="text-white/80">application tracking</strong>, <strong className="text-white/80">24-hour offer letter support</strong>, <strong className="text-white/80">internship pathways</strong>, and full arrival services. Courses start from <strong className="text-gold-400">SGD 4,000 to 8,000</strong> per year.
+            <p className="text-white/55 font-body text-lg leading-relaxed mb-7 max-w-xl">
+              Apply to Singapore <strong className="text-white/85">diploma, advanced diploma, higher diploma,</strong> and <strong className="text-white/85">specialist diploma</strong> programmes from India — with <strong className="text-white/85">application tracking</strong>, <strong className="text-white/85">24-hour offer letter support</strong>, <strong className="text-white/85">internship pathways</strong>, and full arrival services. Courses start from <strong className="text-gold-400">SGD 4,000 to 8,000</strong> per year.
             </p>
+
+            {/* Trust badges — premium pill row */}
+            <div className="flex flex-wrap gap-2 mb-10">
+              {TRUST_BADGES.map(label => (
+                <span
+                  key={label}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/[0.04] border border-white/[0.10] backdrop-blur-sm text-white/75 font-body text-xs font-medium hover:border-gold-400/35 hover:text-white/95 hover:bg-white/[0.06] transition-all duration-200"
+                >
+                  <Check className="w-3.5 h-3.5 text-gold-400 flex-shrink-0" strokeWidth={2.5} />
+                  {label}
+                </span>
+              ))}
+            </div>
 
             {/* CTAs */}
             <div className="flex flex-col sm:flex-row gap-3 mb-12">
@@ -132,30 +161,36 @@ export default function HeroSection() {
               </Link>
             </div>
 
-            {/* Stats */}
+            {/* Stats — premium cards with lift + glow on hover */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {STATS.map(({ value, label }) => (
-                <div key={label} className="bg-white/[0.04] border border-white/[0.07] rounded-xl p-4 hover:border-gold-400/25 transition-colors">
-                  <div className="font-display text-2xl text-gold-400 font-bold mb-1">{value}</div>
-                  <div className="font-body text-white/45 text-xs">{label}</div>
+                <div
+                  key={label}
+                  className="group relative bg-white/[0.04] border border-white/[0.08] rounded-xl p-4 backdrop-blur-sm transition-all duration-300 hover:border-gold-400/35 hover:bg-white/[0.06] hover:-translate-y-0.5 hover:shadow-[0_8px_24px_-8px_rgba(240,165,0,0.25)]"
+                >
+                  <div className="font-display text-2xl text-gold-400 font-bold mb-1 group-hover:scale-[1.02] transition-transform">{value}</div>
+                  <div className="font-body text-white/50 text-xs">{label}</div>
                 </div>
               ))}
             </div>
           </div>
 
           {/* ── RIGHT: Quick Form + Dashboard Widget ────────────────── */}
-          <div className="flex flex-col gap-4">
+          <div className="relative flex flex-col gap-4">
 
-            {/* Quick Interest Form */}
-            <div className="bg-navy-800/80 border border-white/[0.10] rounded-2xl p-6 backdrop-blur-md shadow-glass">
+            {/* Blue glow behind the entire right column — makes the form pop */}
+            <div aria-hidden className="absolute -inset-6 bg-gradient-to-br from-pathBlue-500/[0.18] via-pathBlue-700/[0.10] to-transparent blur-3xl pointer-events-none -z-10" />
+
+            {/* Quick Interest Form — glassmorphism, stronger border, soft shadow */}
+            <div className="relative bg-gradient-to-br from-white/[0.08] via-navy-800/70 to-navy-900/85 border border-white/[0.14] rounded-2xl p-6 backdrop-blur-xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.08)] hover:border-white/[0.18] hover:shadow-[0_24px_72px_-15px_rgba(30,78,216,0.35),inset_0_1px_0_rgba(255,255,255,0.10)] transition-all duration-300">
               <p className="text-gold-400 font-body text-xs font-semibold tracking-[0.18em] uppercase mb-2">
                 APPLY INTEREST FORM
               </p>
               <h2 className="font-display text-[1.55rem] text-white mb-1.5 leading-snug">
                 Start Your Singapore Journey
               </h2>
-              <p className="text-white/45 font-body text-sm mb-5 leading-relaxed">
-                Students from India can submit their interest and receive <strong className="text-white/70">course recommendations</strong>, guidance, and <strong className="text-white/70">fast offer letter assistance</strong>.
+              <p className="text-white/55 font-body text-sm mb-5 leading-relaxed">
+                Students from India can submit their interest and receive <strong className="text-white/80">course recommendations</strong>, guidance, and <strong className="text-white/80">fast offer letter assistance</strong>.
               </p>
 
               {submitted ? (
@@ -209,28 +244,28 @@ export default function HeroSection() {
               )}
             </div>
 
-            {/* PathPort AI Dashboard Preview Widget */}
-            <div className="bg-navy-800/70 border border-white/[0.09] rounded-2xl p-5 backdrop-blur-md shadow-card">
-              <div className="flex items-center justify-between mb-4">
+            {/* PathPort AI Dashboard Preview Widget — premium card */}
+            <div className="relative bg-gradient-to-br from-white/[0.06] via-navy-800/65 to-navy-900/80 border border-white/[0.12] rounded-2xl p-5 backdrop-blur-xl shadow-[0_16px_48px_-12px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.06)]">
+              <div className="flex items-start justify-between mb-5">
                 <div>
-                  <p className="text-pathBlue-400 font-body text-xs font-semibold tracking-[0.16em] uppercase">PATHPORT AI</p>
-                  <h3 className="font-display text-lg text-white leading-snug">Singapore Student Dashboard</h3>
+                  <p className="text-pathBlue-400 font-body text-[11px] font-semibold tracking-[0.20em] uppercase mb-1">PATHPORT AI</p>
+                  <h3 className="font-display text-lg text-white leading-tight">Singapore Student Dashboard</h3>
                 </div>
-                <span className="inline-flex items-center gap-1.5 bg-emerald-500/15 border border-emerald-500/30 rounded-full px-3 py-1 text-emerald-400 font-body text-xs font-semibold">
+                <span className="inline-flex items-center gap-1.5 bg-emerald-500/[0.12] border border-emerald-500/30 rounded-full px-2.5 py-1 text-emerald-400 font-body text-[11px] font-semibold tracking-wide">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                   Live
                 </span>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-2.5">
                 {[
                   { label: "Student Satisfaction", value: "95%",     color: "text-gold-400"     },
                   { label: "Application Status",   value: "Tracking",color: "text-pathBlue-400" },
                   { label: "Advisor Response",      value: "24hrs",   color: "text-emerald-400"  },
                   { label: "Career Path",           value: "Ready",   color: "text-white"        },
                 ].map(({ label, value, color }) => (
-                  <div key={label} className="bg-navy-700/60 border border-white/[0.07] rounded-xl p-3.5">
-                    <p className="text-white/40 font-body text-xs mb-1.5">{label}</p>
+                  <div key={label} className="bg-navy-900/50 border border-white/[0.08] rounded-xl p-3.5 hover:border-white/[0.14] hover:bg-navy-900/70 transition-colors">
+                    <p className="text-white/45 font-body text-[11px] mb-1.5 tracking-wide">{label}</p>
                     <p className={cn("font-display text-xl font-bold", color)}>{value}</p>
                   </div>
                 ))}
