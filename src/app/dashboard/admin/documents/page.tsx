@@ -42,12 +42,14 @@ export default async function AdminDocumentsPage({
     supabase.from("student_documents").select("*", { count: "exact", head: true }).eq("status", "rejected"),
   ]);
 
-  // Main query with filters
+  // Main query — fetch documents with application/course/college join only.
+  // student_documents.student_id references auth.users, NOT profiles, so the
+  // FK-implicit `profiles:student_id` join fails.  We fetch profiles
+  // separately by IN(student_ids) below.
   let query = supabase
     .from("student_documents")
     .select(`
       *,
-      profiles:student_id ( full_name, email ),
       applications:application_id (
         courses ( title, colleges ( name ) )
       )
@@ -59,11 +61,23 @@ export default async function AdminDocumentsPage({
   if (params.docType)  query = query.eq("document_type", params.docType);
 
   const { data, error } = await query;
-  if (error) console.error("[Documents] admin fetch error:", error.message);
+  if (error) console.error("[Documents] admin fetch error:", error.code, error.message);
+
+  // Fetch student profiles separately
+  const studentIds = Array.from(new Set((data ?? []).map(r => (r as { student_id?: string }).student_id).filter(Boolean) as string[]));
+  let profileMap = new Map<string, { full_name: string | null; email: string | null }>();
+  if (studentIds.length > 0) {
+    const { data: profiles, error: pErr } = await supabase
+      .from("profiles")
+      .select("id, full_name, email")
+      .in("id", studentIds);
+    if (pErr) console.error("[Documents] profile fetch error:", pErr.code, pErr.message);
+    profileMap = new Map((profiles ?? []).map(p => [p.id, { full_name: p.full_name, email: p.email }]));
+  }
 
   // Normalise: Supabase may return foreign-key joins as arrays instead of objects
   type RawRow = {
-    profiles?:     { full_name: string | null; email: string | null } | { full_name: string | null; email: string | null }[] | null;
+    student_id?:   string;
     applications?: {
       courses?: { title: string; colleges?: { name: string } | { name: string }[] | null } | null |
                 { title: string; colleges?: { name: string } | { name: string }[] | null }[];
@@ -72,14 +86,13 @@ export default async function AdminDocumentsPage({
   };
 
   const docs: DocRow[] = ((data ?? []) as RawRow[]).map((row) => {
-    const rawProfile  = Array.isArray(row.profiles)     ? row.profiles[0]     : row.profiles;
     const rawApp      = Array.isArray(row.applications)  ? row.applications[0]  : row.applications;
     const rawCourse   = rawApp  ? (Array.isArray((rawApp as { courses?: unknown }).courses) ? ((rawApp as { courses: unknown[] }).courses)[0] : (rawApp as { courses?: unknown }).courses) : null;
     const rawCollege  = rawCourse ? (Array.isArray((rawCourse as { colleges?: unknown }).colleges) ? ((rawCourse as { colleges: unknown[] }).colleges)[0] : (rawCourse as { colleges?: unknown }).colleges) : null;
 
     return {
       ...(row as unknown as StudentDocument),
-      profiles: (rawProfile as DocRow["profiles"]) ?? null,
+      profiles: row.student_id ? (profileMap.get(row.student_id) ?? null) : null,
       applications: rawApp ? {
         courses: rawCourse ? {
           title:    (rawCourse as { title?: string }).title ?? "—",

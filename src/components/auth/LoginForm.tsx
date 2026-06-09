@@ -50,6 +50,12 @@ export default function LoginForm() {
         return;
       }
 
+      // ── Step 0b: Clear any stale cached session ──────────────────────────
+      // Prevents a previous user's JWT being used for the profile query that
+      // comes next. Pair with the server-side /api/auth/signout that runs on
+      // sign-out, so a fresh login on the same tab never sees old cookies.
+      await supabase.auth.signOut();
+
       // ── Step 1: Authenticate ──────────────────────────────────────────────
       const { data, error: authError } = await supabase.auth.signInWithPassword({
         email:    normalizedEmail,

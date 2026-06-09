@@ -104,31 +104,43 @@ export default function Sidebar() {
     setSigningOut(true);
     console.log("[Auth] signOut start");
 
-    // 1. Attempt Supabase signOut — AuthContext has a built-in 3-second timeout
-    //    so this will never hang indefinitely.
+    // 1. Server-side sign-out — calls supabase.auth.signOut({ scope: "global" })
+    //    inside the cookie-aware server client so SSR cookies are deleted at
+    //    the HTTP layer. Client-only signOut leaves the SSR cookie behind and
+    //    the next request re-authenticates as the previous user.
+    try {
+      const res = await fetch("/api/auth/signout", { method: "POST", cache: "no-store" });
+      console.log("[Auth] server signOut:", res.status);
+    } catch (err) {
+      console.error("[Auth] server signOut error:", err);
+    }
+
+    // 2. Client-side sign-out — clears the in-memory session and React state
+    //    (user/profile) in AuthContext. Bounded by the 3s timeout there.
     try {
       await signOut();
-      console.log("[Auth] signOut success");
+      console.log("[Auth] client signOut success");
     } catch (err) {
-      console.error("[Auth] signOut error:", err);
+      console.error("[Auth] client signOut error:", err);
     }
 
-    // 2. Clear all Supabase session keys from localStorage.
-    //    AuthContext clears React state; we wipe the browser cache too so the
-    //    next page load has no stale session even if the API call timed out.
+    // 3. Nuke every Supabase key from localStorage AND sessionStorage so a
+    //    fresh login on the same tab can't reuse cached tokens.
     try {
-      Object.keys(localStorage)
-        .filter(k => k.startsWith("sb-") || k.startsWith("supabase-"))
-        .forEach(k => localStorage.removeItem(k));
-      console.log("[Auth] local storage cleared");
+      for (const store of [localStorage, sessionStorage]) {
+        Object.keys(store)
+          .filter(k => k.startsWith("sb-") || k.startsWith("supabase-"))
+          .forEach(k => store.removeItem(k));
+      }
+      console.log("[Auth] storage cleared");
     } catch {
-      // localStorage unavailable in some environments — safe to ignore
+      // Storage unavailable in some environments — safe to ignore
     }
 
-    // 3. Hard redirect — no history entry, forces full page reload so
-    //    Next.js middleware re-validates auth from scratch.
+    // 4. Hard redirect to /login — no history entry, forces full reload so
+    //    middleware re-validates auth from scratch on the next request.
     console.log("[Auth] redirecting");
-    window.location.replace("/");
+    window.location.replace("/login");
   };
 
   return (
