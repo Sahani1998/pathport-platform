@@ -18,6 +18,9 @@
 --     2. Drops every legacy recursive admin policy across all tables.
 --     3. Recreates the admin policies using the safe helper.
 --
+--   Every table block is wrapped in a `to_regclass()` guard so missing tables
+--   are silently skipped — the migration never fails on a partial schema.
+--
 -- Safe to re-run.  Paste into Supabase Dashboard → SQL Editor → Run.
 -- ═══════════════════════════════════════════════════════════════════════════════
 
@@ -41,7 +44,8 @@ GRANT EXECUTE ON FUNCTION public.requesting_user_is_admin() TO anon;
 
 
 -- ── 2. profiles ────────────────────────────────────────────────────────────────
--- Drop EVERY legacy admin policy — including the recursive ones from schema.sql
+-- This block is unguarded because profiles is required to exist for the helper
+-- function itself to work.  If profiles is missing, nothing else matters.
 DROP POLICY IF EXISTS "profiles: admin read all"   ON public.profiles;
 DROP POLICY IF EXISTS "profiles: admin update all" ON public.profiles;
 DROP POLICY IF EXISTS "profiles: admin all"        ON public.profiles;
@@ -55,95 +59,110 @@ CREATE POLICY "profiles: admin update all"
   USING (public.requesting_user_is_admin());
 
 
--- ── 3. applications ──────────────────────────────────────────────────────────
-DROP POLICY IF EXISTS "applications: admin all" ON public.applications;
-CREATE POLICY "applications: admin all"
-  ON public.applications FOR ALL
-  USING (public.requesting_user_is_admin());
+-- ── 3. Optional tables — each wrapped in a to_regclass() guard ────────────────
+-- to_regclass(qualified_name) returns NULL when the relation doesn't exist, so
+-- the IF check skips the entire block on databases that haven't run the
+-- relevant feature migration yet.  EXECUTE is used because DDL inside a DO
+-- block must be dynamic SQL.
 
+-- applications
+DO $$ BEGIN
+  IF to_regclass('public.applications') IS NOT NULL THEN
+    EXECUTE 'DROP POLICY IF EXISTS "applications: admin all" ON public.applications';
+    EXECUTE 'CREATE POLICY "applications: admin all" ON public.applications FOR ALL USING (public.requesting_user_is_admin())';
+  END IF;
+END $$;
 
--- ── 4. colleges ──────────────────────────────────────────────────────────────
-DROP POLICY IF EXISTS "colleges: admin all" ON public.colleges;
-CREATE POLICY "colleges: admin all"
-  ON public.colleges FOR ALL
-  USING (public.requesting_user_is_admin());
+-- colleges
+DO $$ BEGIN
+  IF to_regclass('public.colleges') IS NOT NULL THEN
+    EXECUTE 'DROP POLICY IF EXISTS "colleges: admin all" ON public.colleges';
+    EXECUTE 'CREATE POLICY "colleges: admin all" ON public.colleges FOR ALL USING (public.requesting_user_is_admin())';
+  END IF;
+END $$;
 
+-- courses
+DO $$ BEGIN
+  IF to_regclass('public.courses') IS NOT NULL THEN
+    EXECUTE 'DROP POLICY IF EXISTS "courses: admin all" ON public.courses';
+    EXECUTE 'CREATE POLICY "courses: admin all" ON public.courses FOR ALL USING (public.requesting_user_is_admin())';
+  END IF;
+END $$;
 
--- ── 5. courses ────────────────────────────────────────────────────────────────
-DROP POLICY IF EXISTS "courses: admin all" ON public.courses;
-CREATE POLICY "courses: admin all"
-  ON public.courses FOR ALL
-  USING (public.requesting_user_is_admin());
+-- student_documents
+DO $$ BEGIN
+  IF to_regclass('public.student_documents') IS NOT NULL THEN
+    EXECUTE 'DROP POLICY IF EXISTS "docs: admin all" ON public.student_documents';
+    EXECUTE 'CREATE POLICY "docs: admin all" ON public.student_documents FOR ALL USING (public.requesting_user_is_admin())';
+  END IF;
+END $$;
 
+-- application_timeline_events
+DO $$ BEGIN
+  IF to_regclass('public.application_timeline_events') IS NOT NULL THEN
+    EXECUTE 'DROP POLICY IF EXISTS "timeline: admin all" ON public.application_timeline_events';
+    EXECUTE 'CREATE POLICY "timeline: admin all" ON public.application_timeline_events FOR ALL USING (public.requesting_user_is_admin())';
+  END IF;
+END $$;
 
--- ── 6. student_documents ──────────────────────────────────────────────────────
-DROP POLICY IF EXISTS "docs: admin all" ON public.student_documents;
-CREATE POLICY "docs: admin all"
-  ON public.student_documents FOR ALL
-  USING (public.requesting_user_is_admin());
+-- notifications
+DO $$ BEGIN
+  IF to_regclass('public.notifications') IS NOT NULL THEN
+    EXECUTE 'DROP POLICY IF EXISTS "notif: admin all" ON public.notifications';
+    EXECUTE 'CREATE POLICY "notif: admin all" ON public.notifications FOR ALL USING (public.requesting_user_is_admin())';
+  END IF;
+END $$;
 
+-- student_inquiries
+DO $$ BEGIN
+  IF to_regclass('public.student_inquiries') IS NOT NULL THEN
+    EXECUTE 'DROP POLICY IF EXISTS "inquiries: admin all" ON public.student_inquiries';
+    EXECUTE 'CREATE POLICY "inquiries: admin all" ON public.student_inquiries FOR ALL USING (public.requesting_user_is_admin())';
+  END IF;
+END $$;
 
--- ── 7. application_timeline_events ────────────────────────────────────────────
-DROP POLICY IF EXISTS "timeline: admin all" ON public.application_timeline_events;
-CREATE POLICY "timeline: admin all"
-  ON public.application_timeline_events FOR ALL
-  USING (public.requesting_user_is_admin());
+-- partner_applications  (often missing — listed in schema.sql but optional)
+DO $$ BEGIN
+  IF to_regclass('public.partner_applications') IS NOT NULL THEN
+    EXECUTE 'DROP POLICY IF EXISTS "partner_applications: admin read"   ON public.partner_applications';
+    EXECUTE 'DROP POLICY IF EXISTS "partner_applications: admin update" ON public.partner_applications';
+    EXECUTE 'DROP POLICY IF EXISTS "partner_applications: admin all"    ON public.partner_applications';
+    EXECUTE 'CREATE POLICY "partner_applications: admin read"   ON public.partner_applications FOR SELECT USING (public.requesting_user_is_admin())';
+    EXECUTE 'CREATE POLICY "partner_applications: admin update" ON public.partner_applications FOR UPDATE USING (public.requesting_user_is_admin())';
+  END IF;
+END $$;
 
+-- email_log
+DO $$ BEGIN
+  IF to_regclass('public.email_log') IS NOT NULL THEN
+    EXECUTE 'DROP POLICY IF EXISTS "email_log: admin all" ON public.email_log';
+    EXECUTE 'CREATE POLICY "email_log: admin all" ON public.email_log FOR ALL USING (public.requesting_user_is_admin())';
+  END IF;
+END $$;
 
--- ── 8. notifications ──────────────────────────────────────────────────────────
-DROP POLICY IF EXISTS "notif: admin all" ON public.notifications;
-CREATE POLICY "notif: admin all"
-  ON public.notifications FOR ALL
-  USING (public.requesting_user_is_admin());
+-- application_audit_log
+DO $$ BEGIN
+  IF to_regclass('public.application_audit_log') IS NOT NULL THEN
+    EXECUTE 'DROP POLICY IF EXISTS "audit_log: admin all" ON public.application_audit_log';
+    EXECUTE 'CREATE POLICY "audit_log: admin all" ON public.application_audit_log FOR ALL USING (public.requesting_user_is_admin())';
+  END IF;
+END $$;
 
+-- student_education
+DO $$ BEGIN
+  IF to_regclass('public.student_education') IS NOT NULL THEN
+    EXECUTE 'DROP POLICY IF EXISTS "education: admin all" ON public.student_education';
+    EXECUTE 'CREATE POLICY "education: admin all" ON public.student_education FOR ALL USING (public.requesting_user_is_admin())';
+  END IF;
+END $$;
 
--- ── 9. student_inquiries ──────────────────────────────────────────────────────
-DROP POLICY IF EXISTS "inquiries: admin all" ON public.student_inquiries;
-CREATE POLICY "inquiries: admin all"
-  ON public.student_inquiries FOR ALL
-  USING (public.requesting_user_is_admin());
-
-
--- ── 10. partner_applications ──────────────────────────────────────────────────
-DROP POLICY IF EXISTS "partner_applications: admin read"   ON public.partner_applications;
-DROP POLICY IF EXISTS "partner_applications: admin update" ON public.partner_applications;
-DROP POLICY IF EXISTS "partner_applications: admin all"    ON public.partner_applications;
-
-CREATE POLICY "partner_applications: admin read"
-  ON public.partner_applications FOR SELECT
-  USING (public.requesting_user_is_admin());
-
-CREATE POLICY "partner_applications: admin update"
-  ON public.partner_applications FOR UPDATE
-  USING (public.requesting_user_is_admin());
-
-
--- ── 11. email_log ─────────────────────────────────────────────────────────────
-DROP POLICY IF EXISTS "email_log: admin all" ON public.email_log;
-CREATE POLICY "email_log: admin all"
-  ON public.email_log FOR ALL
-  USING (public.requesting_user_is_admin());
-
-
--- ── 12. application_audit_log ─────────────────────────────────────────────────
-DROP POLICY IF EXISTS "audit_log: admin all" ON public.application_audit_log;
-CREATE POLICY "audit_log: admin all"
-  ON public.application_audit_log FOR ALL
-  USING (public.requesting_user_is_admin());
-
-
--- ── 13. student_education ─────────────────────────────────────────────────────
-DROP POLICY IF EXISTS "education: admin all" ON public.student_education;
-CREATE POLICY "education: admin all"
-  ON public.student_education FOR ALL
-  USING (public.requesting_user_is_admin());
-
-
--- ── 14. offer_letters ─────────────────────────────────────────────────────────
-DROP POLICY IF EXISTS "offer_letters: admin all" ON public.offer_letters;
-CREATE POLICY "offer_letters: admin all"
-  ON public.offer_letters FOR ALL
-  USING (public.requesting_user_is_admin());
+-- offer_letters
+DO $$ BEGIN
+  IF to_regclass('public.offer_letters') IS NOT NULL THEN
+    EXECUTE 'DROP POLICY IF EXISTS "offer_letters: admin all" ON public.offer_letters';
+    EXECUTE 'CREATE POLICY "offer_letters: admin all" ON public.offer_letters FOR ALL USING (public.requesting_user_is_admin())';
+  END IF;
+END $$;
 
 
 -- ═══════════════════════════════════════════════════════════════════════════════
