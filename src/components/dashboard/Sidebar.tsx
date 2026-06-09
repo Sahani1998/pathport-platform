@@ -33,6 +33,7 @@ const NAV_ITEMS: Record<UserRole, { label: string; href: string; icon: React.Ele
     { label: "Applications",     href: "/dashboard/admin/applications",   icon: FileText        },
     { label: "Colleges",         href: "/dashboard/admin/colleges",       icon: Building2       },
     { label: "Courses",          href: "/dashboard/admin/courses",        icon: BookOpen        },
+    { label: "Offer Letters",    href: "/dashboard/admin/offer-letters",  icon: FileText        },
     { label: "Partners",         href: "/dashboard/admin/partners",       icon: Award           },
     { label: "Analytics",        href: "/dashboard/admin/analytics",      icon: BarChart2       },
     { label: "Settings",         href: "/dashboard/admin/settings",       icon: Settings        },
