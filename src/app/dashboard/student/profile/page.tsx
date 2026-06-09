@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import { UserCircle, Mail, Phone, Globe, Clock } from "lucide-react";
+import Link from "next/link";
+import { Pencil, Mail, Phone, Globe, Clock } from "lucide-react";
 
 export default async function StudentProfilePage() {
   const supabase = await createClient();
@@ -15,9 +16,17 @@ export default async function StudentProfilePage() {
 
   return (
     <div className="max-w-2xl space-y-6">
-      <div>
-        <h2 className="font-display text-3xl text-white mb-1">My Profile</h2>
-        <p className="text-white/40 font-body text-sm">View and manage your account details</p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h2 className="font-display text-3xl text-white mb-1">My Profile</h2>
+          <p className="text-white/40 font-body text-sm">View and manage your account details</p>
+        </div>
+        <Link
+          href="/dashboard/student/profile/edit"
+          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gold-400/10 border border-gold-400/25 text-gold-400 font-body text-sm font-semibold hover:bg-gold-400/20 transition-all flex-shrink-0"
+        >
+          <Pencil className="w-3.5 h-3.5" /> Edit Profile
+        </Link>
       </div>
 
       {/* Avatar + name */}
@@ -54,16 +63,6 @@ export default async function StudentProfilePage() {
         ))}
       </div>
 
-      {/* Coming soon notice */}
-      <div className="flex items-start gap-3 p-4 rounded-2xl bg-pathBlue-500/[0.07] border border-pathBlue-500/20">
-        <UserCircle className="w-5 h-5 text-pathBlue-400 flex-shrink-0 mt-0.5" />
-        <div>
-          <p className="font-body text-sm text-white/70 font-semibold mb-0.5">Profile editing coming soon</p>
-          <p className="font-body text-xs text-white/40">
-            To update your name, phone, or country, contact your PathPort advisor on WhatsApp.
-          </p>
-        </div>
-      </div>
     </div>
   );
 }

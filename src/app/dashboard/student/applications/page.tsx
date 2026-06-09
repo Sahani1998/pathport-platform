@@ -8,8 +8,9 @@ import type { ApplicationTimelineEvent, ApplicationStage } from "@/types/timelin
 import { REQUIRED_DOC_TYPES } from "@/types/documents";
 import {
   FileText, Building2, BookOpen, CheckCircle2, XCircle,
-  Upload, Bell, ChevronDown, ChevronRight,
+  Upload, Bell,
 } from "lucide-react";
+import WithdrawButton from "@/components/applications/WithdrawButton";
 
 function fmtSGD(n: number) {
   return `S$${n.toLocaleString("en-SG")}`;
@@ -151,6 +152,7 @@ export default async function StudentApplicationsPage() {
         const currentStage  = (app.current_stage ?? "application_submitted") as ApplicationStage;
         const isRejected    = ["rejected", "withdrawn"].includes(currentStage);
         const isApproved    = ["approved", "arrived_singapore"].includes(currentStage);
+        const canWithdraw   = !isRejected && !isApproved && !["ipa_processing", "offer_letter_ready", "fee_payment_pending"].includes(currentStage);
         const appEvents     = eventsMap.get(app.id) ?? [];
         const docs          = docMap.get(app.id);
         const uploaded      = docs?.types.size ?? 0;
@@ -202,7 +204,7 @@ export default async function StudentApplicationsPage() {
 
             {/* Footer */}
             <div className="px-5 py-3 border-t border-white/[0.06] flex items-center justify-between flex-wrap gap-2">
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3 flex-wrap">
                 <p className="text-white/25 font-body text-xs">
                   Applied {new Date(app.submitted_at).toLocaleDateString("en-SG", { day: "numeric", month: "short", year: "numeric" })}
                 </p>
@@ -210,6 +212,12 @@ export default async function StudentApplicationsPage() {
                   <p className="text-white/25 font-body text-xs">
                     Updated {new Date(app.stage_updated_at).toLocaleDateString("en-SG", { day: "numeric", month: "short" })}
                   </p>
+                )}
+                {canWithdraw && (
+                  <WithdrawButton
+                    applicationId={app.id}
+                    courseName={course?.title ?? "this course"}
+                  />
                 )}
               </div>
               {/* Document summary */}

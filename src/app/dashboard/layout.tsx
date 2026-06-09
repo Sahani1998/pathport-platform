@@ -13,21 +13,24 @@ export default async function DashboardLayout({ children }: { children: ReactNod
 
   console.log("[DashboardLayout] getUser result — user:", user ? user.id : "null", "| error:", error?.message ?? "none");
 
-  if (!user || error) {
-    const headerList  = await headers();
-    const pathname    = headerList.get("x-pathname") ?? "";
-    const isAdminPath = pathname.startsWith("/dashboard/admin");
+  const headerList  = await headers();
+  const pathname    = headerList.get("x-pathname") ?? "";
+  const isAdminPath = pathname.startsWith("/dashboard/admin");
 
+  if (!user || error) {
     console.log(
       "[DashboardLayout] REDIRECT →", isAdminPath ? "/admin/login" : "/login",
       "| x-pathname:", pathname,
       "| reason:", error?.message ?? "user null"
     );
-
-    if (isAdminPath) {
-      redirect("/admin/login");
-    }
+    if (isAdminPath) redirect("/admin/login");
     redirect("/login");
+  }
+
+  // Enforce email verification for non-admin users.
+  // Admins are exempt so manually-created admin accounts always work.
+  if (!user.email_confirmed_at && !isAdminPath) {
+    redirect("/verify-email");
   }
 
   console.log("[DashboardLayout] session OK — rendering layout");

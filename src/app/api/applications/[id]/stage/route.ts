@@ -3,12 +3,19 @@ import { createClient } from "@/lib/supabase/server";
 import type { ApplicationStage } from "@/types/timeline";
 import { getStageMeta, STAGE_NOTIFICATION } from "@/types/timeline";
 import { STAGE_TO_STATUS } from "@/lib/application-stage-mapping";
+import { sendApplicationUpdate } from "@/lib/email/send";
+import { checkRateLimit, getClientIp, rateLimitResponse } from "@/lib/rate-limit";
 
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
+
+  const ip = getClientIp(request);
+  const rl = checkRateLimit(`stage:${ip}`, 30, 60_000);
+  if (!rl.success) return rateLimitResponse(rl.resetAt);
+
   console.log("[Applications API] PATCH /api/applications/" + id + "/stage — request received");
 
   try {
@@ -45,7 +52,7 @@ export async function PATCH(
       return NextResponse.json({ error: "Insufficient permissions" }, { status: 403 });
     }
 
-    // Fetch current application values
+    // Fetch current application values + student email for notifications
     const { data: app, error: appError } = await supabase
       .from("applications")
       .select("id, student_id, course_id, status, current_stage")
@@ -124,6 +131,29 @@ export async function PATCH(
       } else {
         console.log("[Applications API] notification sent to student:", app.student_id);
       }
+    }
+
+    // Send email notification (non-fatal)
+    const stageMeta2 = getStageMeta(stage);
+    const { data: studentProfile } = await supabase
+      .from("profiles")
+      .select("email, full_name")
+      .eq("id", app.student_id)
+      .single();
+    const { data: courseData } = await supabase
+      .from("courses")
+      .select("title")
+      .eq("id", app.course_id)
+      .single();
+
+    if (studentProfile?.email) {
+      sendApplicationUpdate({
+        to:         studentProfile.email,
+        name:       studentProfile.full_name ?? "Student",
+        courseName: (courseData as { title: string } | null)?.title ?? "your course",
+        stageLabel: stageMeta2.label,
+        message:    student_message,
+      }).catch(err => console.error("[Email] application update failed (non-fatal):", err));
     }
 
     console.log("[Applications API] stage update complete:", id, "→", stage);
