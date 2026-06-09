@@ -10,7 +10,7 @@ import {
   LayoutDashboard, FileText, BookOpen, Briefcase, Building2,
   Users, Settings, LogOut, ChevronLeft, ChevronRight,
   GraduationCap, BarChart2, UserCircle, ClipboardList,
-  Globe, Award, MessageSquare, Bell,
+  Globe, Award, MessageSquare, Bell, Loader2, Stethoscope,
 } from "lucide-react";
 
 // ─── Role-specific nav items ──────────────────────────────────────────────────
@@ -36,6 +36,7 @@ const NAV_ITEMS: Record<UserRole, { label: string; href: string; icon: React.Ele
     { label: "Offer Letters",    href: "/dashboard/admin/offer-letters",  icon: FileText        },
     { label: "Partners",         href: "/dashboard/admin/partners",       icon: Award           },
     { label: "Analytics",        href: "/dashboard/admin/analytics",      icon: BarChart2       },
+    { label: "Diagnostics",      href: "/dashboard/admin/diagnostic",     icon: Stethoscope     },
     { label: "Settings",         href: "/dashboard/admin/settings",       icon: Settings        },
   ],
   institution: [
@@ -73,6 +74,7 @@ export default function Sidebar() {
   const { profile, loading, signOut } = useAuth();
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
 
   // Derive role with three priority levels:
   // 1. profile.role from Supabase (authoritative, once loaded)
@@ -98,6 +100,8 @@ export default function Sidebar() {
   // Only the name/avatar in the user-info strip shows a skeleton while loading.
 
   const handleSignOut = async () => {
+    if (signingOut) return;
+    setSigningOut(true);
     console.log("[Auth] signOut start");
 
     // 1. Attempt Supabase signOut — AuthContext has a built-in 3-second timeout
@@ -220,15 +224,20 @@ export default function Sidebar() {
 
         <button
           onClick={handleSignOut}
+          disabled={signingOut}
           className={cn(
             "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl",
             "text-red-400/60 hover:text-red-400 hover:bg-red-500/[0.08] transition-all font-body text-sm",
+            "disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:bg-transparent",
             collapsed && "justify-center"
           )}
-          title={collapsed ? "Sign out" : undefined}
+          title={collapsed ? (signingOut ? "Signing out…" : "Sign out") : undefined}
+          aria-busy={signingOut}
         >
-          <LogOut className="w-4 h-4 flex-shrink-0" />
-          {!collapsed && <span>Sign Out</span>}
+          {signingOut
+            ? <Loader2 className="w-4 h-4 flex-shrink-0 animate-spin" />
+            : <LogOut className="w-4 h-4 flex-shrink-0" />}
+          {!collapsed && <span>{signingOut ? "Signing out…" : "Sign Out"}</span>}
         </button>
       </div>
     </aside>
