@@ -148,11 +148,13 @@ export async function PATCH(
 
     if (studentProfile?.email) {
       sendApplicationUpdate({
-        to:         studentProfile.email,
-        name:       studentProfile.full_name ?? "Student",
-        courseName: (courseData as { title: string } | null)?.title ?? "your course",
-        stageLabel: stageMeta2.label,
-        message:    student_message,
+        to:            studentProfile.email,
+        name:          studentProfile.full_name ?? "Student",
+        courseName:    (courseData as { title: string } | null)?.title ?? "your course",
+        stageLabel:    stageMeta2.label,
+        message:       student_message,
+        applicationId: id,
+        userId:        app.student_id,
       }).catch(err => console.error("[Email] application update failed (non-fatal):", err));
     }
 
