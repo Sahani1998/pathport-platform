@@ -1,27 +1,39 @@
 -- ─── Sprint 10: Document Verification System ────────────────────────────────
 -- Run once in Supabase SQL Editor (project owner).
+-- Safe to re-run: all statements are idempotent.
 
 -- ─── 1. Widen student_documents.status to include reupload_required ──────────
--- Drop existing status CHECK constraint(s) regardless of name, then re-add.
+--
+-- Problem with information_schema approach: PostgreSQL may store NOT NULL
+-- constraints as check constraints whose check clause contains the column name
+-- (e.g. "status IS NOT NULL"), causing LIKE '%status%' to match them and fail
+-- when trying to drop a system-generated constraint like "2200_18067_10_not_null".
+--
+-- Fix: use pg_catalog.pg_constraint + pg_get_constraintdef() and match against
+-- the actual enum values ('pending', 'verified', 'rejected'). These strings
+-- only appear in our explicit CHECK constraint, never in NOT NULL constraints.
+
 DO $$ DECLARE _con TEXT; BEGIN
   FOR _con IN (
-    SELECT tc.constraint_name
-    FROM information_schema.table_constraints  tc
-    JOIN information_schema.check_constraints  cc
-      ON tc.constraint_schema = cc.constraint_schema
-     AND tc.constraint_name   = cc.constraint_name
-    WHERE tc.table_name       = 'student_documents'
-      AND tc.table_schema     = 'public'
-      AND tc.constraint_type  = 'CHECK'
-      AND cc.check_clause     LIKE '%status%'
+    SELECT conname
+    FROM   pg_catalog.pg_constraint
+    WHERE  conrelid = 'public.student_documents'::regclass
+      AND  contype  = 'c'
+      AND  pg_get_constraintdef(oid) LIKE $s$%'pending'%$s$
+      AND  pg_get_constraintdef(oid) LIKE $s$%'verified'%$s$
+      AND  pg_get_constraintdef(oid) LIKE $s$%'rejected'%$s$
   ) LOOP
     EXECUTE format('ALTER TABLE public.student_documents DROP CONSTRAINT %I', _con);
   END LOOP;
 END $$;
 
-ALTER TABLE public.student_documents
-  ADD CONSTRAINT student_documents_status_check
-  CHECK (status IN ('pending', 'verified', 'rejected', 'reupload_required'));
+-- Add widened constraint — wrapped in DO so re-runs are safe (duplicate_object ignored)
+DO $$ BEGIN
+  ALTER TABLE public.student_documents
+    ADD CONSTRAINT student_documents_status_check
+    CHECK (status IN ('pending', 'verified', 'rejected', 'reupload_required'));
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 -- ─── 2. document_reviews table ───────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.document_reviews (
