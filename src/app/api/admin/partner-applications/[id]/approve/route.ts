@@ -74,16 +74,18 @@ export async function POST(
     }
 
     // ── Parse body ─────────────────────────────────────────────────────────
-    let college_id: string | null = null;
+    let college_id:      string | null = null;
+    let new_college_name: string | null = null;
     try {
-      const body = await request.json() as { college_id?: string | null };
-      college_id = body.college_id ?? null;
+      const body = await request.json() as { college_id?: string | null; new_college_name?: string | null };
+      college_id       = body.college_id       ?? null;
+      new_college_name = body.new_college_name ?? null;
     } catch { /* empty body is fine for non-institution partners */ }
 
     // ── Load the partner application ───────────────────────────────────────
     const { data: app, error: appError } = await supabase
       .from("partner_applications")
-      .select("id, org_name, contact_name, email, partner_type, status, created_user_id")
+      .select("id, org_name, contact_name, email, partner_type, status, created_user_id, country, website, message")
       .eq("id", id)
       .single();
 
@@ -98,16 +100,60 @@ export async function POST(
       return NextResponse.json({ error: `Unknown partner type: ${partnerType}` }, { status: 400 });
     }
 
-    // Institution approvals require a college to be selected
-    if (partnerType === "institution" && !college_id) {
+    // Institution approvals require either an existing college or a new college name
+    if (partnerType === "institution" && !college_id && !new_college_name) {
       return NextResponse.json(
-        { error: "A college must be selected before approving an institution application." },
+        { error: "A college must be selected or a new college name provided before approving an institution application." },
         { status: 422 },
       );
     }
 
     // ── Create auth user via service-role client ───────────────────────────
-    const adminDb      = createAdminClient();
+    const adminDb = createAdminClient();
+
+    // ── Create new college if requested ───────────────────────────────────
+    if (partnerType === "institution" && new_college_name) {
+      const baseName = new_college_name.trim();
+      let slug = baseName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+
+      // Ensure slug uniqueness
+      let suffix = 1;
+      let uniqueSlug = slug;
+      while (true) {
+        const { data: existing } = await adminDb
+          .from("colleges")
+          .select("id")
+          .eq("slug", uniqueSlug)
+          .maybeSingle();
+        if (!existing) break;
+        suffix++;
+        uniqueSlug = `${slug}-${suffix}`;
+      }
+
+      const { data: newCollege, error: collegeError } = await adminDb
+        .from("colleges")
+        .insert({
+          name:        baseName,
+          slug:        uniqueSlug,
+          country:     (app as Record<string, unknown>).country as string ?? null,
+          website:     (app as Record<string, unknown>).website as string ?? null,
+          description: (app as Record<string, unknown>).message as string ?? null,
+          is_active:   true,
+        })
+        .select("id")
+        .single();
+
+      if (collegeError || !newCollege) {
+        console.error("[PartnerApprove] college create error:", collegeError?.message);
+        return NextResponse.json(
+          { error: `Failed to create college: ${collegeError?.message ?? "unknown error"}` },
+          { status: 500 },
+        );
+      }
+
+      college_id = newCollege.id as string;
+    }
+
     const tempPassword = generateTempPassword();
 
     const { data: authData, error: createUserError } = await adminDb.auth.admin.createUser({
@@ -142,7 +188,6 @@ export async function POST(
         role,
         phone:      null,
         country:    null,
-        avatar_url: null,
         college_id: partnerType === "institution" ? college_id : null,
       });
 
@@ -170,7 +215,11 @@ export async function POST(
       action:          "approved",
       created_user_id: newUserId,
       created_by:      user.id,
-      notes:           partnerType === "institution" ? `college_id=${college_id ?? "none"}` : null,
+      notes:           partnerType === "institution"
+        ? (new_college_name
+          ? `created college "${new_college_name.trim()}" (id=${college_id})`
+          : `college_id=${college_id ?? "none"}`)
+        : null,
     });
 
     // ── In-app notification for the new partner user ───────────────────────

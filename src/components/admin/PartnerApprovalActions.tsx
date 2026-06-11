@@ -29,6 +29,7 @@ export default function PartnerApprovalActions({
 
   const [action,          setAction]          = useState<"approve" | "reject" | null>(null);
   const [collegeId,       setCollegeId]       = useState<string>("");
+  const [newCollegeName,  setNewCollegeName]  = useState<string>("");
   const [rejectionReason, setRejectionReason] = useState<string>("");
   const [loading,         setLoading]         = useState(false);
   const [error,           setError]           = useState<string | null>(null);
@@ -58,9 +59,15 @@ export default function PartnerApprovalActions({
     if (loading) return;
     setError(null);
 
-    if (action === "approve" && isInstitution && !collegeId) {
-      setError("Please select a college before approving an institution application.");
-      return;
+    if (action === "approve" && isInstitution) {
+      if (!collegeId) {
+        setError("Please select a college before approving an institution application.");
+        return;
+      }
+      if (collegeId === "new" && !newCollegeName.trim()) {
+        setError("Please enter a name for the new college.");
+        return;
+      }
     }
     if (action === "reject" && !rejectionReason.trim()) {
       setError("A rejection reason is required.");
@@ -73,8 +80,16 @@ export default function PartnerApprovalActions({
         ? `/api/admin/partner-applications/${applicationId}/approve`
         : `/api/admin/partner-applications/${applicationId}/reject`;
 
+      let approveBody: Record<string, string | null> = {};
+      if (action === "approve") {
+        if (isInstitution && collegeId === "new") {
+          approveBody = { new_college_name: newCollegeName.trim() };
+        } else {
+          approveBody = { college_id: isInstitution ? collegeId : null };
+        }
+      }
       const body = action === "approve"
-        ? { college_id: isInstitution ? collegeId : null }
+        ? approveBody
         : { rejection_reason: rejectionReason.trim() };
 
       const res  = await fetch(endpoint, {
@@ -139,18 +154,32 @@ export default function PartnerApprovalActions({
               <div className="relative">
                 <select
                   value={collegeId}
-                  onChange={e => setCollegeId(e.target.value)}
+                  onChange={e => { setCollegeId(e.target.value); setNewCollegeName(""); }}
                   className="w-full appearance-none bg-white/[0.06] border border-white/[0.12] rounded-xl px-4 py-2.5 font-body text-sm text-white focus:outline-none focus:border-emerald-400/50 transition-all [&>option]:bg-navy-900"
                 >
                   <option value="">Select a college…</option>
                   {colleges.map(c => (
                     <option key={c.id} value={c.id}>{c.name}</option>
                   ))}
+                  <option value="new">+ Add new college</option>
                 </select>
                 <ChevronDown className="w-4 h-4 text-white/30 absolute right-3 top-3 pointer-events-none" />
               </div>
+              {collegeId === "new" && (
+                <input
+                  type="text"
+                  value={newCollegeName}
+                  onChange={e => setNewCollegeName(e.target.value)}
+                  placeholder="New college name…"
+                  className="w-full bg-white/[0.06] border border-emerald-400/30 rounded-xl px-4 py-2.5 font-body text-sm text-white placeholder-white/25 focus:outline-none focus:border-emerald-400/60 transition-all"
+                  autoFocus
+                />
+              )}
               <p className="font-body text-[11px] text-white/30">
-                The institution user will only see applications and documents belonging to this college.
+                {collegeId === "new"
+                  ? "A new college record will be created automatically on approval."
+                  : "The institution user will only see applications and documents belonging to this college."
+                }
               </p>
             </div>
           )}
@@ -163,7 +192,7 @@ export default function PartnerApprovalActions({
             <button
               type="button"
               onClick={handleSubmit}
-              disabled={loading || (isInstitution && !collegeId)}
+              disabled={loading || (isInstitution && (!collegeId || (collegeId === "new" && !newCollegeName.trim())))}
               className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-500/15 border border-emerald-400/30 text-emerald-400 font-body text-sm font-semibold hover:bg-emerald-500/25 transition-all disabled:opacity-50"
             >
               {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
