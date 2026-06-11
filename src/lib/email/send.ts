@@ -60,7 +60,15 @@ export async function sendTemplatedEmail(opts: SendOptions): Promise<SendResult>
   }
 
   try {
-    console.log("[Email] sending:", { template, to, from: FROM_ADDRESS, subject: rendered.subject, logId });
+    console.log("[Email] sending:", {
+      template,
+      to,
+      from:               FROM_ADDRESS,
+      RESEND_FROM_EMAIL:  process.env.RESEND_FROM_EMAIL ?? "(not set — using default noreply@pathport.sg)",
+      RESEND_API_KEY_set: !!process.env.RESEND_API_KEY,
+      subject:            rendered.subject,
+      logId,
+    });
 
     // Resend v6 never throws on API errors — it returns { data, error }.
     // The error branch must be checked explicitly or failures are silent.

@@ -286,6 +286,9 @@ export async function POST(
     // ── Activation email (non-fatal; only for newly created users) ────────
     if (createdNewUser) {
       const redirectTo = `${SITE_URL}/activate-account`;
+
+      console.log("[PartnerApprove] calling generateLink:", { email: app.email, redirectTo });
+
       const { data: linkData, error: linkError } = await adminDb.auth.admin.generateLink({
         type:    "invite",
         email:   app.email,
@@ -293,13 +296,27 @@ export async function POST(
       });
 
       console.log("[PartnerApprove] generateLink result:", {
-        success: !linkError,
-        error:   linkError?.message ?? null,
+        success:        !linkError,
+        errorMessage:   linkError?.message    ?? null,
+        errorStatus:    linkError?.status     ?? null,
+        propertiesKeys: linkData?.properties  ? Object.keys(linkData.properties) : null,
+        action_link:    linkData?.properties?.action_link
+          ? `${linkData.properties.action_link.substring(0, 60)}… [truncated]`
+          : null,
       });
 
       const activationUrl = linkData?.properties?.action_link ?? null;
 
+      console.log("[PartnerApprove] activationUrl generated:", !!activationUrl);
+
       if (activationUrl) {
+        console.log("[PartnerApprove] calling sendTemplatedEmail:", {
+          template: "partner_activation",
+          to:       app.email,
+          RESEND_FROM_EMAIL: process.env.RESEND_FROM_EMAIL ?? "(not set — using default)",
+          RESEND_API_KEY_set: !!process.env.RESEND_API_KEY,
+        });
+
         await sendTemplatedEmail({
           to:       app.email,
           template: "partner_activation",
@@ -312,7 +329,10 @@ export async function POST(
           metadata: { application_id: id, partner_type: partnerType },
         });
       } else {
-        console.error("[PartnerApprove] generateLink failed, skipping activation email:", linkError?.message);
+        console.error("[PartnerApprove] generateLink failed — no action_link in response. Skipping activation email.", {
+          linkError,
+          linkDataProperties: linkData?.properties ?? null,
+        });
       }
     } else {
       console.log("[PartnerApprove] skipping activation email — existing user");
