@@ -40,11 +40,12 @@ const NAV_ITEMS: Record<UserRole, { label: string; href: string; icon: React.Ele
     { label: "Settings",         href: "/dashboard/admin/settings",       icon: Settings        },
   ],
   institution: [
-    { label: "Dashboard",        href: "/dashboard/institution",            icon: LayoutDashboard },
-    { label: "Students",         href: "/dashboard/institution/students",   icon: GraduationCap   },
-    { label: "Applications",     href: "/dashboard/institution/applications",icon: FileText       },
-    { label: "Courses",          href: "/dashboard/institution/courses",    icon: BookOpen        },
-    { label: "Reports",          href: "/dashboard/institution/reports",    icon: BarChart2       },
+    { label: "Dashboard",        href: "/dashboard/institution",             icon: LayoutDashboard },
+    { label: "Students",         href: "/dashboard/institution/students",    icon: GraduationCap   },
+    { label: "Applications",     href: "/dashboard/institution/applications",icon: FileText        },
+    { label: "Documents",        href: "/dashboard/institution/documents",   icon: ClipboardList   },
+    { label: "Courses",          href: "/dashboard/institution/courses",     icon: BookOpen        },
+    { label: "Reports",          href: "/dashboard/institution/reports",     icon: BarChart2       },
   ],
   recruitment_partner: [
     { label: "Dashboard",        href: "/dashboard/partner",              icon: LayoutDashboard },

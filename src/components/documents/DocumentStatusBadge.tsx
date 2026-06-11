@@ -1,6 +1,6 @@
 import type { DocumentStatus } from "@/types/documents";
 import { DOCUMENT_STATUS_META } from "@/types/documents";
-import { CheckCircle2, Clock, XCircle } from "lucide-react";
+import { CheckCircle2, Clock, XCircle, RefreshCw } from "lucide-react";
 
 interface DocumentStatusBadgeProps {
   status:           DocumentStatus;
@@ -9,9 +9,10 @@ interface DocumentStatusBadgeProps {
 }
 
 const ICONS: Record<DocumentStatus, React.ElementType> = {
-  pending:  Clock,
-  verified: CheckCircle2,
-  rejected: XCircle,
+  pending:           Clock,
+  verified:          CheckCircle2,
+  rejected:          XCircle,
+  reupload_required: RefreshCw,
 };
 
 export default function DocumentStatusBadge({
@@ -28,8 +29,8 @@ export default function DocumentStatusBadge({
         <Icon className="w-3 h-3 flex-shrink-0" />
         {meta.label}
       </span>
-      {showReason && status === "rejected" && rejectionReason && (
-        <p className="text-red-400/80 font-body text-xs pl-1 leading-relaxed">
+      {showReason && (status === "rejected" || status === "reupload_required") && rejectionReason && (
+        <p className="text-orange-400/80 font-body text-xs pl-1 leading-relaxed">
           {rejectionReason}
         </p>
       )}
