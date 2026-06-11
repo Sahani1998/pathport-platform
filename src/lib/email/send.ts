@@ -60,16 +60,42 @@ export async function sendTemplatedEmail(opts: SendOptions): Promise<SendResult>
   }
 
   try {
-    await resend.emails.send({
+    console.log("[Email] sending:", { template, to, from: FROM_ADDRESS, subject: rendered.subject, logId });
+
+    // Resend v6 never throws on API errors — it returns { data, error }.
+    // The error branch must be checked explicitly or failures are silent.
+    const { data: sendData, error: sendError } = await resend.emails.send({
       from:    FROM_ADDRESS,
       to,
       subject: rendered.subject,
       html:    rendered.html,
     });
+
+    console.log("[Email] resend response:", {
+      id:    sendData?.id ?? null,
+      error: sendError ? { name: sendError.name, statusCode: sendError.statusCode, message: sendError.message } : null,
+    });
+
+    if (sendError) {
+      const message = `${sendError.name ?? "resend_error"} (${sendError.statusCode ?? "?"}): ${sendError.message}`;
+      if (logId) {
+        await supabase
+          .from("email_log")
+          .update({ status: "failed", error_message: message })
+          .eq("id", logId);
+      }
+      console.error("[Email] resend rejected:", message);
+      return { success: false, logId, error: message };
+    }
+
     if (logId) {
       await supabase
         .from("email_log")
-        .update({ status: "sent", sent_at: new Date().toISOString() })
+        .update({
+          status:   "sent",
+          sent_at:  new Date().toISOString(),
+          metadata: { ...(metadata ?? {}), resend_id: sendData?.id ?? null },
+        })
         .eq("id", logId);
     }
     return { success: true, logId };
