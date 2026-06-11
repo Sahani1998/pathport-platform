@@ -61,6 +61,7 @@ export type EmailTemplate =
   | "application_withdrawn"
   | "withdrawal_notice_internal"
   | "partner_approved"
+  | "partner_activation"
   | "partner_rejected";
 
 export interface TemplateContext {
@@ -80,6 +81,8 @@ export interface TemplateContext {
   portalUrl?: string;
   email?: string;
   temporaryPassword?: string;
+  // Account activation
+  activationUrl?: string;
 }
 
 export interface RenderedEmail {
@@ -241,6 +244,17 @@ export const TEMPLATES: Record<EmailTemplate, (ctx: TemplateContext) => Rendered
       (ctx.message ? quote(ctx.message) : "") +
       cta(adminAppsUrl, "View Application →") +
       `<p style="color:rgba(255,255,255,.25);font-size:11px;margin-top:16px;text-align:center">Institution view: <a href="${instAppsUrl}" style="color:rgba(201,168,76,.6)">${instAppsUrl}</a></p>`
+    ),
+  }),
+
+  partner_activation: ctx => ({
+    subject: "Your PathPort Account Has Been Approved — Activate Now",
+    html: shell(
+      h1("Your application has been approved! 🎉") +
+      p(`Hi ${ctx.name ?? "there"}, congratulations! Your application to join PathPort as a <strong style="color:#fff">${ctx.partnerType ?? "partner"}</strong> has been approved.`) +
+      p("Click the button below to set your password and activate your account. This link is valid for 24 hours.") +
+      cta(ctx.activationUrl ?? SITE_URL + "/login", "Activate Account →") +
+      p('<span style="color:rgba(255,255,255,.35);font-size:12px">If you did not apply to PathPort, you can safely ignore this email.</span>')
     ),
   }),
 
