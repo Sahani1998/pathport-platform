@@ -3,7 +3,6 @@ import { createClient }             from "@/lib/supabase/server";
 import { createAdminClient }        from "@/lib/supabase/admin-client";
 import { sendTemplatedEmail }       from "@/lib/email/send";
 import { checkRateLimit, getClientIp, rateLimitResponse, LIMITS } from "@/lib/rate-limit";
-import { randomBytes }              from "crypto";
 import type { UserRole }            from "@/types/auth";
 import { SITE_URL }                 from "@/lib/email/client";
 
@@ -20,30 +19,6 @@ const PARTNER_TYPE_LABEL: Record<string, string> = {
   recruitment_partner: "Recruitment Partner",
   employer:            "Employer",
 };
-
-const PORTAL_PATH: Record<string, string> = {
-  institution:         "/dashboard/institution",
-  recruitment_partner: "/dashboard/partner",
-  employer:            "/dashboard/employer",
-};
-
-// ─── Password generator ───────────────────────────────────────────────────────
-
-function generateTempPassword(): string {
-  const upper   = "ABCDEFGHJKLMNPQRSTUVWXYZ";
-  const lower   = "abcdefghjkmnpqrstuvwxyz";
-  const digits  = "23456789";
-  const special = "!@#$";
-  const all     = upper + lower + digits + special;
-  const bytes   = randomBytes(14);
-  let pwd =
-    upper[bytes[0]  % upper.length]   +
-    lower[bytes[1]  % lower.length]   +
-    digits[bytes[2] % digits.length]  +
-    special[bytes[3]% special.length];
-  for (let i = 4; i < 14; i++) pwd += all[bytes[i] % all.length];
-  return pwd.split("").sort(() => (randomBytes(1)[0] % 2 === 0 ? 1 : -1)).join("");
-}
 
 // ─── POST /api/admin/partner-applications/[id]/approve ───────────────────────
 
@@ -153,9 +128,8 @@ export async function POST(
     //      inserts a profile row immediately, so the explicit insert below
     //      would duplicate — we use upsert instead.
     //
-    let resolvedUserId:  string;
-    let tempPassword:    string | null = null;
-    let createdNewUser   = false;
+    let resolvedUserId: string;
+    let createdNewUser  = false;
 
     const linkedUserId = (app as Record<string, unknown>).created_user_id as string | null;
 
@@ -186,13 +160,11 @@ export async function POST(
 
       } else {
         // No existing user — create one.
-        tempPassword = generateTempPassword();
         console.log("[PartnerApprove] creating new auth user for:", app.email);
 
         const { data: authData, error: createUserError } = await adminDb.auth.admin.createUser({
           email:         app.email,
-          password:      tempPassword,
-          email_confirm: true,
+          email_confirm: false,
           user_metadata: { full_name: app.contact_name, role, org_name: app.org_name },
         });
 
@@ -311,24 +283,39 @@ export async function POST(
       type:           "system",
     });
 
-    // ── Activation email (non-fatal; skipped if no temp password) ─────────
-    if (tempPassword) {
-      const portalUrl = `${SITE_URL}${PORTAL_PATH[partnerType] ?? "/login"}`;
-      await sendTemplatedEmail({
-        to:       app.email,
-        template: "partner_approved",
-        context: {
-          name:              app.contact_name,
-          partnerType:       PARTNER_TYPE_LABEL[partnerType] ?? partnerType,
-          portalUrl:         `${SITE_URL}/login`,
-          email:             app.email,
-          temporaryPassword: tempPassword,
-        },
-        userId:   resolvedUserId,
-        metadata: { application_id: id, partner_type: partnerType, portal_url: portalUrl },
+    // ── Activation email (non-fatal; only for newly created users) ────────
+    if (createdNewUser) {
+      const redirectTo = `${SITE_URL}/activate-account`;
+      const { data: linkData, error: linkError } = await adminDb.auth.admin.generateLink({
+        type:    "invite",
+        email:   app.email,
+        options: { redirectTo },
       });
+
+      console.log("[PartnerApprove] generateLink result:", {
+        success: !linkError,
+        error:   linkError?.message ?? null,
+      });
+
+      const activationUrl = linkData?.properties?.action_link ?? null;
+
+      if (activationUrl) {
+        await sendTemplatedEmail({
+          to:       app.email,
+          template: "partner_activation",
+          context: {
+            name:          app.contact_name,
+            partnerType:   PARTNER_TYPE_LABEL[partnerType] ?? partnerType,
+            activationUrl,
+          },
+          userId:   resolvedUserId,
+          metadata: { application_id: id, partner_type: partnerType },
+        });
+      } else {
+        console.error("[PartnerApprove] generateLink failed, skipping activation email:", linkError?.message);
+      }
     } else {
-      console.log("[PartnerApprove] skipping activation email — existing user, password unknown");
+      console.log("[PartnerApprove] skipping activation email — existing user");
     }
 
     console.log("[PartnerApprove] success:", { applicationId: id, userId: resolvedUserId, role, createdNewUser });
