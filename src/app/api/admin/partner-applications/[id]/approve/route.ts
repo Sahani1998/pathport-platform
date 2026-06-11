@@ -186,8 +186,6 @@ export async function POST(
         email:      app.email,
         full_name:  app.contact_name,
         role,
-        phone:      null,
-        country:    null,
         college_id: partnerType === "institution" ? college_id : null,
       });
 
