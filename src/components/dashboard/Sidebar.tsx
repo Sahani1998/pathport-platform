@@ -34,7 +34,7 @@ const NAV_ITEMS: Record<UserRole, { label: string; href: string; icon: React.Ele
     { label: "Colleges",         href: "/dashboard/admin/colleges",       icon: Building2       },
     { label: "Courses",          href: "/dashboard/admin/courses",        icon: BookOpen        },
     { label: "Offer Letters",    href: "/dashboard/admin/offer-letters",  icon: FileText        },
-    { label: "Partners",         href: "/dashboard/admin/partners",       icon: Award           },
+    { label: "Partners",         href: "/dashboard/admin/partner-applications", icon: Award      },
     { label: "Analytics",        href: "/dashboard/admin/analytics",      icon: BarChart2       },
     { label: "Diagnostics",      href: "/dashboard/admin/diagnostic",     icon: Stethoscope     },
     { label: "Settings",         href: "/dashboard/admin/settings",       icon: Settings        },
