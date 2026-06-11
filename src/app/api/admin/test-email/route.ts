@@ -11,6 +11,8 @@ const SAMPLE_CONTEXTS: Record<EmailTemplate, TemplateContext> = {
   document_verified:            { name: "Priya Sharma", documentType: "Passport", collegeName: "PSB Academy", comment: "Clear photo page — accepted." },
   document_rejected:            { name: "Priya Sharma", documentType: "Financial Proof", comment: "Bank statement is older than 3 months. Please upload a more recent one." },
   document_reupload_requested:  { name: "Priya Sharma", documentType: "Education Certificate", comment: "Please upload the original certificate — photos are blurry." },
+  partner_approved:             { name: "ABC Institute", partnerType: "Institution", portalUrl: "https://pathport.sg/login", email: "admin@abcinstitute.sg", temporaryPassword: "Temp@12345" },
+  partner_rejected:             { name: "ABC Institute", reason: "Insufficient accreditation documentation provided." },
   offer_letter_available:       { name: "Priya Sharma", courseName: "Diploma in Business Management", collegeName: "PSB Academy" },
   fee_payment_reminder:         { name: "Priya Sharma", courseName: "Diploma in Business Management", amount: "SGD 2,400", dueDate: "30 July 2025" },
   ipa_processing:               { name: "Priya Sharma", courseName: "Diploma in Business Management" },

@@ -59,7 +59,9 @@ export type EmailTemplate =
   | "ipa_approved"
   | "arrival_preparation"
   | "application_withdrawn"
-  | "withdrawal_notice_internal";
+  | "withdrawal_notice_internal"
+  | "partner_approved"
+  | "partner_rejected";
 
 export interface TemplateContext {
   name?: string;
@@ -73,6 +75,11 @@ export interface TemplateContext {
   studentName?: string;
   documentType?: string;
   comment?: string | null;
+  // Partner approval
+  partnerType?: string;
+  portalUrl?: string;
+  email?: string;
+  temporaryPassword?: string;
 }
 
 export interface RenderedEmail {
@@ -234,6 +241,37 @@ export const TEMPLATES: Record<EmailTemplate, (ctx: TemplateContext) => Rendered
       (ctx.message ? quote(ctx.message) : "") +
       cta(adminAppsUrl, "View Application →") +
       `<p style="color:rgba(255,255,255,.25);font-size:11px;margin-top:16px;text-align:center">Institution view: <a href="${instAppsUrl}" style="color:rgba(201,168,76,.6)">${instAppsUrl}</a></p>`
+    ),
+  }),
+
+  partner_approved: ctx => ({
+    subject: "Welcome to PathPort — Your Account is Ready",
+    html: shell(
+      h1("Your application has been approved! 🎉") +
+      p(`Hi ${ctx.name ?? "there"}, congratulations! Your application to join PathPort as a <strong style="color:#fff">${ctx.partnerType ?? "partner"}</strong> has been approved.`) +
+      `<div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:20px;margin:20px 0">
+        <p style="color:rgba(255,255,255,.45);font-size:11px;text-transform:uppercase;letter-spacing:.1em;margin:0 0 12px">Your Login Credentials</p>
+        <table style="width:100%;border-collapse:collapse">
+          <tr><td style="color:rgba(255,255,255,.45);font-size:13px;padding:6px 0;width:40%">Portal</td><td style="color:#fff;font-size:13px;font-weight:600;padding:6px 0"><a href="${ctx.portalUrl ?? SITE_URL + "/login"}" style="color:#C9A84C;text-decoration:none">${ctx.portalUrl ?? SITE_URL + "/login"}</a></td></tr>
+          <tr><td style="color:rgba(255,255,255,.45);font-size:13px;padding:6px 0">Email</td><td style="color:#fff;font-size:13px;font-weight:600;padding:6px 0">${ctx.email ?? "—"}</td></tr>
+          <tr><td style="color:rgba(255,255,255,.45);font-size:13px;padding:6px 0">Temp Password</td><td style="color:#C9A84C;font-size:13px;font-weight:700;padding:6px 0;font-family:monospace">${ctx.temporaryPassword ?? "—"}</td></tr>
+        </table>
+      </div>` +
+      p('<strong style="color:rgba(255,200,80,.9)">⚠️ Please change your password immediately after your first login.</strong>') +
+      p("If you have any questions, reply to this email or contact your PathPort account manager.") +
+      cta(ctx.portalUrl ?? SITE_URL + "/login", "Login to PathPort →")
+    ),
+  }),
+
+  partner_rejected: ctx => ({
+    subject: "PathPort Partner Application Update",
+    html: shell(
+      h1("Application update") +
+      p(`Hi ${ctx.name ?? "there"}, thank you for applying to join PathPort as a partner.`) +
+      p("After careful review, we are unable to approve your application at this time.") +
+      (ctx.reason ? highlight("Reason", ctx.reason) : "") +
+      p("If you believe this is an error or would like to discuss further, please reply to this email. You are welcome to reapply in the future.") +
+      cta(`${SITE_URL}/partner-with-us`, "Apply Again →")
     ),
   }),
 };
