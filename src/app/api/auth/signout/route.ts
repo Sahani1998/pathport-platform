@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
+import { checkRateLimit, getClientIp, rateLimitResponse } from "@/lib/rate-limit";
 
 /**
  * Server-side sign-out.
@@ -16,7 +17,11 @@ import { createClient } from "@/lib/supabase/server";
  * cookie gets deleted at the HTTP layer.  We then return a JSON response;
  * the client follows up with a hard navigation.
  */
-export async function POST() {
+export async function POST(request: Request) {
+  const ip = getClientIp(request);
+  const rl = checkRateLimit(`signout:${ip}`, 20, 60_000);
+  if (!rl.success) return rateLimitResponse(rl.resetAt);
+
   const supabase = await createClient();
 
   // scope: "global" invalidates the JWT across every device / tab.

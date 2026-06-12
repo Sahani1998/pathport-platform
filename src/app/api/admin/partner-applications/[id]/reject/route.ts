@@ -32,6 +32,9 @@ export async function POST(
     try {
       const body = await request.json() as { rejection_reason?: string | null };
       rejection_reason = body.rejection_reason?.trim() || null;
+      if (rejection_reason && rejection_reason.length > 2000) {
+        rejection_reason = rejection_reason.slice(0, 2000);
+      }
     } catch { /* rejection_reason is optional */ }
 
     // ── Load the application ───────────────────────────────────────────────

@@ -10,13 +10,10 @@ export async function updateSession(request: NextRequest) {
 
   if (supabaseUrl === "MISSING" || supabaseKey === "MISSING") {
     console.error(
-      "[Middleware] ❌ Env vars missing — add NEXT_PUBLIC_SUPABASE_URL and " +
+      "[Middleware] Env vars missing — add NEXT_PUBLIC_SUPABASE_URL and " +
       "NEXT_PUBLIC_SUPABASE_ANON_KEY in Vercel → Project → Settings → Environment Variables"
     );
   }
-
-  console.log("[Middleware] SUPABASE_URL:", supabaseUrl);
-  console.log("[Middleware] ANON_KEY prefix:", supabaseKey.slice(0, 15));
 
   // ── Supabase client ───────────────────────────────────────────────────────
   // Uses the individual get/set/remove adapter so Supabase calls
@@ -73,20 +70,6 @@ export async function updateSession(request: NextRequest) {
     data:  { user },
     error: userError,
   } = await supabase.auth.getUser();
-
-  // ── Cookie diagnostics ────────────────────────────────────────────────────
-  const allCookies  = request.cookies.getAll();
-  const authCookies = allCookies.filter(
-    c => c.name.includes("sb-") || c.name.includes("supabase")
-  );
-
-  console.log(
-    "[Middleware] path:",       request.nextUrl.pathname,
-    "| user:",                  user       ? user.id          : "null",
-    "| userError:",             userError  ? userError.message : "none",
-    "| cookies total:",         allCookies.length,
-    "| auth cookies:",          authCookies.map(c => `${c.name}(${c.value.length}ch)`).join(", ") || "NONE"
-  );
 
   // ── Route guards ──────────────────────────────────────────────────────────
   const path        = request.nextUrl.pathname;

@@ -46,6 +46,11 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
+
+  const ip = getClientIp(request);
+  const rl = checkRateLimit(`colleges-delete:${ip}`, 10, 60_000);
+  if (!rl.success) return rateLimitResponse(rl.resetAt);
+
   const { supabase, forbidden } = await requireAdmin(request);
   if (forbidden) return forbidden;
 

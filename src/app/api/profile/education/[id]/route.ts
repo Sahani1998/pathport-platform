@@ -1,11 +1,17 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { checkRateLimit, getClientIp, rateLimitResponse } from "@/lib/rate-limit";
 
 export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
+
+  const ip = getClientIp(request);
+  const rl = checkRateLimit(`education-delete:${ip}`, 20, 60_000);
+  if (!rl.success) return rateLimitResponse(rl.resetAt);
+
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
