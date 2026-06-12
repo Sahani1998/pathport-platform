@@ -8,11 +8,15 @@ export type ApplicationStage =
   | "documents_verified"
   | "offer_letter_processing"
   | "offer_letter_ready"
+  | "offer_letter_accepted"
   | "fee_payment_pending"
   | "ipa_processing"
   | "approved"
   | "arrival_preparation"
   | "arrived_singapore"
+  | "enrolled"
+  | "internship_eligible"
+  | "completed"
   | "rejected"
   | "withdrawn";
 
@@ -33,11 +37,15 @@ export const STAGE_META: StageMeta[] = [
   { value: "documents_verified",      label: "Documents Verified",      step: 5,  emoji: "✅", color: "text-emerald-400  bg-emerald-500/10   border-emerald-400/25",        description: "All documents have been verified."                            },
   { value: "offer_letter_processing", label: "Offer Letter Processing", step: 6,  emoji: "📝", color: "text-gold-400     bg-gold-400/10      border-gold-400/25",           description: "Your offer letter is being prepared by the college."          },
   { value: "offer_letter_ready",      label: "Offer Letter Ready",      step: 7,  emoji: "📩", color: "text-gold-400     bg-gold-400/15      border-gold-400/35",           description: "Your offer letter is ready! Please review it."                },
-  { value: "fee_payment_pending",     label: "Fee Payment Pending",     step: 8,  emoji: "💳", color: "text-orange-400   bg-orange-500/10    border-orange-400/25",         description: "Please complete the application fee payment."                  },
-  { value: "ipa_processing",          label: "IPA Processing",          step: 9,  emoji: "🪪", color: "text-purple-400   bg-purple-500/10    border-purple-400/25",         description: "Your In-Principle Approval is being processed by ICA."        },
-  { value: "approved",                label: "Approved",                step: 10, emoji: "🎉", color: "text-emerald-400  bg-emerald-500/10   border-emerald-400/25",        description: "Congratulations! Your application has been approved."         },
-  { value: "arrival_preparation",     label: "Arrival Preparation",     step: 11, emoji: "✈️", color: "text-pathBlue-400 bg-pathBlue-500/10  border-pathBlue-500/25",       description: "Preparing for your arrival in Singapore."                     },
-  { value: "arrived_singapore",       label: "Arrived Singapore",       step: 12, emoji: "🇸🇬", color: "text-gold-400     bg-gold-400/10      border-gold-400/25",           description: "Welcome to Singapore! Your journey starts here."              },
+  { value: "offer_letter_accepted",   label: "Offer Letter Accepted",   step: 8,  emoji: "🎊", color: "text-emerald-400  bg-emerald-500/10   border-emerald-400/25",        description: "You've accepted your offer. Next: fee payment."               },
+  { value: "fee_payment_pending",     label: "Fee Payment Pending",     step: 9,  emoji: "💳", color: "text-orange-400   bg-orange-500/10    border-orange-400/25",         description: "Please complete the application fee payment."                  },
+  { value: "ipa_processing",          label: "IPA Processing",          step: 10, emoji: "🪪", color: "text-purple-400   bg-purple-500/10    border-purple-400/25",         description: "Your In-Principle Approval is being processed by ICA."        },
+  { value: "approved",                label: "IPA Approved",            step: 11, emoji: "🎉", color: "text-emerald-400  bg-emerald-500/10   border-emerald-400/25",        description: "Congratulations! Your IPA has been approved."                 },
+  { value: "arrival_preparation",     label: "Arrival Preparation",     step: 12, emoji: "✈️", color: "text-pathBlue-400 bg-pathBlue-500/10  border-pathBlue-500/25",       description: "Preparing for your arrival in Singapore."                     },
+  { value: "arrived_singapore",       label: "Arrived Singapore",       step: 13, emoji: "🇸🇬", color: "text-gold-400     bg-gold-400/10      border-gold-400/25",           description: "Welcome to Singapore! Your journey starts here."              },
+  { value: "enrolled",                label: "Enrolled",                step: 14, emoji: "🎓", color: "text-emerald-400  bg-emerald-500/10   border-emerald-400/25",        description: "You are officially enrolled in your programme."               },
+  { value: "internship_eligible",     label: "Internship Eligible",     step: 15, emoji: "💼", color: "text-pathBlue-400 bg-pathBlue-500/10  border-pathBlue-500/25",       description: "You are now eligible for internship placement."               },
+  { value: "completed",               label: "Completed",               step: 16, emoji: "🏁", color: "text-gold-400     bg-gold-400/10      border-gold-400/25",           description: "Your programme journey is complete. Congratulations!"          },
   { value: "rejected",                label: "Not Progressed",          step: -1, emoji: "❌", color: "text-red-400      bg-red-500/10       border-red-400/25",            description: "This application was not taken forward."                      },
   { value: "withdrawn",               label: "Withdrawn",               step: -1, emoji: "↩️", color: "text-white/40     bg-white/[0.05]     border-white/[0.09]",          description: "This application was withdrawn."                              },
 ];
@@ -99,10 +107,14 @@ export const STAGE_NOTIFICATION: Partial<Record<ApplicationStage, { title: strin
   documents_verified:      { title: "Documents Verified ✅",                  message: "All your documents have been verified. Your offer letter is being prepared.",         type: "document_update"    },
   offer_letter_processing: { title: "Offer Letter Being Prepared",            message: "Your offer letter is being prepared by the college. We'll notify you when it's ready.", type: "offer_letter"     },
   offer_letter_ready:      { title: "Your Offer Letter is Ready! 📩",         message: "Your offer letter is ready. Please review it and confirm acceptance.",               type: "offer_letter"       },
+  offer_letter_accepted:   { title: "Offer Accepted 🎊",                      message: "You've accepted your offer letter. Next step: complete your fee payment to proceed.", type: "offer_letter"       },
   fee_payment_pending:     { title: "Action Required: Fee Payment",           message: "Please complete your application fee payment to proceed with IPA processing.",        type: "payment_update"     },
   ipa_processing:          { title: "IPA Processing Started 🪪",              message: "Your In-Principle Approval is being processed by ICA Singapore. This takes 2–4 weeks.", type: "application_update" },
-  approved:                { title: "Application Approved! 🎉",               message: "Congratulations! Your Singapore study application has been approved. Welcome aboard!", type: "application_update" },
+  approved:                { title: "IPA Approved! 🎉",                       message: "Congratulations! Your In-Principle Approval has been issued. Welcome aboard!",         type: "application_update" },
   arrival_preparation:     { title: "Arrival Preparation Started ✈️",         message: "PathPort is preparing your arrival support. Check your email for logistics details.", type: "application_update" },
   arrived_singapore:       { title: "Welcome to Singapore! 🇸🇬",              message: "You've arrived! Your PathPort advisor will contact you for orientation and next steps.", type: "application_update" },
+  enrolled:                { title: "Enrollment Completed 🎓",                message: "You are now officially enrolled in your programme. Your student journey begins!",     type: "application_update" },
+  internship_eligible:     { title: "Internship Eligible 💼",                 message: "You are now eligible for internship placement. Explore opportunities in your dashboard.", type: "application_update" },
+  completed:               { title: "Journey Completed 🏁",                   message: "Congratulations on completing your programme. We wish you every success ahead!",      type: "application_update" },
   rejected:                { title: "Application Update",                     message: "We regret to inform you that your application was not taken forward at this stage. Please contact your advisor.", type: "application_update" },
 };

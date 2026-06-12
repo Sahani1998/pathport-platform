@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import DocumentsClient from "./DocumentsClient";
 import type { AppRow, DocWithReviews, CollegeDocRow, OfferLetterRow } from "./DocumentsClient";
 import type { StudentDocument, DocumentReview } from "@/types/documents";
+import type { DocumentRequest } from "@/types/application-processing";
 
 export const dynamic = "force-dynamic";
 
@@ -73,7 +74,7 @@ export default async function StudentDocumentsPage() {
   // auth.users(id), NOT profiles(id) — PostgREST implicit joins fail there.
   // Two-query pattern: fetch rows first, then batch-fetch reviewer profiles.
   //
-  const [reviewsRes, offersRes, collegeDocsRes] = await Promise.all([
+  const [reviewsRes, offersRes, collegeDocsRes, docRequestsRes] = await Promise.all([
     docIds.length > 0
       ? supabase
           .from("document_reviews")
@@ -93,6 +94,12 @@ export default async function StudentDocumentsPage() {
       .select("id, application_id, title, file_name, file_size, document_type, created_at")
       .eq("student_id", user.id)
       .order("created_at", { ascending: false }),
+    supabase
+      .from("document_requests")
+      .select("*")
+      .eq("student_id", user.id)
+      .eq("status", "pending")
+      .order("created_at", { ascending: false }),
   ]);
 
   if (reviewsRes.error) {
@@ -111,6 +118,14 @@ export default async function StudentDocumentsPage() {
     } else {
       console.error("[StudentDocuments] college documents query failed:", collegeDocsRes.error);
       queryErrors.push(`Could not load college documents: ${collegeDocsRes.error.message}`);
+    }
+  }
+  if (docRequestsRes.error) {
+    if (docRequestsRes.error.code === "42P01") {
+      console.warn("[StudentDocuments] document_requests table missing — run sprint15_application_processing.sql");
+    } else {
+      console.error("[StudentDocuments] document requests query failed:", docRequestsRes.error);
+      queryErrors.push(`Could not load document requests: ${docRequestsRes.error.message}`);
     }
   }
 
@@ -174,6 +189,8 @@ export default async function StudentDocumentsPage() {
     courseTitle:   d.application_id ? (courseTitleByApp.get(d.application_id) ?? null) : null,
   }));
 
+  const pendingRequests = (docRequestsRes.data ?? []) as DocumentRequest[];
+
   return (
     <DocumentsClient
       userId={user.id}
@@ -181,6 +198,7 @@ export default async function StudentDocumentsPage() {
       documents={documents}
       collegeDocs={collegeDocs}
       offerLetters={offerLetters}
+      pendingRequests={pendingRequests}
       queryErrors={queryErrors}
     />
   );

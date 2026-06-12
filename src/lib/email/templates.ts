@@ -49,15 +49,19 @@ function quote(text: string) {
 export type EmailTemplate =
   | "application_submitted"
   | "documents_requested"
+  | "document_request"
   | "documents_approved"
   | "document_verified"
   | "document_rejected"
   | "document_reupload_requested"
   | "offer_letter_available"
+  | "offer_letter_accepted"
+  | "offer_letter_decision_internal"
   | "fee_payment_reminder"
   | "ipa_processing"
   | "ipa_approved"
   | "arrival_preparation"
+  | "enrollment_completed"
   | "application_withdrawn"
   | "withdrawal_notice_internal"
   | "partner_approved"
@@ -83,6 +87,12 @@ export interface TemplateContext {
   temporaryPassword?: string;
   // Account activation
   activationUrl?: string;
+  // Document requests
+  requestTitle?: string;
+  deadline?: string;
+  priority?: string;
+  // Offer letter decisions
+  decision?: string;
 }
 
 export interface RenderedEmail {
@@ -116,6 +126,19 @@ export const TEMPLATES: Record<EmailTemplate, (ctx: TemplateContext) => Rendered
       (ctx.message ? quote(ctx.message) : "") +
       p("Upload them through your dashboard — we'll review within 24 hours of receiving them.") +
       cta(documentsUrl, "Upload Documents →")
+    ),
+  }),
+
+  document_request: ctx => ({
+    subject: `Document requested — ${ctx.documentType ?? "additional document"}`,
+    html: shell(
+      h1("A document has been requested") +
+      p(`Hi ${ctx.name ?? "there"}, ${ctx.collegeName ?? "the institution"} has requested a document for your application${ctx.courseName ? ` to <strong style="color:#fff">${ctx.courseName}</strong>` : ""}.`) +
+      highlight("Requested Document", ctx.requestTitle ?? ctx.documentType ?? "Document") +
+      (ctx.message ? quote(ctx.message) : "") +
+      (ctx.deadline ? p(`<strong style="color:rgba(255,255,255,.85)">Deadline:</strong> ${ctx.deadline}`) : "") +
+      p("Upload it through your documents page — we'll review it within 24 hours of receiving it.") +
+      cta(documentsUrl, "Upload Document →")
     ),
   }),
 
@@ -174,6 +197,27 @@ export const TEMPLATES: Record<EmailTemplate, (ctx: TemplateContext) => Rendered
     ),
   }),
 
+  offer_letter_accepted: ctx => ({
+    subject: `Offer accepted — ${ctx.courseName ?? "your course"}`,
+    html: shell(
+      h1("You've accepted your offer! 🎊") +
+      p(`Hi ${ctx.name ?? "there"}, this confirms you have accepted your offer for <strong style="color:#fff">${ctx.courseName ?? "your course"}</strong>${ctx.collegeName ? ` at ${ctx.collegeName}` : ""}.`) +
+      highlight("Next Step", "Complete your fee payment") +
+      p("Once your fee payment is confirmed, your IPA (In-Principle Approval) application will be submitted to Singapore's ICA.") +
+      cta(dashboardUrl, "View My Application →")
+    ),
+  }),
+
+  offer_letter_decision_internal: ctx => ({
+    subject: `[Internal] Offer ${ctx.decision ?? "decision"} — ${ctx.courseName ?? "course"}`,
+    html: shell(
+      h1(`Student ${ctx.decision ?? "responded to"} the offer`) +
+      p(`<strong style="color:#fff">${ctx.studentName ?? "A student"}</strong> has <strong style="color:#fff">${ctx.decision ?? "responded to"}</strong> the offer letter for <strong style="color:#fff">${ctx.courseName ?? "a course"}</strong>${ctx.collegeName ? ` at ${ctx.collegeName}` : ""}.`) +
+      (ctx.comment ? quote(ctx.comment) : "") +
+      cta(instAppsUrl, "View Application →")
+    ),
+  }),
+
   fee_payment_reminder: ctx => ({
     subject: "Reminder — fee payment pending",
     html: shell(
@@ -221,6 +265,17 @@ export const TEMPLATES: Record<EmailTemplate, (ctx: TemplateContext) => Rendered
         <li>Collect Singapore student pass within 14 days of arrival</li>
       </ul>` +
       cta(arrivalUrl, "View Full Checklist →")
+    ),
+  }),
+
+  enrollment_completed: ctx => ({
+    subject: `🎓 Enrollment completed — ${ctx.courseName ?? "your programme"}`,
+    html: shell(
+      h1("You're officially enrolled!") +
+      p(`Congratulations ${ctx.name ?? "there"}! Your enrollment in <strong style="color:#fff">${ctx.courseName ?? "your programme"}</strong>${ctx.collegeName ? ` at ${ctx.collegeName}` : ""} is complete.`) +
+      highlight("Status", "Enrolled — your student journey begins") +
+      p("Keep an eye on your dashboard for orientation details, class schedules, and internship eligibility updates.") +
+      cta(dashboardUrl, "Open My Dashboard →")
     ),
   }),
 

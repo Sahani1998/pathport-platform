@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import type { ApplicationStage } from "@/types/timeline";
-import { getStageMeta, STAGE_NOTIFICATION } from "@/types/timeline";
+import { getStageMeta, STAGE_NOTIFICATION, STAGE_META } from "@/types/timeline";
 import { STAGE_TO_STATUS } from "@/lib/application-stage-mapping";
-import { sendApplicationUpdate } from "@/lib/email/send";
+import { STAGE_EMAIL } from "@/lib/application-workflow";
+import { sendApplicationUpdate, sendTemplatedEmail } from "@/lib/email/send";
 import { checkRateLimit, getClientIp, rateLimitResponse } from "@/lib/rate-limit";
+
+const VALID_STAGES = STAGE_META.map(s => s.value);
 
 export async function PATCH(
   request: NextRequest,
@@ -40,6 +43,9 @@ export async function PATCH(
     }
 
     if (!stage) return NextResponse.json({ error: "stage is required" }, { status: 400 });
+    if (!VALID_STAGES.includes(stage)) {
+      return NextResponse.json({ error: `Invalid stage. Must be one of: ${VALID_STAGES.join(", ")}` }, { status: 400 });
+    }
 
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -147,15 +153,33 @@ export async function PATCH(
       .single();
 
     if (studentProfile?.email) {
-      sendApplicationUpdate({
-        to:            studentProfile.email,
-        name:          studentProfile.full_name ?? "Student",
-        courseName:    (courseData as { title: string } | null)?.title ?? "your course",
-        stageLabel:    stageMeta2.label,
-        message:       student_message,
-        applicationId: id,
-        userId:        app.student_id,
-      }).catch(err => console.error("[Email] application update failed (non-fatal):", err));
+      const courseName = (courseData as { title: string } | null)?.title ?? "your course";
+      // Stage-specific templates are centralised in STAGE_EMAIL (application-workflow);
+      // stages without one fall back to the generic update email.
+      const specificTemplate = STAGE_EMAIL[stage];
+      const emailPromise = specificTemplate
+        ? sendTemplatedEmail({
+            to:            studentProfile.email,
+            template:      specificTemplate,
+            context: {
+              name:       studentProfile.full_name ?? "Student",
+              courseName,
+              message:    student_message,
+            },
+            applicationId: id,
+            userId:        app.student_id,
+            metadata:      { stage },
+          })
+        : sendApplicationUpdate({
+            to:            studentProfile.email,
+            name:          studentProfile.full_name ?? "Student",
+            courseName,
+            stageLabel:    stageMeta2.label,
+            message:       student_message,
+            applicationId: id,
+            userId:        app.student_id,
+          });
+      emailPromise.catch(err => console.error("[Email] application update failed (non-fatal):", err));
     }
 
     console.log("[Applications API] stage update complete:", id, "→", stage);

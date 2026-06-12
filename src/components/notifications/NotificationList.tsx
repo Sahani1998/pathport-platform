@@ -10,11 +10,15 @@ import { CheckCheck, Loader2 } from "lucide-react";
 interface NotificationListProps {
   notifications:  Notification[];
   onAllRead?:     () => void;
+  // Base path for "View application →" deep links — the application id is
+  // appended (institution/admin detail pages). Defaults to the student list.
+  applicationBasePath?: string;
 }
 
 export default function NotificationList({
   notifications: initial,
   onAllRead,
+  applicationBasePath,
 }: NotificationListProps) {
   const [items,   setItems]   = useState<Notification[]>(initial);
   const [marking, setMarking] = useState(false);
@@ -111,7 +115,7 @@ export default function NotificationList({
                 </div>
                 {n.application_id && (
                   <Link
-                    href="/dashboard/student/applications"
+                    href={applicationBasePath ? `${applicationBasePath}/${n.application_id}` : "/dashboard/student/applications"}
                     onClick={e => e.stopPropagation()}
                     className="inline-flex items-center gap-1 mt-2 text-pathBlue-400 hover:text-pathBlue-300 font-body text-xs transition-colors"
                   >

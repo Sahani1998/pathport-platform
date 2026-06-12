@@ -36,6 +36,15 @@ export async function POST(
       );
     }
 
+    // Comments are mandatory when a document is sent back to the student —
+    // they need to know what to fix.
+    if ((action === "rejected" || action === "reupload_required") && !comment) {
+      return NextResponse.json(
+        { error: "A comment is required when rejecting or requesting re-upload" },
+        { status: 400 },
+      );
+    }
+
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
