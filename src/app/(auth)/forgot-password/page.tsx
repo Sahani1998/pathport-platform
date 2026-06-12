@@ -26,12 +26,15 @@ export default function ForgotPasswordPage() {
     setError(null);
     setLoading(true);
 
-    const siteUrl    = process.env.NEXT_PUBLIC_SITE_URL ?? "https://pathport.sg";
-    const redirectTo = `${siteUrl}/reset-password`;
-    console.log("[ForgotPassword] PASSWORD_RESET_REDIRECT:", redirectTo);
+    // Use the live browser origin — NOT NEXT_PUBLIC_SITE_URL — so the redirect
+    // always matches the domain the user is actually on (production, preview,
+    // or team domain). A mismatched URL gets silently replaced by Supabase
+    // with the project Site URL, landing users on the homepage.
+    const redirectUrl = `${window.location.origin}/reset-password`;
+    console.log("PASSWORD_RESET_REDIRECT", redirectUrl);
     const { error: resetError } = await supabase.auth.resetPasswordForEmail(
       email.trim(),
-      { redirectTo }
+      { redirectTo: redirectUrl }
     );
 
     setLoading(false);
