@@ -34,30 +34,60 @@ export default function ResetPasswordPage() {
   const [loading,   setLoading]   = useState(false);
   const [error,     setError]     = useState<string | null>(null);
 
-  // The recovery link goes through /auth/callback which exchanges the code and
-  // sets a session cookie before redirecting here. PKCE/hash flows may instead
-  // deliver the token in the URL fragment, which the browser client consumes
-  // and surfaces via onAuthStateChange. Accept either; without a session the
-  // link is invalid or expired.
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (session && (event === "PASSWORD_RECOVERY" || event === "SIGNED_IN" || event === "INITIAL_SESSION")) {
-        setPageState(prev => (prev === "checking" ? "ready" : prev));
-      }
-    });
+    let cancelled = false;
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        setPageState(prev => (prev === "checking" ? "ready" : prev));
+    // Log that we arrived at the reset page so we can verify the redirect_to was correct
+    if (typeof window !== "undefined") {
+      const hasHash = window.location.hash.includes("access_token") || window.location.hash.includes("type=recovery");
+      const hasCode = new URLSearchParams(window.location.search).has("code");
+      if (hasHash || hasCode) {
+        console.log("[ResetPassword] PASSWORD_RESET_REDIRECT detected:", hasHash ? "hash-token" : "pkce-code");
       } else {
-        // Allow a moment for a hash token to be consumed before declaring invalid
-        setTimeout(() => {
-          setPageState(prev => (prev === "checking" ? "invalid" : prev));
-        }, 2500);
+        console.log("[ResetPassword] PASSWORD_RESET_REDIRECT: no token in URL — checking existing session");
+      }
+    }
+
+    // onAuthStateChange fires when the Supabase client processes the hash token
+    // or a PKCE code exchange completes. PASSWORD_RECOVERY is the definitive event
+    // for reset links; also accept SIGNED_IN / INITIAL_SESSION (PKCE path).
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (cancelled) return;
+      if (session && (event === "PASSWORD_RECOVERY" || event === "SIGNED_IN" || event === "INITIAL_SESSION")) {
+        console.log("[ResetPassword] PASSWORD_RECOVERY_SESSION_FOUND via event:", event);
+        setPageState(prev => (prev === "checking" ? "ready" : prev));
       }
     });
 
-    return () => subscription.unsubscribe();
+    // Poll getSession every 500ms for up to 5 seconds as a safety net for cases
+    // where onAuthStateChange fires before the listener was registered, or in
+    // environments where the hash exchange resolves before this effect runs.
+    let elapsed = 0;
+    const POLL_MS  = 500;
+    const MAX_WAIT = 5000;
+
+    const checkSession = async () => {
+      if (cancelled) return;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        console.log("[ResetPassword] PASSWORD_RECOVERY_SESSION_FOUND via getSession after", elapsed, "ms");
+        if (!cancelled) setPageState(prev => (prev === "checking" ? "ready" : prev));
+        return;
+      }
+      elapsed += POLL_MS;
+      if (elapsed >= MAX_WAIT) {
+        if (!cancelled) setPageState(prev => (prev === "checking" ? "invalid" : prev));
+      } else {
+        setTimeout(checkSession, POLL_MS);
+      }
+    };
+
+    checkSession();
+
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+    };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSubmit = async (e: FormEvent) => {
@@ -76,10 +106,11 @@ export default function ResetPasswordPage() {
       return;
     }
 
+    console.log("[ResetPassword] PASSWORD_UPDATE_SUCCESS");
     setPageState("done");
-    // End the recovery session so the user signs in with the new password
+    // End the recovery session before the user signs in with the new password
     await supabase.auth.signOut();
-    setTimeout(() => router.push("/login"), 1500);
+    router.push("/login?message=password-updated");
   };
 
   if (pageState === "checking") {
@@ -174,7 +205,7 @@ export default function ResetPasswordPage() {
         </div>
 
         <GoldButton type="submit" variant="solid-gold" size="lg" disabled={loading} className="w-full">
-          {loading ? <><Loader2 className="w-5 h-5 animate-spin" /> Updating…</> : "Update Password"}
+          {loading ? <><Loader2 className="w-5 h-5 animate-spin" /> Updating…</> : "Save Password"}
         </GoldButton>
       </form>
     </>

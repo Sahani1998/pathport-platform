@@ -27,8 +27,8 @@ export default function ForgotPasswordPage() {
     setLoading(true);
 
     const siteUrl    = process.env.NEXT_PUBLIC_SITE_URL ?? "https://pathport.sg";
-    const redirectTo = `${siteUrl}/auth/callback?next=/reset-password`;
-    console.log("[ForgotPassword] resetPasswordForEmail redirectTo:", redirectTo);
+    const redirectTo = `${siteUrl}/reset-password`;
+    console.log("[ForgotPassword] PASSWORD_RESET_REDIRECT:", redirectTo);
     const { error: resetError } = await supabase.auth.resetPasswordForEmail(
       email.trim(),
       { redirectTo }
