@@ -99,13 +99,14 @@ export const APPLICATION_STATUSES: {
 ];
 
 export interface Application {
-  id:           string;
-  student_id:   string;
-  course_id:    string;
-  status:       ApplicationStatus;
-  notes:        string | null;
-  submitted_at: string;
-  updated_at:   string;
+  id:            string;
+  student_id:    string;
+  course_id:     string;
+  status:        ApplicationStatus;
+  current_stage: string;
+  notes:         string | null;
+  submitted_at:  string;
+  updated_at:    string;
 }
 
 // Application joined with course + college

@@ -297,7 +297,7 @@ export default async function InstitutionApplicationsPage({
                         <div className="flex items-center gap-2">
                           <StatusUpdateSelect
                             applicationId={app.id}
-                            currentStatus={app.status}
+                            currentStage={(app.current_stage as import("@/types/timeline").ApplicationStage) ?? "application_submitted"}
                           />
                           <Link
                             href={`/dashboard/institution/applications/${app.id}`}

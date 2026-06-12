@@ -51,15 +51,9 @@ const NAV_ITEMS: Record<UserRole, { label: string; href: string; icon: React.Ele
   ],
   recruitment_partner: [
     { label: "Dashboard",        href: "/dashboard/partner",              icon: LayoutDashboard },
-    { label: "Candidates",       href: "/dashboard/partner/candidates",   icon: Users           },
-    { label: "Placements",       href: "/dashboard/partner/placements",   icon: Briefcase       },
-    { label: "Reports",          href: "/dashboard/partner/reports",      icon: BarChart2       },
   ],
   employer: [
     { label: "Dashboard",        href: "/dashboard/employer",             icon: LayoutDashboard },
-    { label: "Intern Requests",  href: "/dashboard/employer/requests",    icon: ClipboardList   },
-    { label: "Current Interns",  href: "/dashboard/employer/interns",     icon: Users           },
-    { label: "Reports",          href: "/dashboard/employer/reports",     icon: BarChart2       },
   ],
 };
 

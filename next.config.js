@@ -4,7 +4,8 @@ const ContentSecurityPolicy = `
   default-src 'self';
   script-src 'self' 'unsafe-inline' 'unsafe-eval';
   style-src 'self' 'unsafe-inline';
-  img-src 'self' blob: data: https://images.unsplash.com https://ui-avatars.com;
+  img-src 'self' blob: data: https://images.unsplash.com https://ui-avatars.com https://*.supabase.co;
+  frame-src https://www.youtube.com https://www.youtube-nocookie.com https://player.vimeo.com;
   font-src 'self';
   connect-src 'self' https://*.supabase.co wss://*.supabase.co;
   frame-ancestors 'none';
