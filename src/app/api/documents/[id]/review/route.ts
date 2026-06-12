@@ -6,7 +6,8 @@ import { DOCUMENT_TYPES } from "@/types/documents";
 import type { DocumentStatus } from "@/types/documents";
 import { recordTimelineEvent, notifyUser, logAudit } from "@/lib/application-timeline";
 
-const VALID_ACTIONS: DocumentStatus[] = ["verified", "rejected", "reupload_required"];
+// "pending" = undo a previous decision (resets the document for re-review)
+const VALID_ACTIONS: DocumentStatus[] = ["verified", "rejected", "reupload_required", "pending"];
 
 export async function POST(
   request: NextRequest,
@@ -91,13 +92,14 @@ export async function POST(
     const now       = new Date().toISOString();
 
     // ── 1. Update student_documents ─────────────────────────────────────────
+    // Undo (pending) clears the review fields so the document re-enters the queue.
     const { error: updateErr } = await supabase
       .from("student_documents")
       .update({
         status:           action,
         rejection_reason: (action === "rejected" || action === "reupload_required") ? comment : null,
-        reviewed_at:      now,
-        reviewed_by:      user.id,
+        reviewed_at:      action === "pending" ? null : now,
+        reviewed_by:      action === "pending" ? null : user.id,
       })
       .eq("id", id);
 
@@ -127,22 +129,25 @@ export async function POST(
     };
 
     if (doc.application_id) {
-      await notifyUser(supabase, {
-        userId:        doc.student_id,
-        applicationId: doc.application_id,
-        title:         notifCopy[action].title,
-        message:       notifCopy[action].message,
-        type:          "document_update",
-      });
+      // Undo is an internal correction — audit it, but don't ping the student
+      if (action !== "pending") {
+        await notifyUser(supabase, {
+          userId:        doc.student_id,
+          applicationId: doc.application_id,
+          title:         notifCopy[action].title,
+          message:       notifCopy[action].message,
+          type:          "document_update",
+        });
 
-      await recordTimelineEvent(supabase, {
-        applicationId: doc.application_id,
-        stage:         "documents_under_review",
-        title:         notifCopy[action].title,
-        description:   notifCopy[action].message,
-        createdBy:     user.id,
-        createdByRole: profile.role,
-      });
+        await recordTimelineEvent(supabase, {
+          applicationId: doc.application_id,
+          stage:         "documents_under_review",
+          title:         notifCopy[action].title,
+          description:   notifCopy[action].message,
+          createdBy:     user.id,
+          createdByRole: profile.role,
+        });
+      }
 
       await logAudit(supabase, {
         applicationId: doc.application_id,
