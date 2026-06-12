@@ -51,15 +51,16 @@ export default function DocumentReviewActions({
     }
   };
 
-  // Undo resets the document back to pending (no review side effects needed).
+  // Undo resets the document back to pending via /review — audited like any
+  // other decision, but skips student-facing notification/timeline/email.
   const undo = async () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/documents/${documentId}`, {
-        method:  "PATCH",
+      const res = await fetch(`/api/documents/${documentId}/review`, {
+        method:  "POST",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ status: "pending", rejection_reason: null }),
+        body:    JSON.stringify({ action: "pending", comment: null }),
       });
       const json = await res.json() as { error?: string };
       if (!res.ok) {

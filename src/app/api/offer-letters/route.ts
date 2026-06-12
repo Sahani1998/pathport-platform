@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { sendTemplatedEmail } from "@/lib/email/send";
 import { checkRateLimit, getClientIp, rateLimitResponse, LIMITS } from "@/lib/rate-limit";
-import { getStageMeta, STAGE_NOTIFICATION } from "@/types/timeline";
-import { STAGE_TO_STATUS } from "@/lib/application-stage-mapping";
+import type { ApplicationStage } from "@/types/timeline";
+import { advanceApplicationStage } from "@/lib/application-timeline";
 
 const MAX_FILE_BYTES = 10 * 1024 * 1024; // 10 MB
 const ALLOWED_MIME   = new Set(["application/pdf"]);
@@ -127,44 +127,20 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: insertErr.message }, { status: 500 });
   }
 
-  // Advance application to offer_letter_ready
-  const stage = "offer_letter_ready" as const;
-  const newStatus = STAGE_TO_STATUS[stage];
-
-  await supabase
-    .from("applications")
-    .update({
-      current_stage:    stage,
-      status:           newStatus,
-      stage_updated_at: now,
-    })
-    .eq("id", applicationId);
-
-  // Timeline event
-  const stageMeta = getStageMeta(stage);
-  await supabase.from("application_timeline_events").insert({
-    application_id:     applicationId,
-    stage,
-    title:              stageMeta.label,
-    description:        notes
+  // Advance application stage + side effects via helper
+  const stage: ApplicationStage = "offer_letter_ready";
+  await advanceApplicationStage(supabase, {
+    applicationId,
+    studentId:     app.student_id,
+    fromStage:     app.current_stage as ApplicationStage ?? null,
+    toStage:       stage,
+    actorId:       user.id,
+    actorRole:     profile.role,
+    studentMessage: notes
       ? `Offer letter issued (v${nextVersion}). ${notes}`
       : `Offer letter issued (v${nextVersion}).`,
-    created_by:         user.id,
-    created_by_role:    profile.role,
-    visible_to_student: true,
-  });
-
-  // Audit log
-  await supabase.from("application_audit_log").insert({
-    application_id: applicationId,
-    actor_id:       user.id,
-    actor_role:     profile.role,
-    action:         "offer_letter_uploaded",
-    from_value:     app.current_stage ?? "unknown",
-    to_value:       stage,
-    reason:         null,
-    comments:       notes,
-    metadata: {
+    auditAction:   "offer_letter_uploaded",
+    auditMetadata: {
       offer_letter_id: (letter as { id: string }).id,
       version:         nextVersion,
       file_name:       file.name,
@@ -172,18 +148,6 @@ export async function POST(request: Request) {
       college_id:      courseCollegeId ?? null,
     },
   });
-
-  // In-app notification for student
-  const notifTemplate = STAGE_NOTIFICATION[stage];
-  if (notifTemplate) {
-    await supabase.from("notifications").insert({
-      user_id:        app.student_id,
-      application_id: applicationId,
-      title:          notifTemplate.title,
-      message:        notifTemplate.message,
-      type:           notifTemplate.type,
-    });
-  }
 
   // Email — non-fatal
   const [{ data: studentProfile }, { data: courseData }] = await Promise.all([

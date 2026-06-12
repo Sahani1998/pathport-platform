@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import type { ApplicationStage } from "@/types/timeline";
-import { getStageMeta, STAGE_NOTIFICATION, STAGE_META } from "@/types/timeline";
+import { STAGE_META, STAGE_NOTIFICATION } from "@/types/timeline";
+import { STAGE_EMAIL, canTransition } from "@/lib/application-workflow";
 import { STAGE_TO_STATUS } from "@/lib/application-stage-mapping";
-import { STAGE_EMAIL } from "@/lib/application-workflow";
+import { recordTimelineEvent, notifyUser, logAudit } from "@/lib/application-timeline";
 import { sendApplicationUpdate, sendTemplatedEmail } from "@/lib/email/send";
-import { checkRateLimit, getClientIp, rateLimitResponse } from "@/lib/rate-limit";
+import { checkRateLimit, getClientIp, rateLimitResponse, LIMITS } from "@/lib/rate-limit";
 
 const VALID_STAGES = STAGE_META.map(s => s.value);
 
@@ -16,10 +17,8 @@ export async function PATCH(
   const { id } = await params;
 
   const ip = getClientIp(request);
-  const rl = checkRateLimit(`stage:${ip}`, 30, 60_000);
+  const rl = checkRateLimit(`stage:${ip}`, LIMITS.stage.limit, LIMITS.stage.windowMs);
   if (!rl.success) return rateLimitResponse(rl.resetAt);
-
-  console.log("[Applications API] PATCH /api/applications/" + id + "/stage — request received");
 
   try {
     let stage:           ApplicationStage;
@@ -44,7 +43,10 @@ export async function PATCH(
 
     if (!stage) return NextResponse.json({ error: "stage is required" }, { status: 400 });
     if (!VALID_STAGES.includes(stage)) {
-      return NextResponse.json({ error: `Invalid stage. Must be one of: ${VALID_STAGES.join(", ")}` }, { status: 400 });
+      return NextResponse.json(
+        { error: `Invalid stage. Must be one of: ${VALID_STAGES.join(", ")}` },
+        { status: 400 }
+      );
     }
 
     const supabase = await createClient();
@@ -58,7 +60,6 @@ export async function PATCH(
       return NextResponse.json({ error: "Insufficient permissions" }, { status: 403 });
     }
 
-    // Fetch current application values + student email for notifications
     const { data: app, error: appError } = await supabase
       .from("applications")
       .select("id, student_id, course_id, status, current_stage")
@@ -77,11 +78,16 @@ export async function PATCH(
       }
     }
 
-    // Compute the matching legacy status for this stage
-    const newStatus = STAGE_TO_STATUS[stage] ?? "submitted";
+    // Enforce allowed transitions
+    const fromStage = app.current_stage as ApplicationStage | null;
+    if (fromStage && !canTransition(fromStage, stage)) {
+      return NextResponse.json(
+        { error: `Invalid transition: cannot move from "${fromStage}" to "${stage}"` },
+        { status: 422 }
+      );
+    }
 
-    console.log("[Applications API] old status:", app.status,       "| old stage:", app.current_stage);
-    console.log("[Applications API] new status:", newStatus,         "| new stage:", stage);
+    const newStatus = STAGE_TO_STATUS[stage] ?? "submitted";
 
     const { error: updateError } = await supabase
       .from("applications")
@@ -100,72 +106,53 @@ export async function PATCH(
       return NextResponse.json({ error: updateError.message }, { status: 500 });
     }
 
-    console.log("[Applications API] synced status/stage —", newStatus, "/", stage);
+    // Side effects via helpers — non-fatal individually
+    await recordTimelineEvent(supabase, {
+      applicationId: id,
+      stage,
+      description:   student_message ?? undefined,
+      createdBy:     user.id,
+      createdByRole: profile.role,
+    });
 
-    // Timeline event
-    const stageMeta = getStageMeta(stage);
-    const { error: eventError } = await supabase
-      .from("application_timeline_events")
-      .insert({
-        application_id:     id,
-        stage,
-        title:              stageMeta.label,
-        description:        student_message || stageMeta.description,
-        created_by:         user.id,
-        created_by_role:    profile.role,
-        visible_to_student: true,
-      });
-
-    if (eventError) {
-      console.error("[Applications API] timeline event error (non-fatal):", eventError.message);
-    }
-
-    // Student notification
     const notifTemplate = STAGE_NOTIFICATION[stage];
     if (notifTemplate) {
-      const { error: notifError } = await supabase
-        .from("notifications")
-        .insert({
-          user_id:        app.student_id,
-          application_id: id,
-          title:          notifTemplate.title,
-          message:        student_message || notifTemplate.message,
-          type:           notifTemplate.type,
-        });
-      if (notifError) {
-        console.error("[Applications API] notification error (non-fatal):", notifError.message);
-      } else {
-        console.log("[Applications API] notification sent to student:", app.student_id);
-      }
+      await notifyUser(supabase, {
+        userId:        app.student_id,
+        applicationId: id,
+        title:         notifTemplate.title,
+        message:       student_message || notifTemplate.message,
+        type:          notifTemplate.type,
+      });
     }
 
-    // Send email notification (non-fatal)
-    const stageMeta2 = getStageMeta(stage);
-    const { data: studentProfile } = await supabase
-      .from("profiles")
-      .select("email, full_name")
-      .eq("id", app.student_id)
-      .single();
-    const { data: courseData } = await supabase
-      .from("courses")
-      .select("title")
-      .eq("id", app.course_id)
-      .single();
+    await logAudit(supabase, {
+      applicationId: id,
+      actorId:       user.id,
+      actorRole:     profile.role,
+      action:        "stage_changed",
+      fromValue:     fromStage,
+      toValue:       stage,
+      comments:      student_message ?? null,
+      metadata:      { internal_notes, next_action },
+    });
+
+    // Email — non-fatal
+    const [{ data: studentProfile }, { data: courseData }] = await Promise.all([
+      supabase.from("profiles").select("email, full_name").eq("id", app.student_id).single(),
+      supabase.from("courses").select("title").eq("id", app.course_id).single(),
+    ]);
 
     if (studentProfile?.email) {
+      const stageMeta  = STAGE_META.find(s => s.value === stage);
       const courseName = (courseData as { title: string } | null)?.title ?? "your course";
-      // Stage-specific templates are centralised in STAGE_EMAIL (application-workflow);
-      // stages without one fall back to the generic update email.
       const specificTemplate = STAGE_EMAIL[stage];
+
       const emailPromise = specificTemplate
         ? sendTemplatedEmail({
             to:            studentProfile.email,
             template:      specificTemplate,
-            context: {
-              name:       studentProfile.full_name ?? "Student",
-              courseName,
-              message:    student_message,
-            },
+            context:       { name: studentProfile.full_name ?? "Student", courseName, message: student_message },
             applicationId: id,
             userId:        app.student_id,
             metadata:      { stage },
@@ -174,15 +161,15 @@ export async function PATCH(
             to:            studentProfile.email,
             name:          studentProfile.full_name ?? "Student",
             courseName,
-            stageLabel:    stageMeta2.label,
+            stageLabel:    stageMeta?.label ?? stage,
             message:       student_message,
             applicationId: id,
             userId:        app.student_id,
           });
+
       emailPromise.catch(err => console.error("[Email] application update failed (non-fatal):", err));
     }
 
-    console.log("[Applications API] stage update complete:", id, "→", stage);
     return NextResponse.json({ success: true }, { status: 200 });
 
   } catch (err: unknown) {

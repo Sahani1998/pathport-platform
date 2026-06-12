@@ -175,11 +175,3 @@ export async function sendApplicationReceived(opts: {
   });
 }
 
-// Backward-compat welcome — older code may import it
-export async function sendWelcomeEmail(to: string, name: string): Promise<SendResult> {
-  return sendTemplatedEmail({
-    to,
-    template: "application_submitted",
-    context:  { name, courseName: "PathPort" },
-  });
-}
