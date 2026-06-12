@@ -6,11 +6,15 @@ import DocumentReviewActions from "@/components/documents/DocumentReviewActions"
 import ApplicationStageBadge from "@/components/applications/ApplicationStageBadge";
 import StageUpdateSelect from "@/components/applications/StageUpdateSelect";
 import IssueOfferLetterForm from "@/components/offer-letters/IssueOfferLetterForm";
+import DocumentRequestPanel from "@/components/applications/DocumentRequestPanel";
+import ApplicationNotesPanel from "@/components/applications/ApplicationNotesPanel";
+import IpaPanel from "@/components/applications/IpaPanel";
 import { APPLICATION_STATUSES } from "@/types/courses";
 import type { ApplicationStage } from "@/types/timeline";
 import { DOCUMENT_TYPES, fmtFileSize } from "@/types/documents";
 import type { StudentDocument } from "@/types/documents";
 import type { OfferLetterWithUploader } from "@/types/offer-letters";
+import type { DocumentRequest, IpaRecord, ApplicationNoteWithAuthor, ApplicationNote } from "@/types/application-processing";
 import {
   ArrowLeft, User, FileText, Building2, Calendar,
   Download, AlertCircle, CheckCircle2,
@@ -65,11 +69,14 @@ export default async function InstitutionApplicationDetailPage({
     if (course.college_id !== profile?.college_id) redirect("/dashboard/institution/applications");
   }
 
-  // Fetch student profile, documents, and offer letters in parallel
+  // Fetch student profile, documents, offer letters + sprint15 data in parallel
   const [
     { data: studentProfile },
     { data: docs, error: docsError },
     { data: offerLetterRows },
+    docRequestsRes,
+    notesRes,
+    ipaRes,
   ] = await Promise.all([
     supabase.from("profiles").select("full_name, email, country").eq("id", app.student_id).single(),
     supabase.from("student_documents").select("*").eq("application_id", id).order("uploaded_at", { ascending: false }),
@@ -78,17 +85,44 @@ export default async function InstitutionApplicationDetailPage({
       .select(`
         id, application_id, uploaded_by, file_path, file_name,
         file_size, version, notes, expiry_date, created_at, updated_at,
+        student_decision, decision_at, decision_comment,
         profiles!offer_letters_uploaded_by_fkey (full_name)
       `)
       .eq("application_id", id)
       .order("version", { ascending: false }),
+    supabase.from("document_requests").select("*").eq("application_id", id).order("created_at", { ascending: false }),
+    supabase.from("application_notes").select("*").eq("application_id", id).order("created_at", { ascending: false }),
+    supabase.from("ipa_records").select("*").eq("application_id", id).order("created_at", { ascending: false }),
   ]);
 
-  if (docsError) {
-    console.error("[DocumentReview] docs fetch error:", docsError.message);
+  if (docsError) console.error("[InstitutionApp] docs fetch error:", docsError.message);
+
+  // Sprint 15 tables may not exist until the migration has been run (42P01) —
+  // render the panels empty instead of failing the whole page.
+  for (const [label, res] of [["document_requests", docRequestsRes], ["application_notes", notesRes], ["ipa_records", ipaRes]] as const) {
+    if (res.error && res.error.code === "42P01") {
+      console.warn(`[InstitutionApp] ${label} table missing — run sprint15_application_processing.sql`);
+    } else if (res.error) {
+      console.error(`[InstitutionApp] ${label} fetch error:`, res.error.message);
+    }
   }
 
-  if (docsError) console.error("[InstitutionApp] docs fetch error:", docsError.message);
+  const documentRequests = (docRequestsRes.data ?? []) as DocumentRequest[];
+  const ipaRecords       = (ipaRes.data ?? []) as IpaRecord[];
+
+  // Two-query pattern: note author_id references auth.users, so batch-fetch
+  // author names from profiles separately.
+  const rawNotes   = (notesRes.data ?? []) as ApplicationNote[];
+  const authorIds  = Array.from(new Set(rawNotes.map(n => n.author_id).filter(Boolean))) as string[];
+  const authorNames = new Map<string, string | null>();
+  if (authorIds.length > 0) {
+    const { data: authors } = await supabase.from("profiles").select("id, full_name").in("id", authorIds);
+    for (const a of authors ?? []) authorNames.set(a.id, a.full_name);
+  }
+  const applicationNotes: ApplicationNoteWithAuthor[] = rawNotes.map(n => ({
+    ...n,
+    author_name: n.author_id ? (authorNames.get(n.author_id) ?? null) : null,
+  }));
 
   const documents = (docs ?? []) as StudentDocument[];
   const statusMeta = APPLICATION_STATUSES.find(s => s.value === app.status);
@@ -202,6 +236,9 @@ export default async function InstitutionApplicationDetailPage({
             applicationId={id}
             existingLetters={offerLetters}
           />
+
+          {/* IPA management */}
+          <IpaPanel applicationId={id} records={ipaRecords} />
         </div>
 
         {/* Right — Documents */}
@@ -277,6 +314,12 @@ export default async function InstitutionApplicationDetailPage({
               })}
             </div>
           )}
+
+          {/* Document requests */}
+          <DocumentRequestPanel applicationId={id} requests={documentRequests} />
+
+          {/* Internal notes */}
+          <ApplicationNotesPanel applicationId={id} notes={applicationNotes} />
         </div>
       </div>
     </div>

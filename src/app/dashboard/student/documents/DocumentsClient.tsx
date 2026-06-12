@@ -6,9 +6,11 @@ import DocumentUploadCard from "@/components/documents/DocumentUploadCard";
 import DocumentStatusBadge from "@/components/documents/DocumentStatusBadge";
 import { DOCUMENT_TYPES, REQUIRED_DOC_TYPES, fmtFileSize } from "@/types/documents";
 import type { StudentDocument, DocumentReview } from "@/types/documents";
+import { PRIORITY_META } from "@/types/application-processing";
+import type { DocumentRequest } from "@/types/application-processing";
 import {
   FileText, BookOpen, ChevronDown, ChevronRight, AlertCircle,
-  Clock, MessageSquare, Download, Award, Building2,
+  Clock, MessageSquare, Download, Award, Building2, FilePlus2, CalendarDays,
 } from "lucide-react";
 
 // ─── Props (data fetched server-side in page.tsx) ─────────────────────────────
@@ -44,12 +46,13 @@ export interface OfferLetterRow {
 }
 
 interface DocumentsClientProps {
-  userId:       string;
-  applications: AppRow[];
-  documents:    DocWithReviews[];
-  collegeDocs:  CollegeDocRow[];
-  offerLetters: OfferLetterRow[];
-  queryErrors:  string[];
+  userId:          string;
+  applications:    AppRow[];
+  documents:       DocWithReviews[];
+  collegeDocs:     CollegeDocRow[];
+  offerLetters:    OfferLetterRow[];
+  pendingRequests: DocumentRequest[];
+  queryErrors:     string[];
 }
 
 const fmtDate = (iso: string) =>
@@ -74,7 +77,7 @@ function SectionHeader({ icon: Icon, title, count, subtitle }: {
 }
 
 export default function DocumentsClient({
-  userId, applications, documents, collegeDocs, offerLetters, queryErrors,
+  userId, applications, documents, collegeDocs, offerLetters, pendingRequests, queryErrors,
 }: DocumentsClientProps) {
   const [docs,     setDocs]     = useState<DocWithReviews[]>(documents);
   const [expanded, setExpanded] = useState<string | null>(applications[0]?.id ?? null);
@@ -121,6 +124,51 @@ export default function DocumentsClient({
           <p className="text-white/65 font-body text-sm">{msg}</p>
         </div>
       ))}
+
+      {/* ── Pending document requests ──────────────────────────────────────── */}
+      {pendingRequests.length > 0 && (
+        <section>
+          <SectionHeader
+            icon={FilePlus2}
+            title="Requested Documents"
+            count={pendingRequests.length}
+            subtitle="Your institution has asked for these documents — upload them below to fulfil the request"
+          />
+          <div className="space-y-3">
+            {pendingRequests.map((req) => {
+              const meta        = DOCUMENT_TYPES.find(t => t.value === req.document_type);
+              const courseTitle = applications.find(a => a.id === req.application_id)?.courseTitle;
+              const overdue     = req.deadline ? new Date(req.deadline) < new Date() : false;
+              return (
+                <div key={req.id} className={`p-4 rounded-2xl border ${
+                  overdue ? "bg-red-500/[0.05] border-red-400/20" : "bg-orange-500/[0.05] border-orange-400/20"
+                }`}>
+                  <div className="flex items-center justify-between gap-3 flex-wrap mb-1">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <AlertCircle className={`w-4 h-4 flex-shrink-0 ${overdue ? "text-red-400" : "text-orange-400"}`} />
+                      <p className="font-body font-semibold text-sm text-white/85 truncate">{req.title}</p>
+                    </div>
+                    <span className={`px-2 py-0.5 rounded-full border font-body text-[10px] font-semibold ${PRIORITY_META[req.priority].color}`}>
+                      {PRIORITY_META[req.priority].label}
+                    </span>
+                  </div>
+                  <p className="font-body text-xs text-white/45">
+                    {meta?.label ?? req.document_type}
+                    {courseTitle && <> · {courseTitle}</>}
+                    {req.description && <> — {req.description}</>}
+                  </p>
+                  {req.deadline && (
+                    <p className={`mt-1.5 inline-flex items-center gap-1 font-body text-xs ${overdue ? "text-red-400" : "text-orange-400/80"}`}>
+                      <CalendarDays className="w-3 h-3" />
+                      {overdue ? "Overdue — was due" : "Due"} {fmtDate(req.deadline)}
+                    </p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       {/* ── A. My Uploaded Documents ───────────────────────────────────────── */}
       <section>

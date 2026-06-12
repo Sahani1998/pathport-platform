@@ -4,13 +4,20 @@ import Link from "next/link";
 import ApplicationTimeline from "@/components/applications/ApplicationTimeline";
 import ApplicationStageBadge from "@/components/applications/ApplicationStageBadge";
 import StudentOfferLetterCard from "@/components/offer-letters/StudentOfferLetterCard";
+import RealtimeRefresher from "@/components/applications/RealtimeRefresher";
 import type { ApplicationWithCourse } from "@/types/courses";
 import type { ApplicationTimelineEvent, ApplicationStage } from "@/types/timeline";
 import type { OfferLetter } from "@/types/offer-letters";
+import type { IpaRecord } from "@/types/application-processing";
+import { IPA_STATUS_META } from "@/types/application-processing";
 import { REQUIRED_DOC_TYPES } from "@/types/documents";
 import {
+  getStageProgress, isApprovedStage, isTerminalStage,
+  isWithdrawableStage, formatApplicationNumber,
+} from "@/lib/application-workflow";
+import {
   FileText, Building2, BookOpen, CheckCircle2, XCircle,
-  Upload, Bell,
+  Upload, Bell, Download,
 } from "lucide-react";
 import WithdrawButton from "@/components/applications/WithdrawButton";
 
@@ -30,9 +37,13 @@ export default async function StudentApplicationsPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  console.log("[Applications] loading student applications for:", user.id);
-
-  const [{ data, error }, { data: docCounts }, { data: events }, { data: offerLetterRows }] = await Promise.all([
+  const [
+    { data, error },
+    { data: docCounts },
+    { data: events },
+    { data: offerLetterRows },
+    ipaRes,
+  ] = await Promise.all([
     supabase
       .from("applications")
       .select(`
@@ -58,11 +69,20 @@ export default async function StudentApplicationsPage() {
 
     supabase
       .from("offer_letters")
-      .select("id, application_id, version, file_name, file_size, expiry_date, created_at, updated_at, notes, file_path, uploaded_by")
+      .select("id, application_id, version, file_name, file_size, expiry_date, created_at, updated_at, notes, file_path, uploaded_by, student_decision, decision_at, decision_comment")
       .order("version", { ascending: false }),
+
+    supabase
+      .from("ipa_records")
+      .select("*")
+      .order("created_at", { ascending: false }),
   ]);
 
   if (error) console.error("[Applications] fetch error:", error.code, error.message);
+  // ipa_records may not exist until sprint15 SQL has been run — degrade gracefully
+  if (ipaRes.error && ipaRes.error.code !== "42P01") {
+    console.error("[Applications] ipa fetch error:", ipaRes.error.code, ipaRes.error.message);
+  }
 
   const applications = (data ?? []) as AppWithStage[];
 
@@ -83,6 +103,12 @@ export default async function StudentApplicationsPage() {
     offerLettersMap.get(ol.application_id)!.push(ol);
   }
 
+  // IPA map: applicationId → latest record (RLS ensures student-own)
+  const ipaMap = new Map<string, IpaRecord>();
+  for (const rec of (ipaRes.data ?? []) as IpaRecord[]) {
+    if (!ipaMap.has(rec.application_id)) ipaMap.set(rec.application_id, rec);
+  }
+
   // Timeline events map
   const eventsMap = new Map<string, ApplicationTimelineEvent[]>();
   for (const evt of (events ?? []) as ApplicationTimelineEvent[]) {
@@ -91,9 +117,14 @@ export default async function StudentApplicationsPage() {
   }
 
   const stats = {
-    total:    applications.length,
-    active:   applications.filter(a => !["approved","rejected","arrived_singapore"].includes(a.current_stage ?? a.status)).length,
-    approved: applications.filter(a => ["approved","arrived_singapore"].includes(a.current_stage ?? a.status)).length,
+    total: applications.length,
+    active: applications.filter(a => {
+      const s = (a.current_stage ?? "application_submitted") as ApplicationStage;
+      return !isApprovedStage(s) && !isTerminalStage(s);
+    }).length,
+    approved: applications.filter(a =>
+      isApprovedStage((a.current_stage ?? "application_submitted") as ApplicationStage)
+    ).length,
   };
 
   // Unread notification count
@@ -105,6 +136,7 @@ export default async function StudentApplicationsPage() {
 
   return (
     <div className="max-w-5xl space-y-6">
+      <RealtimeRefresher userId={user.id} />
 
       {/* Header */}
       <div className="flex items-center justify-between gap-4 flex-wrap">
@@ -165,10 +197,12 @@ export default async function StudentApplicationsPage() {
       {applications.map((app) => {
         const currentStage  = (app.current_stage ?? "application_submitted") as ApplicationStage;
         const isRejected    = ["rejected", "withdrawn"].includes(currentStage);
-        const isApproved    = ["approved", "arrived_singapore"].includes(currentStage);
-        const canWithdraw   = !isRejected && !isApproved && !["ipa_processing", "offer_letter_ready", "fee_payment_pending"].includes(currentStage);
+        const isApproved    = isApprovedStage(currentStage);
+        const canWithdraw   = isWithdrawableStage(currentStage);
+        const progress      = getStageProgress(currentStage);
         const appEvents     = eventsMap.get(app.id) ?? [];
         const appOfferLetters = offerLettersMap.get(app.id) ?? [];
+        const latestIpa     = ipaMap.get(app.id) ?? null;
         const docs          = docMap.get(app.id);
         const uploaded      = docs?.types.size ?? 0;
         const reqTotal      = REQUIRED_DOC_TYPES.length;
@@ -187,7 +221,12 @@ export default async function StudentApplicationsPage() {
                   <Building2 className="w-5 h-5 text-pathBlue-400" />
                 </div>
                 <div>
-                  <p className="text-white/40 font-body text-xs">{college?.name ?? "—"}</p>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="text-white/40 font-body text-xs">{college?.name ?? "—"}</p>
+                    <span className="font-mono text-[10px] text-white/30 bg-white/[0.05] border border-white/[0.08] rounded-md px-1.5 py-0.5">
+                      {formatApplicationNumber(app.id)}
+                    </span>
+                  </div>
                   <Link href={`/dashboard/student/courses/${course?.slug ?? ""}`} className="text-white/85 font-body font-semibold text-sm hover:text-gold-400 transition-colors">
                     {course?.title ?? "—"}
                   </Link>
@@ -207,6 +246,24 @@ export default async function StudentApplicationsPage() {
               </div>
             </div>
 
+            {/* Progress bar */}
+            {!isRejected && (
+              <div className="px-5 pb-3">
+                <div className="flex items-center justify-between mb-1.5">
+                  <p className="text-white/30 font-body text-[10px] uppercase tracking-wider">Progress</p>
+                  <p className={`font-body text-xs font-semibold ${progress === 100 ? "text-emerald-400" : "text-gold-400"}`}>
+                    {progress}%
+                  </p>
+                </div>
+                <div className="h-1.5 bg-white/[0.07] rounded-full overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all duration-500 ${progress === 100 ? "bg-emerald-500" : "bg-gold-500"}`}
+                    style={{ width: `${progress}%` }}
+                  />
+                </div>
+              </div>
+            )}
+
             {/* Timeline */}
             <div className="px-5 pb-3">
               <ApplicationTimeline
@@ -221,6 +278,30 @@ export default async function StudentApplicationsPage() {
             {appOfferLetters.length > 0 && (
               <div className="px-5 pb-4">
                 <StudentOfferLetterCard letters={appOfferLetters} />
+              </div>
+            )}
+
+            {/* IPA status — only when an IPA record exists */}
+            {latestIpa && (
+              <div className="px-5 pb-4">
+                <div className="p-4 rounded-2xl border bg-purple-500/[0.05] border-purple-400/20 space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="font-body text-sm font-semibold text-purple-400">IPA Status</p>
+                    <span className={`px-2 py-0.5 rounded-full border font-body text-[10px] font-semibold ${IPA_STATUS_META[latestIpa.status].color}`}>
+                      {IPA_STATUS_META[latestIpa.status].label}
+                    </span>
+                  </div>
+                  {latestIpa.status === "approved" && (
+                    <a
+                      href={`/api/ipa/${latestIpa.id}/download`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-center gap-2 w-full px-4 py-2 rounded-xl bg-purple-500/15 border border-purple-400/30 text-purple-400 font-body text-xs font-semibold hover:bg-purple-500/25 transition-all"
+                    >
+                      <Download className="w-3.5 h-3.5" /> Download IPA Letter
+                    </a>
+                  )}
+                </div>
               </div>
             )}
 

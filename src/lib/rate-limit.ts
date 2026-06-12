@@ -118,4 +118,8 @@ export const LIMITS = {
   offerLetterUpload: { limit: 20,  windowMs: 60_000  },
   offerLetterDownload: { limit: 60, windowMs: 60_000  },
   partnerApproval:     { limit: 10, windowMs: 60_000  },
+  documentRequest:     { limit: 20, windowMs: 60_000  },
+  offerDecision:       { limit: 10, windowMs: 60_000  },
+  ipaWrite:            { limit: 20, windowMs: 60_000  },
+  notes:               { limit: 30, windowMs: 60_000  },
 } as const;
