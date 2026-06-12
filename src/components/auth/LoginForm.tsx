@@ -4,7 +4,7 @@ import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import GoldButton from "@/components/ui/GoldButton";
-import { Eye, EyeOff, Loader2, AlertCircle } from "lucide-react";
+import { Eye, EyeOff, Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { UserRole } from "@/types/auth";
 import { ROLE_META } from "@/types/auth";
@@ -16,7 +16,7 @@ const INPUT = cn(
   "transition-all duration-200"
 );
 
-export default function LoginForm() {
+export default function LoginForm({ successMessage }: { successMessage?: string }) {
   const supabase = createClient();
 
   const [email,    setEmail]    = useState("");
@@ -106,6 +106,14 @@ export default function LoginForm() {
       noValidate
       className="space-y-5"
     >
+      {/* Success banner (e.g. password updated) */}
+      {successMessage && (
+        <div className="flex items-center gap-3 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-body text-sm">
+          <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+          {successMessage}
+        </div>
+      )}
+
       {/* Error banner */}
       {error && (
         <div className="flex items-center gap-3 p-4 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 font-body text-sm">

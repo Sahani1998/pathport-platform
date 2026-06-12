@@ -6,7 +6,16 @@ export const metadata: Metadata = {
   description: "Sign in to your PathPort account.",
 };
 
-export default function LoginPage() {
+interface PageProps {
+  searchParams: Promise<Record<string, string>>;
+}
+
+export default async function LoginPage({ searchParams }: PageProps) {
+  const params = await searchParams;
+  const successMessage = params.message === "password-updated"
+    ? "Password updated successfully. Sign in with your new password."
+    : undefined;
+
   return (
     <>
       <div className="text-center mb-8">
@@ -15,7 +24,7 @@ export default function LoginPage() {
           Sign in to access your PathPort dashboard.
         </p>
       </div>
-      <LoginForm />
+      <LoginForm successMessage={successMessage} />
     </>
   );
 }
