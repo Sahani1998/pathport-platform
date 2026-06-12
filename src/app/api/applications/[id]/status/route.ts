@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import type { ApplicationStage } from "@/types/timeline";
 import { getStageMeta, STAGE_NOTIFICATION } from "@/types/timeline";
 import { STATUS_TO_STAGE } from "@/lib/application-stage-mapping";
+import { checkRateLimit, getClientIp, rateLimitResponse, LIMITS } from "@/lib/rate-limit";
 
 const VALID_STATUSES = [
   "submitted", "under_review", "docs_required",
@@ -14,7 +15,10 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  console.log("[Applications API] PATCH /api/applications/" + id + "/status — request received");
+
+  const ip = getClientIp(request);
+  const rl = checkRateLimit(`app-status:${ip}`, LIMITS.stage.limit, LIMITS.stage.windowMs);
+  if (!rl.success) return rateLimitResponse(rl.resetAt);
 
   try {
     let status: string;
@@ -62,9 +66,6 @@ export async function PATCH(
     // Compute synced current_stage from the new status
     const newStage = STATUS_TO_STAGE[status] ?? "application_submitted";
 
-    console.log("[Applications API] old status:", app.status,       "| old stage:", app.current_stage);
-    console.log("[Applications API] new status:", status,            "| new stage:", newStage);
-
     const { error: updateError } = await supabase
       .from("applications")
       .update({
@@ -78,8 +79,6 @@ export async function PATCH(
       console.error("[Applications API] update error:", updateError.message);
       return NextResponse.json({ error: updateError.message }, { status: 500 });
     }
-
-    console.log("[Applications API] synced status/stage —", status, "/", newStage);
 
     // Timeline event
     const stageMeta = getStageMeta(newStage);
@@ -103,7 +102,6 @@ export async function PATCH(
         message:        notifTemplate.message,
         type:           notifTemplate.type,
       });
-      console.log("[Applications API] notification sent to student:", app.student_id);
     }
 
     return NextResponse.json({ success: true, stage: newStage }, { status: 200 });

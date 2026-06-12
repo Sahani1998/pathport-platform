@@ -36,9 +36,14 @@ export async function POST(request: Request) {
   }
 
   const applicationId = String(formData.get("application_id") ?? "").trim();
-  const notes         = String(formData.get("notes")         ?? "").trim() || null;
+  const rawNotes      = String(formData.get("notes")         ?? "").trim() || null;
   const expiryDate    = String(formData.get("expiry_date")   ?? "").trim() || null;
   const file          = formData.get("file") as File | null;
+
+  // Length limits
+  const notes = rawNotes && rawNotes.length > 2000
+    ? rawNotes.slice(0, 2000)
+    : rawNotes;
 
   if (!applicationId) return NextResponse.json({ error: "application_id is required" }, { status: 400 });
   if (!file)           return NextResponse.json({ error: "PDF file is required" },     { status: 400 });
@@ -46,6 +51,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Only PDF files are accepted" }, { status: 400 });
   if (file.size > MAX_FILE_BYTES)
     return NextResponse.json({ error: "File exceeds 10 MB limit" },   { status: 400 });
+  if (expiryDate && !/^\d{4}-\d{2}-\d{2}$/.test(expiryDate))
+    return NextResponse.json({ error: "expiry_date must be in YYYY-MM-DD format" }, { status: 400 });
 
   // Fetch application + related context
   const { data: app } = await supabase
@@ -202,6 +209,10 @@ export async function POST(request: Request) {
 }
 
 export async function GET(request: Request) {
+  const ip = getClientIp(request);
+  const rl = checkRateLimit(`offer-list:${ip}`, 30, 60_000);
+  if (!rl.success) return rateLimitResponse(rl.resetAt);
+
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

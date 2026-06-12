@@ -77,6 +77,9 @@ export async function POST(
         { status: 422 },
       );
     }
+    if (new_college_name && new_college_name.trim().length > 255) {
+      return NextResponse.json({ error: "College name must not exceed 255 characters." }, { status: 400 });
+    }
 
     const adminDb = createAdminClient();
 
