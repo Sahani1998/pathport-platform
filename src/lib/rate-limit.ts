@@ -165,4 +165,13 @@ export const LIMITS = {
   ipaWrite:            { limit: 20, windowMs: 60_000  },
   notes:               { limit: 30, windowMs: 60_000  },
   coursesDelete:       { limit: 10, windowMs: 60_000  },
+
+  // Sprint 17 — finance
+  invoiceRead:         { limit: 60, windowMs: 60_000  },
+  invoiceWrite:        { limit: 20, windowMs: 60_000  },
+  proofUpload:         { limit: 10, windowMs: 60_000  },
+  paymentVerify:       { limit: 30, windowMs: 60_000  },
+  verificationQueue:   { limit: 60, windowMs: 60_000  },
+  paymentSettings:     { limit: 20, windowMs: 60_000  },
+  feeSchedule:         { limit: 20, windowMs: 60_000  },
 } as const;
