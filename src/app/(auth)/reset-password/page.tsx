@@ -2,7 +2,6 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import GoldButton from "@/components/ui/GoldButton";
 import { Loader2, CheckCircle2, AlertCircle, ArrowLeft } from "lucide-react";
@@ -25,7 +24,6 @@ const passwordRules = [
 type PageState = "checking" | "ready" | "invalid" | "done";
 
 export default function ResetPasswordPage() {
-  const router   = useRouter();
   const supabase = createClient();
 
   const [pageState, setPageState] = useState<PageState>("checking");
@@ -99,18 +97,43 @@ export default function ResetPasswordPage() {
     if (password !== confirm) { setError("Passwords do not match."); return; }
 
     setLoading(true);
-    const { error: updateError } = await supabase.auth.updateUser({ password });
-    if (updateError) {
-      setError(updateError.message);
-      setLoading(false);
-      return;
-    }
+    console.log("[ResetPassword] PASSWORD_UPDATE_START");
 
-    console.log("[ResetPassword] PASSWORD_UPDATE_SUCCESS");
-    setPageState("done");
-    // End the recovery session before the user signs in with the new password
-    await supabase.auth.signOut();
-    router.push("/login?message=password-updated");
+    try {
+      const { error: updateError } = await supabase.auth.updateUser({ password });
+      console.log("[ResetPassword] PASSWORD_UPDATE_RESULT:", updateError ? "error" : "success");
+
+      if (updateError) {
+        console.error("[ResetPassword] PASSWORD_UPDATE_ERROR:", updateError.message);
+        setError(updateError.message);
+        return;
+      }
+
+      setPageState("done");
+
+      // Sign out with a 3-second timeout so a hanging signOut never blocks the redirect
+      console.log("[ResetPassword] PASSWORD_SIGNOUT_START");
+      try {
+        await Promise.race([
+          supabase.auth.signOut(),
+          new Promise<void>(resolve => setTimeout(resolve, 3000)),
+        ]);
+        console.log("[ResetPassword] PASSWORD_SIGNOUT_DONE");
+      } catch {
+        console.warn("[ResetPassword] PASSWORD_SIGNOUT_DONE (ignored error)");
+      }
+
+      // Hard redirect — bypasses Next.js router which can conflict with a cleared session
+      console.log("[ResetPassword] PASSWORD_REDIRECT_START");
+      window.location.href = "/login?message=password-updated";
+
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Unexpected error. Please try again.";
+      console.error("[ResetPassword] PASSWORD_UPDATE_ERROR:", msg);
+      setError(msg);
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (pageState === "checking") {
