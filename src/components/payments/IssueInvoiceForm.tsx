@@ -21,10 +21,12 @@ const LINE_TYPES: InvoiceLineType[] = [
 
 const INPUT = cn(
   "w-full px-3 py-2 rounded-xl bg-white/[0.06] border border-white/[0.10]",
-  "font-body text-sm text-white placeholder-white/25",
-  "focus:outline-none focus:border-gold-400/50 focus:ring-1 focus:ring-gold-400/15 transition-colors",
+  "font-body text-sm text-white placeholder-white/35",
+  "focus:outline-none focus:border-gold-400/50 focus:ring-1 focus:ring-gold-400/15",
+  "transition-colors [color-scheme:dark]",
 );
-const LABEL = "block text-white/40 font-body text-[10px] uppercase tracking-wider mb-1.5";
+const LABEL = "block text-white/55 font-body text-[10px] uppercase tracking-wider mb-1.5";
+const OPTION_STYLE = { backgroundColor: "#0a1024", color: "#fff" } as const;
 
 interface Props {
   applicationId:   string;
@@ -209,7 +211,7 @@ export default function IssueInvoiceForm({
         <div>
           <label className={LABEL}>Currency</label>
           <select value={currency} onChange={e => setCurrency(e.target.value as Currency)} className={INPUT}>
-            {CURRENCIES.map(c => <option key={c} value={c}>{c}</option>)}
+            {CURRENCIES.map(c => <option key={c} value={c} style={OPTION_STYLE}>{c}</option>)}
           </select>
         </div>
         <div>
@@ -225,9 +227,9 @@ export default function IssueInvoiceForm({
             <div>
               <label className={LABEL}>Apply Fee Schedule Template</label>
               <select value={scheduleId} onChange={e => applySchedule(e.target.value)} className={INPUT}>
-                <option value="">— Custom —</option>
+                <option value=""  style={OPTION_STYLE}>— Custom —</option>
                 {feeSchedules.map(s => (
-                  <option key={s.id} value={s.id}>{s.name}{s.is_default ? " (default)" : ""}</option>
+                  <option key={s.id} value={s.id} style={OPTION_STYLE}>{s.name}{s.is_default ? " (default)" : ""}</option>
                 ))}
               </select>
             </div>
@@ -248,7 +250,7 @@ export default function IssueInvoiceForm({
                   <div className="col-span-12 sm:col-span-3">
                     <label className={LABEL}>Type</label>
                     <select value={line.line_type} onChange={e => setLine(idx, { line_type: e.target.value as InvoiceLineType })} className={INPUT}>
-                      {LINE_TYPES.map(t => <option key={t} value={t}>{INVOICE_LINE_TYPE_LABEL[t]}</option>)}
+                      {LINE_TYPES.map(t => <option key={t} value={t} style={OPTION_STYLE}>{INVOICE_LINE_TYPE_LABEL[t]}</option>)}
                     </select>
                   </div>
                   <div className="col-span-12 sm:col-span-5">
@@ -349,7 +351,7 @@ export default function IssueInvoiceForm({
         </button>
       </div>
 
-      <p className="text-white/30 font-body text-[11px] text-center">
+      <p className="text-white/55 font-body text-[11px] text-center">
         <Send className="w-3 h-3 inline mr-1" /> The invoice is saved as a draft. Review and click <strong>Issue</strong> to send it to the student.
       </p>
     </form>

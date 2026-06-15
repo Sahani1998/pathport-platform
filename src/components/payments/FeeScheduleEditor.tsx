@@ -21,11 +21,12 @@ const LINE_TYPES: InvoiceLineType[] = [
 
 const INPUT = cn(
   "w-full px-3 py-2 rounded-xl bg-white/[0.06] border border-white/[0.10]",
-  "font-body text-sm text-white placeholder-white/25",
+  "font-body text-sm text-white placeholder-white/35",
   "focus:outline-none focus:border-gold-400/50 focus:ring-1 focus:ring-gold-400/15",
-  "transition-colors",
+  "transition-colors [color-scheme:dark]",
 );
-const LABEL = "block text-white/40 font-body text-[10px] uppercase tracking-wider mb-1.5";
+const LABEL = "block text-white/55 font-body text-[10px] uppercase tracking-wider mb-1.5";
+const OPTION_STYLE = { backgroundColor: "#0a1024", color: "#fff" } as const;
 
 interface Props {
   courseId:    string;
@@ -246,7 +247,7 @@ export default function FeeScheduleEditor({ courseId, courseTitle, schedules: in
                     <div className="col-span-12 sm:col-span-3">
                       <label className={LABEL}>Type</label>
                       <select value={line.type} onChange={e => setLine(idx, { type: e.target.value as InvoiceLineType })} className={INPUT}>
-                        {LINE_TYPES.map(t => <option key={t} value={t}>{INVOICE_LINE_TYPE_LABEL[t]}</option>)}
+                        {LINE_TYPES.map(t => <option key={t} value={t} style={OPTION_STYLE}>{INVOICE_LINE_TYPE_LABEL[t]}</option>)}
                       </select>
                     </div>
                     <div className="col-span-7 sm:col-span-4">
@@ -263,7 +264,7 @@ export default function FeeScheduleEditor({ courseId, courseTitle, schedules: in
                     <div className="col-span-3 sm:col-span-2">
                       <label className={LABEL}>Currency</label>
                       <select value={line.currency} onChange={e => setLine(idx, { currency: e.target.value as Currency })} className={INPUT}>
-                        {CURRENCIES.map(c => <option key={c} value={c}>{c}</option>)}
+                        {CURRENCIES.map(c => <option key={c} value={c} style={OPTION_STYLE}>{c}</option>)}
                       </select>
                     </div>
                     <div className="col-span-12 sm:col-span-3">
@@ -311,8 +312,8 @@ export default function FeeScheduleEditor({ courseId, courseTitle, schedules: in
 
       {/* List */}
       {schedules.length === 0 && !draft ? (
-        <div className="flex flex-col items-center py-16 rounded-2xl bg-white/[0.03] border border-white/[0.07] text-white/25">
-          <Receipt className="w-10 h-10 mb-3" />
+        <div className="flex flex-col items-center py-16 rounded-2xl bg-white/[0.03] border border-white/[0.07] text-white/45">
+          <Receipt className="w-10 h-10 mb-3 opacity-60" />
           <p className="font-body text-sm">No fee schedules yet — create your first template above</p>
         </div>
       ) : (

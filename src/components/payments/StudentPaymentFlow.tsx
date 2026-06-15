@@ -53,6 +53,7 @@ export default function StudentPaymentFlow({ invoice, attempts: initialAttempts,
   const [method, setMethod] = useState<PaymentMethod | null>(null);
   const [error, setError]   = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+  const [uploadingId, setUploadingId] = useState<string | null>(null);
 
   // Most recent active attempt — student typically continues this rather than starting a fresh one.
   const activeAttempt = attempts.find(a =>
@@ -100,8 +101,7 @@ export default function StudentPaymentFlow({ invoice, attempts: initialAttempts,
     if (refInput?.value)  fd.append("receipt_reference", refInput.value);
     if (dateInput?.value) fd.append("payment_date", dateInput.value);
 
-    const submitBtn = formEl.querySelector("button[type=submit]") as HTMLButtonElement;
-    submitBtn.disabled = true;
+    setUploadingId(attemptId);
     try {
       const res = await fetch(`/api/payment-attempts/${attemptId}/proofs`, { method: "POST", body: fd });
       const data = await res.json() as { proof?: PaymentProof; error?: string };
@@ -112,11 +112,13 @@ export default function StudentPaymentFlow({ invoice, attempts: initialAttempts,
       const j = await r.json() as { attempts?: PaymentAttempt[] };
       if (j.attempts) setAttempts(j.attempts);
       formEl.reset();
+      const fileLabel = document.getElementById(`fl-${attemptId}`);
+      if (fileLabel) fileLabel.textContent = "Click to select a file";
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload failed");
     } finally {
-      submitBtn.disabled = false;
+      setUploadingId(null);
     }
   };
 
@@ -266,25 +268,27 @@ export default function StudentPaymentFlow({ invoice, attempts: initialAttempts,
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-white/40 font-body text-[10px] uppercase tracking-wider mb-1">Bank/Wise Reference (optional)</label>
+                  <label className="block text-white/55 font-body text-[10px] uppercase tracking-wider mb-1">Bank/Wise Reference (optional)</label>
                   <input type="text" name="receipt_reference" placeholder="Their transfer ID"
-                    className="w-full px-3 py-2 rounded-xl bg-white/[0.06] border border-white/[0.10] font-body text-sm text-white placeholder-white/25 focus:outline-none focus:border-gold-400/50 transition-colors" />
+                    className="w-full px-3 py-2 rounded-xl bg-white/[0.06] border border-white/[0.10] font-body text-sm text-white placeholder-white/35 focus:outline-none focus:border-gold-400/50 transition-colors [color-scheme:dark]" />
                 </div>
                 <div>
-                  <label className="block text-white/40 font-body text-[10px] uppercase tracking-wider mb-1">Payment Date (optional)</label>
+                  <label className="block text-white/55 font-body text-[10px] uppercase tracking-wider mb-1">Payment Date (optional)</label>
                   <input type="date" name="payment_date"
-                    className="w-full px-3 py-2 rounded-xl bg-white/[0.06] border border-white/[0.10] font-body text-sm text-white placeholder-white/25 focus:outline-none focus:border-gold-400/50 transition-colors" />
+                    className="w-full px-3 py-2 rounded-xl bg-white/[0.06] border border-white/[0.10] font-body text-sm text-white placeholder-white/35 focus:outline-none focus:border-gold-400/50 transition-colors [color-scheme:dark]" />
                 </div>
               </div>
 
-              <p className="text-white/30 font-body text-[10px]">
+              <p className="text-white/40 font-body text-[10px]">
                 Max upload size {Math.round(MAX_FILE_BYTES / 1024 / 1024)} MB. By submitting you confirm the proof shows a transfer of {total}.
               </p>
 
-              <button type="submit"
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gold-400/15 border border-gold-400/30 text-gold-400 font-body text-sm font-semibold hover:bg-gold-400/25 transition-all disabled:opacity-50">
-                <Loader2 className="w-4 h-4 hidden [&[data-loading=true]]:inline animate-spin" />
-                <Upload className="w-4 h-4" /> Upload Proof
+              <button type="submit" disabled={uploadingId === activeAttempt.id}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gold-400/15 border border-gold-400/30 text-gold-400 font-body text-sm font-semibold hover:bg-gold-400/25 transition-all disabled:opacity-60 disabled:cursor-wait">
+                {uploadingId === activeAttempt.id
+                  ? <Loader2 className="w-4 h-4 animate-spin" />
+                  : <Upload className="w-4 h-4" />}
+                {uploadingId === activeAttempt.id ? "Uploading…" : "Upload Proof"}
               </button>
             </form>
           )}
