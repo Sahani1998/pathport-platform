@@ -58,6 +58,7 @@ export type EmailTemplate =
   | "offer_letter_accepted"
   | "offer_letter_decision_internal"
   | "fee_payment_reminder"
+  | "invoice_issued"
   | "ipa_processing"
   | "ipa_approved"
   | "arrival_preparation"
@@ -77,6 +78,7 @@ export interface TemplateContext {
   applicationId?: string;
   amount?: string;
   dueDate?: string;
+  invoiceNumber?: string;
   studentName?: string;
   documentType?: string;
   comment?: string | null;
@@ -227,6 +229,19 @@ export const TEMPLATES: Record<EmailTemplate, (ctx: TemplateContext) => Rendered
       (ctx.dueDate ? p(`<strong style="color:rgba(255,255,255,.85)">Due by:</strong> ${ctx.dueDate}`) : "") +
       p("Complete payment to confirm your seat and move to the IPA (In-Principle Approval) stage of your Singapore student pass.") +
       cta(dashboardUrl, "Pay Now →")
+    ),
+  }),
+
+  invoice_issued: ctx => ({
+    subject: `Invoice ${ctx.invoiceNumber ?? "issued"} — ${ctx.courseName ?? "your course"}`,
+    html: shell(
+      h1("Your invoice is ready") +
+      p(`Hi ${ctx.name ?? "there"}, ${ctx.collegeName ?? "your college"} has issued an invoice for <strong style="color:#fff">${ctx.courseName ?? "your course"}</strong>.`) +
+      (ctx.invoiceNumber ? highlight("Invoice Number", ctx.invoiceNumber) : "") +
+      (ctx.amount       ? highlight("Amount Due",     ctx.amount)        : "") +
+      (ctx.dueDate      ? p(`<strong style="color:rgba(255,255,255,.85)">Due by:</strong> ${ctx.dueDate}`) : "") +
+      p("Sign in to view the invoice, choose a payment method (Bank Transfer or Wise) and upload your transfer proof when ready.") +
+      cta(dashboardUrl, "View Invoice →")
     ),
   }),
 

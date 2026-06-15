@@ -17,7 +17,7 @@ import type { OfferLetterWithUploader } from "@/types/offer-letters";
 import type { DocumentRequest, IpaRecord, ApplicationNoteWithAuthor, ApplicationNote } from "@/types/application-processing";
 import {
   ArrowLeft, User, FileText, Building2, Calendar,
-  Download, AlertCircle, CheckCircle2,
+  Download, AlertCircle, CheckCircle2, Receipt, ChevronRight,
 } from "lucide-react";
 
 export default async function InstitutionApplicationDetailPage({
@@ -236,6 +236,21 @@ export default async function InstitutionApplicationDetailPage({
             applicationId={id}
             existingLetters={offerLetters}
           />
+
+          {/* Invoices (Sprint 17) */}
+          <Link href={`/dashboard/institution/applications/${id}/invoices`}
+            className="flex items-center justify-between p-4 rounded-2xl bg-white/[0.04] border border-white/[0.08] hover:border-gold-400/25 hover:bg-gold-400/[0.03] transition-all group">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-gold-400/10 border border-gold-400/20 flex items-center justify-center">
+                <Receipt className="w-4 h-4 text-gold-400" />
+              </div>
+              <div>
+                <p className="font-body font-semibold text-sm text-white/85">Invoices &amp; Payments</p>
+                <p className="font-body text-xs text-white/40">Issue invoice, track payment proofs</p>
+              </div>
+            </div>
+            <ChevronRight className="w-4 h-4 text-white/30 group-hover:text-gold-400 transition-colors" />
+          </Link>
 
           {/* IPA management */}
           <IpaPanel applicationId={id} records={ipaRecords} />
