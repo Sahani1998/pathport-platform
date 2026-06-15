@@ -203,7 +203,7 @@ export default function CollegeManagementClient({ colleges: initial, courseCount
                 title="2–6 uppercase letters"
                 className="w-full px-3 py-2.5 rounded-xl bg-white/[0.06] border border-white/[0.1] text-white placeholder-white/20 font-body text-sm font-mono focus:outline-none focus:border-gold-400/50 transition-colors"
               />
-              <p className="mt-1 text-white/30 font-body text-[10px]">Used in invoice numbers: <span className="font-mono text-white/45">{(form.short_code || "XXX").trim().toUpperCase()}-INV-2026-0001</span></p>
+              <p className="mt-1 text-white/55 font-body text-[10px]">Used in invoice numbers: <span className="font-mono text-white/75">{(form.short_code || "XXX").trim().toUpperCase()}-INV-2026-0001</span></p>
             </div>
           </div>
 

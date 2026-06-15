@@ -8,14 +8,25 @@ import type { CollegePaymentSettings, Currency } from "@/types/payment";
 
 const CURRENCIES: Currency[] = ["SGD", "USD", "INR", "GBP", "EUR", "AUD"];
 
+// `[color-scheme:dark]` tells the browser to draw native widgets — the
+// <select> dropdown panel, the date-picker calendar, the number-input
+// steppers — using the dark system widget set instead of the default light
+// one. Without this, the currency dropdown panel is white-on-white on most
+// browsers.
 const INPUT = cn(
   "w-full px-3 py-2.5 rounded-xl bg-white/[0.06] border border-white/[0.10]",
-  "font-body text-sm text-white placeholder-white/25",
+  "font-body text-sm text-white placeholder-white/35",
   "focus:outline-none focus:border-gold-400/50 focus:ring-1 focus:ring-gold-400/15",
-  "transition-colors",
+  "transition-colors [color-scheme:dark]",
+  "disabled:opacity-100 disabled:text-white/40 disabled:cursor-not-allowed",
 );
-const LABEL = "block text-white/40 font-body text-[10px] uppercase tracking-wider mb-1.5";
+const LABEL = "block text-white/55 font-body text-[10px] uppercase tracking-wider mb-1.5";
 const TEXTAREA = cn(INPUT, "min-h-[80px] resize-y");
+
+// Each <option> needs an explicit dark background as a defense-in-depth — some
+// older browsers (especially on Linux/X11) ignore the color-scheme hint for
+// option lists. Inline style guarantees both ends of the spectrum.
+const OPTION_STYLE = { backgroundColor: "#0a1024", color: "#fff" } as const;
 
 interface Props {
   collegeId:    string;
@@ -136,7 +147,7 @@ export default function PaymentSettingsForm({ collegeId, collegeName, initial, i
               : `${methodsEnabled} method${methodsEnabled === 1 ? "" : "s"} enabled`}
           </p>
           {savedAt && (
-            <p className="text-white/30 font-body text-[11px] mt-0.5">
+            <p className="text-white/50 font-body text-[11px] mt-0.5">
               Last saved {savedAt.toLocaleString("en-SG", { dateStyle: "medium", timeStyle: "short" })}
             </p>
           )}
@@ -161,7 +172,7 @@ export default function PaymentSettingsForm({ collegeId, collegeName, initial, i
           </label>
         </header>
 
-        <div className={cn("grid grid-cols-1 sm:grid-cols-2 gap-3", !form.bank_transfer_enabled && "opacity-50")}>
+        <div className={cn("grid grid-cols-1 sm:grid-cols-2 gap-3", !form.bank_transfer_enabled && "opacity-70")}>
           <div>
             <label className={LABEL}>Bank Name *</label>
             <input value={form.bank_name} onChange={set("bank_name")} placeholder="e.g. DBS Bank" className={INPUT}
@@ -196,8 +207,8 @@ export default function PaymentSettingsForm({ collegeId, collegeName, initial, i
             <label className={LABEL}>Currency</label>
             <select value={form.bank_currency} onChange={set("bank_currency")} className={INPUT}
               disabled={!form.bank_transfer_enabled}>
-              <option value="">Select…</option>
-              {CURRENCIES.map(c => <option key={c} value={c}>{c}</option>)}
+              <option value=""  style={OPTION_STYLE}>Select…</option>
+              {CURRENCIES.map(c => <option key={c} value={c} style={OPTION_STYLE}>{c}</option>)}
             </select>
           </div>
           <div className="sm:col-span-2">
@@ -227,7 +238,7 @@ export default function PaymentSettingsForm({ collegeId, collegeName, initial, i
           </label>
         </header>
 
-        <div className={cn("grid grid-cols-1 sm:grid-cols-2 gap-3", !form.wise_enabled && "opacity-50")}>
+        <div className={cn("grid grid-cols-1 sm:grid-cols-2 gap-3", !form.wise_enabled && "opacity-70")}>
           <div>
             <label className={LABEL}>Recipient Name *</label>
             <input value={form.wise_recipient_name} onChange={set("wise_recipient_name")} placeholder="College name as registered on Wise"
@@ -242,8 +253,8 @@ export default function PaymentSettingsForm({ collegeId, collegeName, initial, i
             <label className={LABEL}>Currency</label>
             <select value={form.wise_currency} onChange={set("wise_currency")} className={INPUT}
               disabled={!form.wise_enabled}>
-              <option value="">Select…</option>
-              {CURRENCIES.map(c => <option key={c} value={c}>{c}</option>)}
+              <option value=""  style={OPTION_STYLE}>Select…</option>
+              {CURRENCIES.map(c => <option key={c} value={c} style={OPTION_STYLE}>{c}</option>)}
             </select>
           </div>
           <div className="sm:col-span-2">

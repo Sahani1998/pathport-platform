@@ -19,6 +19,7 @@ const SAMPLE_CONTEXTS: Record<EmailTemplate, TemplateContext> = {
   offer_letter_accepted:        { name: "Priya Sharma", courseName: "Diploma in Business Management", collegeName: "PSB Academy" },
   offer_letter_decision_internal: { studentName: "Priya Sharma", decision: "accepted", courseName: "Diploma in Business Management", collegeName: "PSB Academy", comment: "Looking forward to joining!" },
   fee_payment_reminder:         { name: "Priya Sharma", courseName: "Diploma in Business Management", amount: "SGD 2,400", dueDate: "30 July 2025" },
+  invoice_issued:               { name: "Priya Sharma", courseName: "Diploma in Business Management", collegeName: "PSB Academy", invoiceNumber: "DIM-INV-2026-0001", amount: "SGD 12,500.00", dueDate: "30 July 2026" },
   ipa_processing:               { name: "Priya Sharma", courseName: "Diploma in Business Management" },
   ipa_approved:                 { name: "Priya Sharma", courseName: "Diploma in Business Management" },
   arrival_preparation:          { name: "Priya Sharma", courseName: "Diploma in Business Management" },
