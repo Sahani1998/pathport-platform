@@ -10,7 +10,7 @@ import {
   LayoutDashboard, FileText, BookOpen, Briefcase, Building2,
   Users, Settings, LogOut, ChevronLeft, ChevronRight,
   GraduationCap, BarChart2, UserCircle, ClipboardList,
-  Globe, Award, MessageSquare, Bell, Loader2, Stethoscope,
+  Globe, Award, MessageSquare, Bell, Loader2, Stethoscope, CreditCard,
 } from "lucide-react";
 
 // ─── Role-specific nav items ──────────────────────────────────────────────────
@@ -34,6 +34,7 @@ const NAV_ITEMS: Record<UserRole, { label: string; href: string; icon: React.Ele
     { label: "Colleges",         href: "/dashboard/admin/colleges",       icon: Building2       },
     { label: "Courses",          href: "/dashboard/admin/courses",        icon: BookOpen        },
     { label: "Offer Letters",    href: "/dashboard/admin/offer-letters",  icon: FileText        },
+    { label: "Payments",         href: "/dashboard/admin/payments",       icon: CreditCard      },
     { label: "Partners",         href: "/dashboard/admin/partner-applications", icon: Award      },
     { label: "Analytics",        href: "/dashboard/admin/analytics",      icon: BarChart2       },
     { label: "Notifications",    href: "/dashboard/admin/notifications",  icon: Bell            },
@@ -46,6 +47,7 @@ const NAV_ITEMS: Record<UserRole, { label: string; href: string; icon: React.Ele
     { label: "Applications",     href: "/dashboard/institution/applications",icon: FileText        },
     { label: "Documents",        href: "/dashboard/institution/documents",   icon: ClipboardList   },
     { label: "Notifications",    href: "/dashboard/institution/notifications", icon: Bell          },
+    { label: "Payments",         href: "/dashboard/institution/payments",    icon: CreditCard      },
     { label: "Courses",          href: "/dashboard/institution/courses",     icon: BookOpen        },
     { label: "Reports",          href: "/dashboard/institution/reports",     icon: BarChart2       },
     { label: "Settings",         href: "/dashboard/institution/settings",    icon: Settings        },

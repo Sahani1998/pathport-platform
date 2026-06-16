@@ -3,13 +3,13 @@ import { createAdminClient } from "@/lib/supabase/admin-client";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import {
-  ArrowLeft, Download, MessageCircle, Mail, Phone,
+  ArrowLeft, Download, MessageCircle, Mail, Phone, Receipt,
 } from "lucide-react";
 import StudentPaymentFlow from "@/components/payments/StudentPaymentFlow";
 import {
   INVOICE_STATUS_META, INVOICE_LINE_TYPE_LABEL,
   type StudentInvoice, type InvoiceLineItem, type PaymentAttempt, type PaymentProof,
-  type CollegePaymentSettings,
+  type OfficialReceipt, type CollegePaymentSettings,
 } from "@/types/payment";
 import { formatCents } from "@/lib/payments/invoice-helpers";
 
@@ -63,16 +63,23 @@ export default async function StudentInvoicePage({
     .eq("college_id", invoice.college_id)
     .maybeSingle();
 
-  // Proofs scoped to this student's attempts
+  // Proofs and official receipts scoped to this student's attempts
   const attemptIds = ((attempts ?? []) as PaymentAttempt[]).map(a => a.id);
-  const { data: proofs } = attemptIds.length
-    ? await supabase.from("payment_proofs").select("*").in("payment_attempt_id", attemptIds)
-    : { data: [] as PaymentProof[] };
+  const [{ data: proofs }, { data: receipts }] = await Promise.all([
+    attemptIds.length
+      ? supabase.from("payment_proofs").select("*").in("payment_attempt_id", attemptIds)
+      : Promise.resolve({ data: [] as PaymentProof[] }),
+    attemptIds.length
+      ? supabase.from("official_receipts").select("*").in("payment_attempt_id", attemptIds)
+      : Promise.resolve({ data: [] as OfficialReceipt[] }),
+  ]);
 
   const proofsByAttempt: Record<string, PaymentProof[]> = {};
   for (const p of ((proofs ?? []) as PaymentProof[])) {
     (proofsByAttempt[p.payment_attempt_id] ??= []).push(p);
   }
+
+  const receiptList = (receipts ?? []) as OfficialReceipt[];
 
   const meta = INVOICE_STATUS_META[invoice.status as keyof typeof INVOICE_STATUS_META];
 
@@ -142,6 +149,28 @@ export default async function StudentInvoicePage({
         proofsByAttempt={proofsByAttempt}
         instructions={settings as CollegePaymentSettings | null}
       />
+
+      {/* Official receipts */}
+      {receiptList.length > 0 && (
+        <section className="p-4 rounded-2xl bg-emerald-500/[0.05] border border-emerald-400/20 space-y-2">
+          <div className="flex items-center gap-2 mb-1">
+            <Receipt className="w-4 h-4 text-emerald-400" />
+            <p className="font-display text-base text-emerald-400">Official Receipt{receiptList.length > 1 ? "s" : ""}</p>
+          </div>
+          {receiptList.map(r => (
+            <a key={r.id} href={`/api/official-receipts/${r.id}/download`} target="_blank" rel="noopener noreferrer"
+              className="flex items-center justify-between gap-3 px-3 py-2 rounded-xl bg-white/[0.03] border border-emerald-400/20 hover:border-emerald-400/40 transition-colors group">
+              <div>
+                <p className="font-mono text-sm text-white/85">{r.public_id}</p>
+                <p className="font-body text-[11px] text-white/40 mt-0.5">
+                  {formatCents(r.amount_cents, r.currency)} · Issued {new Date(r.issued_at).toLocaleDateString("en-SG", { dateStyle: "medium" })}
+                </p>
+              </div>
+              <Download className="w-4 h-4 text-white/30 group-hover:text-emerald-400 transition-colors" />
+            </a>
+          ))}
+        </section>
+      )}
 
       {/* Finance contact */}
       {(settings?.finance_email || settings?.finance_phone || settings?.finance_whatsapp) && (
