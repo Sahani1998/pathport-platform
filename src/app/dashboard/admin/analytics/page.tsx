@@ -6,7 +6,7 @@ import type { ApplicationStage } from "@/types/timeline";
 import type { AdminAnalyticsSummary } from "@/types/analytics";
 import {
   BarChart2, Users, Clock, FileCheck2, BadgeCheck,
-  CheckCircle2, XCircle, Building2, CalendarDays, Globe2, AlertCircle,
+  CheckCircle2, XCircle, Building2, CalendarDays, AlertCircle,
 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -138,7 +138,7 @@ export default async function AdminAnalyticsPage() {
         </div>
       </section>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* College analytics */}
         <section className="bg-white/[0.04] border border-white/[0.08] rounded-2xl p-6">
           <div className="flex items-center gap-2 mb-4">
@@ -182,31 +182,6 @@ export default async function AdminAnalyticsPage() {
                   </div>
                   <div className="h-1.5 bg-white/[0.06] rounded-full overflow-hidden">
                     <div className="h-full rounded-full bg-gold-500/70" style={{ width: `${Math.round((count / maxBar(summary.by_intake)) * 100)}%` }} />
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
-
-        {/* Country analytics */}
-        <section className="bg-white/[0.04] border border-white/[0.08] rounded-2xl p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <Globe2 className="w-4 h-4 text-emerald-400" />
-            <h3 className="font-display text-xl text-white">By Country</h3>
-          </div>
-          {summary.by_country.length === 0 ? (
-            <p className="text-white/30 font-body text-sm">No data yet.</p>
-          ) : (
-            <div className="space-y-2.5">
-              {summary.by_country.map(({ country, count }) => (
-                <div key={country}>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-white/55 font-body text-xs truncate pr-2">{country}</span>
-                    <span className="text-white/45 font-body text-xs flex-shrink-0">{count}</span>
-                  </div>
-                  <div className="h-1.5 bg-white/[0.06] rounded-full overflow-hidden">
-                    <div className="h-full rounded-full bg-emerald-500/70" style={{ width: `${Math.round((count / maxBar(summary.by_country)) * 100)}%` }} />
                   </div>
                 </div>
               ))}

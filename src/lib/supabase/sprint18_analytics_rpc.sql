@@ -88,14 +88,6 @@ BEGIN
     ORDER BY count DESC
     LIMIT 10
   ),
-  by_country AS (
-    SELECT COALESCE(p.country, 'Unknown') AS country, COUNT(*)::int AS count
-    FROM apps
-    LEFT JOIN public.profiles p ON p.id = apps.student_id
-    GROUP BY COALESCE(p.country, 'Unknown')
-    ORDER BY count DESC
-    LIMIT 10
-  )
   SELECT jsonb_build_object(
     'total_students',     (SELECT COUNT(*)::int FROM public.profiles WHERE role = 'student'),
     'total_applications', (SELECT COUNT(*)::int FROM apps),
@@ -103,8 +95,7 @@ BEGIN
     'total_courses',      (SELECT COUNT(*)::int FROM public.courses),
     'by_stage',           COALESCE((SELECT jsonb_object_agg(stage, count) FROM by_stage), '{}'::jsonb),
     'by_college',         COALESCE((SELECT jsonb_agg(jsonb_build_object('college', college, 'count', count)) FROM by_college), '[]'::jsonb),
-    'by_intake',          COALESCE((SELECT jsonb_agg(jsonb_build_object('intake',  intake,  'count', count)) FROM by_intake),  '[]'::jsonb),
-    'by_country',         COALESCE((SELECT jsonb_agg(jsonb_build_object('country', country, 'count', count)) FROM by_country), '[]'::jsonb)
+    'by_intake',          COALESCE((SELECT jsonb_agg(jsonb_build_object('intake',  intake,  'count', count)) FROM by_intake),  '[]'::jsonb)
   )
   INTO result;
 
