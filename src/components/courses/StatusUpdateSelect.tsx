@@ -79,10 +79,10 @@ export default function StatusUpdateSelect({
           value={status}
           onChange={handleChange}
           disabled={loading}
-          className={`px-3 py-1.5 rounded-xl border font-body text-xs font-semibold appearance-none cursor-pointer focus:outline-none focus:ring-1 focus:ring-gold-400/30 transition-all disabled:opacity-50 ${meta?.color ?? ""}`}
+          className={`px-3 py-1.5 rounded-xl border font-body text-xs font-semibold appearance-none cursor-pointer focus:outline-none focus:ring-1 focus:ring-gold-400/30 transition-all disabled:opacity-50 [color-scheme:dark] ${meta?.color ?? ""}`}
         >
           {APPLICATION_STATUSES.map(s => (
-            <option key={s.value} value={s.value} className="bg-navy-800 text-white">
+            <option key={s.value} value={s.value} style={{ backgroundColor: "#0a1024", color: "#fff" }}>
               {s.label}
             </option>
           ))}

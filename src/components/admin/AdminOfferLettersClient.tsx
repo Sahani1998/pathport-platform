@@ -176,19 +176,19 @@ export default function AdminOfferLettersClient({ letterRows, colleges, auditRow
             <select
               value={collegeFilter}
               onChange={e => setCollegeFilter(e.target.value)}
-              className="px-3 py-2.5 rounded-xl bg-white/[0.06] border border-white/[0.1] text-white font-body text-sm focus:outline-none focus:border-gold-400/50 transition-colors"
+              className="px-3 py-2.5 rounded-xl bg-white/[0.06] border border-white/[0.1] text-white font-body text-sm focus:outline-none focus:border-gold-400/50 transition-colors [color-scheme:dark]"
             >
-              <option value="">All colleges</option>
-              {colleges.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              <option value="" style={{ backgroundColor: "#0a1024", color: "#fff" }}>All colleges</option>
+              {colleges.map(c => <option key={c.id} value={c.id} style={{ backgroundColor: "#0a1024", color: "#fff" }}>{c.name}</option>)}
             </select>
             <select
               value={statusFilter}
               onChange={e => setStatusFilter(e.target.value as "" | "active" | "expired")}
-              className="px-3 py-2.5 rounded-xl bg-white/[0.06] border border-white/[0.1] text-white font-body text-sm focus:outline-none focus:border-gold-400/50 transition-colors"
+              className="px-3 py-2.5 rounded-xl bg-white/[0.06] border border-white/[0.1] text-white font-body text-sm focus:outline-none focus:border-gold-400/50 transition-colors [color-scheme:dark]"
             >
-              <option value="">All statuses</option>
-              <option value="active">Active (not expired)</option>
-              <option value="expired">Expired</option>
+              <option value="" style={{ backgroundColor: "#0a1024", color: "#fff" }}>All statuses</option>
+              <option value="active" style={{ backgroundColor: "#0a1024", color: "#fff" }}>Active (not expired)</option>
+              <option value="expired" style={{ backgroundColor: "#0a1024", color: "#fff" }}>Expired</option>
             </select>
           </div>
 

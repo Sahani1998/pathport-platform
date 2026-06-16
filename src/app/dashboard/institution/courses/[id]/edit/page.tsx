@@ -16,8 +16,7 @@ export default async function EditCoursePage({
   const { data: profile } = await supabase
     .from("profiles").select("role, full_name, college_id").eq("id", user.id).single();
 
-  // PREVIEW MODE: role guard temporarily disabled
-  // if (profile?.role !== "institution") redirect("/dashboard");
+  if (profile?.role !== "institution") redirect("/dashboard");
   if (!profile?.college_id) redirect("/dashboard/institution/courses");
 
   const { data: course, error } = await supabase

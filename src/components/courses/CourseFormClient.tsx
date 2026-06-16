@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, type FormEvent, type ChangeEvent } from "react";
-import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import GoldButton from "@/components/ui/GoldButton";
 import { Loader2, ArrowLeft, ChevronDown, ChevronRight, Image, Video, Briefcase, Link2 } from "lucide-react";
@@ -10,9 +9,10 @@ import { COURSE_CATEGORIES } from "@/types/courses";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 
-const INPUT    = "w-full bg-white/[0.06] border border-white/[0.10] rounded-xl px-4 py-3 font-body text-sm text-white placeholder-white/25 focus:outline-none focus:border-gold-400/60 transition-all [&>option]:bg-navy-800";
-const LABEL    = "block text-white/55 font-body text-sm mb-1.5 font-medium";
-const OPT_HINT = "text-white/25 font-body text-xs ml-2 font-normal";
+const INPUT       = "w-full bg-white/[0.06] border border-white/[0.10] rounded-xl px-4 py-3 font-body text-sm text-white placeholder-white/25 focus:outline-none focus:border-gold-400/60 transition-all [color-scheme:dark] [&>option]:bg-navy-800";
+const LABEL       = "block text-white/55 font-body text-sm mb-1.5 font-medium";
+const OPT_HINT    = "text-white/25 font-body text-xs ml-2 font-normal";
+const OPTION_STYLE = { backgroundColor: "#0a1024", color: "#fff" } as const;
 
 interface CourseFormClientProps {
   collegeId:   string;
@@ -65,7 +65,6 @@ function commas(val: string): string[] {
 }
 
 export default function CourseFormClient({ collegeId, collegeName, course }: CourseFormClientProps) {
-  const router = useRouter();
   const isEdit = !!course;
 
   const [form, setForm] = useState<FormState>({
@@ -167,8 +166,7 @@ export default function CourseFormClient({ collegeId, collegeName, course }: Cou
         if (insertError) throw new Error(insertError.message);
       }
 
-      router.push("/dashboard/institution/courses");
-      router.refresh();
+      window.location.href = "/dashboard/institution/courses";
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       console.error("[InstitutionPortal] course form error:", msg);
@@ -214,16 +212,16 @@ export default function CourseFormClient({ collegeId, collegeName, course }: Cou
             <div>
               <label className={LABEL}>Category <span className="text-gold-400">*</span></label>
               <select name="category" value={form.category} onChange={onChange} className={INPUT}>
-                {COURSE_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                {COURSE_CATEGORIES.map(c => <option key={c} value={c} style={OPTION_STYLE}>{c}</option>)}
               </select>
             </div>
             <div>
               <label className={LABEL}>Level <span className="text-gold-400">*</span></label>
               <select name="level" value={form.level} onChange={onChange} className={INPUT}>
-                <option value="diploma">Diploma</option>
-                <option value="advanced_diploma">Advanced Diploma</option>
-                <option value="graduate_diploma">Graduate Diploma</option>
-                <option value="certificate">Certificate</option>
+                <option value="diploma" style={OPTION_STYLE}>Diploma</option>
+                <option value="advanced_diploma" style={OPTION_STYLE}>Advanced Diploma</option>
+                <option value="graduate_diploma" style={OPTION_STYLE}>Graduate Diploma</option>
+                <option value="certificate" style={OPTION_STYLE}>Certificate</option>
               </select>
             </div>
           </div>
@@ -243,8 +241,8 @@ export default function CourseFormClient({ collegeId, collegeName, course }: Cou
             <div>
               <label className={LABEL}>Study Mode</label>
               <select name="study_mode" value={form.study_mode} onChange={onChange} className={INPUT}>
-                <option value="full_time">Full-Time</option>
-                <option value="part_time">Part-Time</option>
+                <option value="full_time" style={OPTION_STYLE}>Full-Time</option>
+                <option value="part_time" style={OPTION_STYLE}>Part-Time</option>
               </select>
             </div>
           </div>
@@ -277,9 +275,9 @@ export default function CourseFormClient({ collegeId, collegeName, course }: Cou
           <div>
             <label className={LABEL}>Status</label>
             <select name="status" value={form.status} onChange={onChange} className={INPUT}>
-              <option value="open">Open — accepting applications</option>
-              <option value="draft">Draft — not visible to students</option>
-              <option value="closed">Closed — intake full</option>
+              <option value="open" style={OPTION_STYLE}>Open — accepting applications</option>
+              <option value="draft" style={OPTION_STYLE}>Draft — not visible to students</option>
+              <option value="closed" style={OPTION_STYLE}>Closed — intake full</option>
             </select>
           </div>
         </div>

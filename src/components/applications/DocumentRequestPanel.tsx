@@ -108,10 +108,10 @@ export default function DocumentRequestPanel({ applicationId, requests }: Props)
               <select
                 value={documentType}
                 onChange={e => setDocumentType(e.target.value as typeof documentType)}
-                className="w-full bg-white/[0.06] border border-white/[0.10] rounded-xl px-3 py-2 font-body text-xs text-white focus:outline-none focus:border-gold-400/50"
+                className="w-full bg-white/[0.06] border border-white/[0.10] rounded-xl px-3 py-2 font-body text-xs text-white focus:outline-none focus:border-gold-400/50 [color-scheme:dark]"
               >
                 {DOCUMENT_TYPES.map(d => (
-                  <option key={d.value} value={d.value} className="bg-[#0A1228]">{d.label}</option>
+                  <option key={d.value} value={d.value} style={{ backgroundColor: "#0a1024", color: "#fff" }}>{d.label}</option>
                 ))}
               </select>
             </div>
@@ -120,10 +120,10 @@ export default function DocumentRequestPanel({ applicationId, requests }: Props)
               <select
                 value={priority}
                 onChange={e => setPriority(e.target.value as DocumentRequestPriority)}
-                className="w-full bg-white/[0.06] border border-white/[0.10] rounded-xl px-3 py-2 font-body text-xs text-white focus:outline-none focus:border-gold-400/50"
+                className="w-full bg-white/[0.06] border border-white/[0.10] rounded-xl px-3 py-2 font-body text-xs text-white focus:outline-none focus:border-gold-400/50 [color-scheme:dark]"
               >
                 {(Object.keys(PRIORITY_META) as DocumentRequestPriority[]).map(p => (
-                  <option key={p} value={p} className="bg-[#0A1228]">{PRIORITY_META[p].label}</option>
+                  <option key={p} value={p} style={{ backgroundColor: "#0a1024", color: "#fff" }}>{PRIORITY_META[p].label}</option>
                 ))}
               </select>
             </div>

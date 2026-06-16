@@ -91,7 +91,8 @@ function slugify(s: string) {
   return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 }
 
-const inputCls = "w-full px-3 py-2.5 rounded-xl bg-white/[0.06] border border-white/[0.1] text-white placeholder-white/20 font-body text-sm focus:outline-none focus:border-gold-400/50 transition-colors";
+const inputCls    = "w-full px-3 py-2.5 rounded-xl bg-white/[0.06] border border-white/[0.1] text-white placeholder-white/20 font-body text-sm focus:outline-none focus:border-gold-400/50 transition-colors [color-scheme:dark]";
+const OPTION_STYLE = { backgroundColor: "#0a1024", color: "#fff" } as const;
 
 export default function CourseManagementClient({
   courses: initial, colleges, applicationCounts, initialCollegeFilter,
@@ -266,21 +267,21 @@ export default function CourseManagementClient({
         <select
           value={collegeFilter}
           onChange={e => setCollegeFilter(e.target.value)}
-          className="px-3 py-2.5 rounded-xl bg-white/[0.06] border border-white/[0.1] text-white font-body text-sm focus:outline-none focus:border-gold-400/50 transition-colors"
+          className="px-3 py-2.5 rounded-xl bg-white/[0.06] border border-white/[0.1] text-white font-body text-sm focus:outline-none focus:border-gold-400/50 transition-colors [color-scheme:dark]"
         >
-          <option value="">All colleges</option>
+          <option value="" style={OPTION_STYLE}>All colleges</option>
           {colleges.map(c => (
-            <option key={c.id} value={c.id}>{c.name}</option>
+            <option key={c.id} value={c.id} style={OPTION_STYLE}>{c.name}</option>
           ))}
         </select>
 
         <select
           value={statusFilter}
           onChange={e => setStatusFilter(e.target.value as "" | CourseStatus)}
-          className="px-3 py-2.5 rounded-xl bg-white/[0.06] border border-white/[0.1] text-white font-body text-sm focus:outline-none focus:border-gold-400/50 transition-colors"
+          className="px-3 py-2.5 rounded-xl bg-white/[0.06] border border-white/[0.1] text-white font-body text-sm focus:outline-none focus:border-gold-400/50 transition-colors [color-scheme:dark]"
         >
-          <option value="">All statuses</option>
-          {STATUSES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+          <option value="" style={OPTION_STYLE}>All statuses</option>
+          {STATUSES.map(s => <option key={s.value} value={s.value} style={OPTION_STYLE}>{s.label}</option>)}
         </select>
 
         <button
@@ -317,9 +318,9 @@ export default function CourseManagementClient({
                 className={inputCls}
                 title={editId ? "College cannot be changed after creation" : undefined}
               >
-                <option value="">Select college…</option>
+                <option value="" style={OPTION_STYLE}>Select college…</option>
                 {colleges.map(c => (
-                  <option key={c.id} value={c.id}>{c.name}{c.is_active ? "" : " (inactive)"}</option>
+                  <option key={c.id} value={c.id} style={OPTION_STYLE}>{c.name}{c.is_active ? "" : " (inactive)"}</option>
                 ))}
               </select>
             </div>
@@ -338,7 +339,7 @@ export default function CourseManagementClient({
             <div>
               <label className="block text-white/40 font-body text-[10px] uppercase tracking-wider mb-1.5">Category *</label>
               <select value={form.category} onChange={setField("category")} className={inputCls}>
-                {COURSE_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                {COURSE_CATEGORIES.map(c => <option key={c} value={c} style={OPTION_STYLE}>{c}</option>)}
               </select>
             </div>
           </div>
@@ -348,19 +349,19 @@ export default function CourseManagementClient({
             <div>
               <label className="block text-white/40 font-body text-[10px] uppercase tracking-wider mb-1.5">Level</label>
               <select value={form.level} onChange={setField("level")} className={inputCls}>
-                {LEVELS.map(l => <option key={l.value} value={l.value}>{l.label}</option>)}
+                {LEVELS.map(l => <option key={l.value} value={l.value} style={OPTION_STYLE}>{l.label}</option>)}
               </select>
             </div>
             <div>
               <label className="block text-white/40 font-body text-[10px] uppercase tracking-wider mb-1.5">Study Mode</label>
               <select value={form.study_mode} onChange={setField("study_mode")} className={inputCls}>
-                {STUDY_MODES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+                {STUDY_MODES.map(s => <option key={s.value} value={s.value} style={OPTION_STYLE}>{s.label}</option>)}
               </select>
             </div>
             <div>
               <label className="block text-white/40 font-body text-[10px] uppercase tracking-wider mb-1.5">Status</label>
               <select value={form.status} onChange={setField("status")} className={inputCls}>
-                {STATUSES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+                {STATUSES.map(s => <option key={s.value} value={s.value} style={OPTION_STYLE}>{s.label}</option>)}
               </select>
             </div>
           </div>
@@ -483,7 +484,11 @@ export default function CourseManagementClient({
                   </button>
                   {course.status === "open" ? (
                     <button
-                      onClick={() => setStatus(course, "closed")}
+                      onClick={() => {
+                        if (confirm(`Archive "${course.title}"? Students won't be able to apply until it's reopened.`)) {
+                          setStatus(course, "closed");
+                        }
+                      }}
                       disabled={busyId === course.id}
                       className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-white/[0.1] text-white/45 font-body text-xs hover:text-amber-400 hover:border-amber-400/25 transition-all disabled:opacity-50"
                     >

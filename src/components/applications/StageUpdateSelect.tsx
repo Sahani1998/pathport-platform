@@ -26,7 +26,8 @@ export default function StageUpdateSelect({
   const [error,          setError]          = useState<string | null>(null);
   const [saved,          setSaved]          = useState(false);
 
-  const INPUT = "w-full bg-white/[0.06] border border-white/[0.10] rounded-xl px-3 py-2 font-body text-sm text-white placeholder-white/25 focus:outline-none focus:border-gold-400/60 transition-all resize-none";
+  const INPUT       = "w-full bg-white/[0.06] border border-white/[0.10] rounded-xl px-3 py-2 font-body text-sm text-white placeholder-white/25 focus:outline-none focus:border-gold-400/60 transition-all resize-none [color-scheme:dark]";
+  const OPTION_STYLE = { backgroundColor: "#0a1024", color: "#fff" } as const;
 
   const handleSave = async () => {
     setLoading(true);
@@ -90,10 +91,10 @@ export default function StageUpdateSelect({
           <select
             value={stage}
             onChange={e => setStage(e.target.value as ApplicationStage)}
-            className="bg-white/[0.06] border border-white/[0.10] rounded-xl pl-3 pr-8 py-1.5 font-body text-xs text-white appearance-none cursor-pointer focus:outline-none focus:border-gold-400/50 transition-all [&>option]:bg-navy-800"
+            className="bg-white/[0.06] border border-white/[0.10] rounded-xl pl-3 pr-8 py-1.5 font-body text-xs text-white appearance-none cursor-pointer focus:outline-none focus:border-gold-400/50 transition-all [color-scheme:dark] [&>option]:bg-navy-800"
           >
             {STAGE_META.map(s => (
-              <option key={s.value} value={s.value}>{s.emoji} {s.label}</option>
+              <option key={s.value} value={s.value} style={OPTION_STYLE}>{s.emoji} {s.label}</option>
             ))}
           </select>
           <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/30 pointer-events-none" />
@@ -124,7 +125,7 @@ export default function StageUpdateSelect({
             className={INPUT + " [&>option]:bg-navy-800"}
           >
             {STAGE_META.map(s => (
-              <option key={s.value} value={s.value}>{s.emoji} {s.label}</option>
+              <option key={s.value} value={s.value} style={OPTION_STYLE}>{s.emoji} {s.label}</option>
             ))}
           </select>
           <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30 pointer-events-none" />

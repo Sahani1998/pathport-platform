@@ -19,7 +19,8 @@ const TEMPLATES: { value: EmailTemplate; label: string; audience: "student" | "i
 
 type Result = { success: boolean; logId?: string; error?: string | null; template?: string; to?: string };
 
-const inputCls = "w-full px-3 py-2.5 rounded-xl bg-white/[0.06] border border-white/[0.1] text-white placeholder-white/25 font-body text-sm focus:outline-none focus:border-gold-400/50 transition-colors";
+const inputCls    = "w-full px-3 py-2.5 rounded-xl bg-white/[0.06] border border-white/[0.1] text-white placeholder-white/25 font-body text-sm focus:outline-none focus:border-gold-400/50 transition-colors [color-scheme:dark]";
+const OPTION_STYLE = { backgroundColor: "#0a1024", color: "#fff" } as const;
 
 export default function EmailTestPanel({ isConfigured }: { isConfigured: boolean }) {
   const [to,       setTo]       = useState("");
@@ -86,12 +87,12 @@ export default function EmailTestPanel({ isConfigured }: { isConfigured: boolean
             >
               <optgroup label="Student-facing">
                 {TEMPLATES.filter(t => t.audience === "student").map(t => (
-                  <option key={t.value} value={t.value}>{t.label}</option>
+                  <option key={t.value} value={t.value} style={OPTION_STYLE}>{t.label}</option>
                 ))}
               </optgroup>
               <optgroup label="Internal">
                 {TEMPLATES.filter(t => t.audience === "internal").map(t => (
-                  <option key={t.value} value={t.value}>{t.label}</option>
+                  <option key={t.value} value={t.value} style={OPTION_STYLE}>{t.label}</option>
                 ))}
               </optgroup>
             </select>

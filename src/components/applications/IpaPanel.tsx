@@ -172,10 +172,10 @@ export default function IpaPanel({ applicationId, records }: Props) {
                     <select
                       value={draft}
                       onChange={e => setStatusDraft(d => ({ ...d, [record.id]: e.target.value as IpaStatus }))}
-                      className="bg-white/[0.06] border border-white/[0.10] rounded-xl px-2.5 py-1.5 font-body text-[11px] text-white focus:outline-none focus:border-purple-400/50"
+                      className="bg-white/[0.06] border border-white/[0.10] rounded-xl px-2.5 py-1.5 font-body text-[11px] text-white focus:outline-none focus:border-purple-400/50 [color-scheme:dark]"
                     >
                       {STATUS_OPTIONS.map(s => (
-                        <option key={s} value={s} className="bg-[#0A1228]">{IPA_STATUS_META[s].label}</option>
+                        <option key={s} value={s} style={{ backgroundColor: "#0a1024", color: "#fff" }}>{IPA_STATUS_META[s].label}</option>
                       ))}
                     </select>
                     {draft === "rejected" && (
