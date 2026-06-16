@@ -32,7 +32,8 @@ export default function VerificationPanel({ attempt, proofs, receipt, invoiceAmo
   const [busy, setBusy]       = useState<"verify" | "reject" | "info" | "receipt" | null>(null);
   const [error, setError]     = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [expanded, setExpanded] = useState(false);
+  // Auto-expand when action is required so buttons are immediately visible
+  const [expanded, setExpanded] = useState(attempt.status === "proof_submitted");
 
   // Verify form state
   const [paidAmountCents, setPaidAmountCents] = useState<string>("");

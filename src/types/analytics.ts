@@ -10,7 +10,6 @@ export interface AdminAnalyticsSummary {
   by_stage:           Record<string, number>;
   by_college:         { college: string; count: number }[];
   by_intake:          { intake: string;  count: number }[];
-  by_country:         { country: string; count: number }[];
 }
 
 export interface InstitutionDashboardSummary {
