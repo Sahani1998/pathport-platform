@@ -10,6 +10,7 @@ import DocumentRequestPanel from "@/components/applications/DocumentRequestPanel
 import ApplicationNotesPanel from "@/components/applications/ApplicationNotesPanel";
 import IpaPanel from "@/components/applications/IpaPanel";
 import { APPLICATION_STATUSES } from "@/types/courses";
+import { resolveStage } from "@/lib/application-stage-mapping";
 import type { ApplicationStage } from "@/types/timeline";
 import { DOCUMENT_TYPES, fmtFileSize } from "@/types/documents";
 import type { StudentDocument } from "@/types/documents";
@@ -172,7 +173,7 @@ export default async function InstitutionApplicationDetailPage({
               </div>
               <div>
                 <p className="text-white/35 font-body text-[10px] uppercase tracking-wider mb-1">Timeline Stage</p>
-                <ApplicationStageBadge stage={(app as unknown as { current_stage?: string }).current_stage as ApplicationStage ?? "application_submitted"} size="sm" />
+                <ApplicationStageBadge stage={resolveStage((app as unknown as { current_stage?: string }).current_stage, app.status)} size="sm" />
               </div>
               <div>
                 <p className="text-white/35 font-body text-[10px] uppercase tracking-wider mb-1">Submitted</p>
@@ -186,7 +187,7 @@ export default async function InstitutionApplicationDetailPage({
           {/* Stage update control */}
           <StageUpdateSelect
             applicationId={id}
-            currentStage={(app as unknown as { current_stage?: string }).current_stage as ApplicationStage ?? "application_submitted"}
+            currentStage={resolveStage((app as unknown as { current_stage?: string }).current_stage, app.status)}
           />
 
           {/* Student info */}

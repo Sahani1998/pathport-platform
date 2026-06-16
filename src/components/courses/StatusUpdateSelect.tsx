@@ -4,10 +4,13 @@ import { useState } from "react";
 import { Loader2, AlertCircle } from "lucide-react";
 import type { ApplicationStage } from "@/types/timeline";
 import { STAGE_META } from "@/types/timeline";
+import { ALLOWED_TRANSITIONS } from "@/lib/application-workflow";
 
-// Curated subset of stages available for quick inline updates from the
-// institution applications list. Full stage pipeline is managed via the
-// application detail page.
+// Curated subset of stages surfaced for quick inline updates from the
+// institution applications list. The final option list is intersected with
+// ALLOWED_TRANSITIONS for the current stage so the dropdown can never offer a
+// jump the /stage route would reject (e.g. offer_letter_accepted →
+// documents_uploaded). Full stage management lives on the detail page.
 const QUICK_STAGES: ApplicationStage[] = [
   "application_submitted",
   "documents_pending",
@@ -17,8 +20,6 @@ const QUICK_STAGES: ApplicationStage[] = [
   "approved",
   "rejected",
 ];
-
-const QUICK_STAGE_META = STAGE_META.filter(s => QUICK_STAGES.includes(s.value));
 
 interface StatusUpdateSelectProps {
   applicationId: string;
@@ -71,7 +72,16 @@ export default function StatusUpdateSelect({
     }
   };
 
-  const meta = QUICK_STAGE_META.find(s => s.value === stage)
+  // Current stage is always selectable (so the control reflects reality); the
+  // remaining options are the curated quick stages that are ALSO valid
+  // transitions from the current stage. This mirrors the backend's
+  // canTransition() gate, so the UI never offers an invalid jump.
+  const validNext    = new Set<ApplicationStage>(ALLOWED_TRANSITIONS[currentStage] ?? []);
+  const stageOptions = STAGE_META.filter(
+    s => s.value === currentStage || (QUICK_STAGES.includes(s.value) && validNext.has(s.value)),
+  );
+
+  const meta = stageOptions.find(s => s.value === stage)
     ?? STAGE_META.find(s => s.value === stage);
 
   return (
@@ -84,7 +94,7 @@ export default function StatusUpdateSelect({
           disabled={loading}
           className={`px-3 py-1.5 rounded-xl border font-body text-xs font-semibold appearance-none cursor-pointer focus:outline-none focus:ring-1 focus:ring-gold-400/30 transition-all disabled:opacity-50 [color-scheme:dark] ${meta?.color ?? ""}`}
         >
-          {QUICK_STAGE_META.map(s => (
+          {stageOptions.map(s => (
             <option key={s.value} value={s.value} style={{ backgroundColor: "#0a1024", color: "#fff" }}>
               {s.label}
             </option>
