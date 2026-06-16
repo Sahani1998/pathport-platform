@@ -83,10 +83,18 @@ export default function DocumentUploadCard({
 
       console.log("[DocumentUpload] uploading to:", storagePath);
 
-      // Upload to Supabase Storage
-      const { error: uploadError } = await supabase.storage
+      // Upload to Supabase Storage — race against a 60-second hard timeout so
+      // a stalled network request can't leave the button stuck on "Uploading…".
+      const uploadPromise = supabase.storage
         .from("student-documents")
         .upload(storagePath, file, { upsert: true });
+
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("Upload timed out. Check your connection and try again.")), 60_000)
+      );
+
+      const uploadResult = await Promise.race([uploadPromise, timeoutPromise]) as Awaited<typeof uploadPromise>;
+      const uploadError  = uploadResult?.error;
 
       if (uploadError) {
         console.error("[DocumentUpload] storage error:", uploadError.message);

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import type { Notification } from "@/types/timeline";
 import { NOTIFICATION_TYPE_META } from "@/types/timeline";
@@ -20,6 +21,7 @@ export default function NotificationList({
   onAllRead,
   applicationBasePath,
 }: NotificationListProps) {
+  const router = useRouter();
   const [items,   setItems]   = useState<Notification[]>(initial);
   const [marking, setMarking] = useState(false);
 
@@ -31,6 +33,7 @@ export default function NotificationList({
       .eq("id", id);
     if (!error) {
       setItems(prev => prev.map(n => n.id === id ? { ...n, read_at: new Date().toISOString() } : n));
+      router.refresh(); // re-fetches layout so sidebar badge updates
     }
   };
 
@@ -49,6 +52,7 @@ export default function NotificationList({
       const now = new Date().toISOString();
       setItems(prev => prev.map(n => ({ ...n, read_at: n.read_at ?? now })));
       onAllRead?.();
+      router.refresh(); // re-fetches layout so sidebar badge clears
     }
     setMarking(false);
   };
