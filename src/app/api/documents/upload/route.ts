@@ -114,6 +114,25 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // Deactivate any prior active row for this slot so the partial unique
+  // index (application_id, document_type) WHERE is_active=true permits the
+  // insert below. Historical rows are retained for audit + document_reviews.
+  const { error: deactivateError } = await adminDb
+    .from("student_documents")
+    .update({ is_active: false })
+    .eq("application_id", applicationId)
+    .eq("document_type",  documentType)
+    .eq("is_active",      true);
+
+  if (deactivateError) {
+    await adminDb.storage.from("student-documents").remove([storagePath]);
+    console.error("[DocUpload] deactivate prior version error:", deactivateError.message);
+    return NextResponse.json(
+      { error: `Failed to supersede prior upload: ${deactivateError.message}` },
+      { status: 500 },
+    );
+  }
+
   // Insert DB record — admin client, no RLS complications
   const { data: inserted, error: dbError } = await adminDb
     .from("student_documents")
@@ -127,12 +146,15 @@ export async function POST(request: NextRequest) {
       mime_type:      file.type,
       file_size:      file.size,
       status:         "pending",
+      is_active:      true,
     })
     .select()
     .single();
 
   if (dbError) {
-    // Roll back the storage upload so we don't leave orphan files
+    // Roll back the storage upload so we don't leave orphan files. Older
+    // versions stay deactivated — they're historical records; the student
+    // can retry the upload (the next attempt's deactivate step is a no-op).
     await adminDb.storage.from("student-documents").remove([storagePath]);
     console.error("[DocUpload] DB insert error:", dbError.message);
     return NextResponse.json(

@@ -21,7 +21,11 @@ CREATE TABLE IF NOT EXISTS public.student_documents (
   rejection_reason TEXT,
   uploaded_at      TIMESTAMPTZ DEFAULT NOW(),
   reviewed_at      TIMESTAMPTZ,
-  reviewed_by      UUID                    REFERENCES auth.users(id) ON DELETE SET NULL
+  reviewed_by      UUID                    REFERENCES auth.users(id) ON DELETE SET NULL,
+  -- Dedup: only ONE active row per (application_id, document_type) slot.
+  -- Older versions retained with is_active=false for audit + review history.
+  -- Enforced by the partial unique index in sprint17_doc_dedup.sql.
+  is_active        BOOLEAN     NOT NULL DEFAULT TRUE
 );
 
 

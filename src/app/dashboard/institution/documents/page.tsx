@@ -55,18 +55,20 @@ export default async function InstitutionDocumentsPage({
   const filterCourse = (sp.course ?? "").trim();
 
   // ── Fetch documents for this college ───────────────────────────────────────
-  // Two-query pattern (FK to auth.users, can't use implicit PostgREST join)
+  // Two-query pattern (FK to auth.users, can't use implicit PostgREST join).
+  // is_active=true filters out superseded uploads (see sprint17_doc_dedup.sql).
   let docsQuery = supabase
     .from("student_documents")
     .select(`
       id, student_id, application_id, document_type,
       file_name, file_url, file_path, mime_type, file_size,
-      status, rejection_reason, uploaded_at, reviewed_at, reviewed_by,
+      status, rejection_reason, uploaded_at, reviewed_at, reviewed_by, is_active,
       applications (
         id, current_stage,
         courses ( title, colleges ( name ) )
       )
     `)
+    .eq("is_active", true)
     .order("uploaded_at", { ascending: false });
 
   if (filterStatus !== "all") {

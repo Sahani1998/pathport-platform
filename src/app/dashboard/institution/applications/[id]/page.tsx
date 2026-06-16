@@ -79,7 +79,7 @@ export default async function InstitutionApplicationDetailPage({
     ipaRes,
   ] = await Promise.all([
     supabase.from("profiles").select("full_name, email, country").eq("id", app.student_id).single(),
-    supabase.from("student_documents").select("*").eq("application_id", id).order("uploaded_at", { ascending: false }),
+    supabase.from("student_documents").select("*").eq("application_id", id).eq("is_active", true).order("uploaded_at", { ascending: false }),
     supabase
       .from("offer_letters")
       .select(`

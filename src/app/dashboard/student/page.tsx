@@ -40,7 +40,8 @@ export default async function StudentDashboardPage() {
     supabase
       .from("student_documents")
       .select("id, status, document_type")
-      .eq("student_id", user.id),
+      .eq("student_id", user.id)
+      .eq("is_active",  true),
 
     supabase
       .from("notifications")

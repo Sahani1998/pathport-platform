@@ -36,10 +36,10 @@ export default async function AdminDocumentsPage({
     { count: verifiedDocs },
     { count: rejectedDocs },
   ] = await Promise.all([
-    supabase.from("student_documents").select("*", { count: "exact", head: true }),
-    supabase.from("student_documents").select("*", { count: "exact", head: true }).eq("status", "pending"),
-    supabase.from("student_documents").select("*", { count: "exact", head: true }).eq("status", "verified"),
-    supabase.from("student_documents").select("*", { count: "exact", head: true }).eq("status", "rejected"),
+    supabase.from("student_documents").select("*", { count: "exact", head: true }).eq("is_active", true),
+    supabase.from("student_documents").select("*", { count: "exact", head: true }).eq("is_active", true).eq("status", "pending"),
+    supabase.from("student_documents").select("*", { count: "exact", head: true }).eq("is_active", true).eq("status", "verified"),
+    supabase.from("student_documents").select("*", { count: "exact", head: true }).eq("is_active", true).eq("status", "rejected"),
   ]);
 
   // Main query — fetch documents with application/course/college join only.
@@ -54,6 +54,7 @@ export default async function AdminDocumentsPage({
         courses ( title, colleges ( name ) )
       )
     `)
+    .eq("is_active", true)
     .order("uploaded_at", { ascending: false })
     .limit(100);
 

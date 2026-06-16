@@ -136,6 +136,7 @@ export default async function InstitutionDashboardPage() {
       ? supabase.from("student_documents")
           .select("id, document_type, status, uploaded_at, student_id, application_id")
           .in("application_id", appIds)
+          .eq("is_active", true)
           .order("uploaded_at", { ascending: false })
       : Promise.resolve({ data: [] as Array<Record<string, unknown>> }),
     appIds.length

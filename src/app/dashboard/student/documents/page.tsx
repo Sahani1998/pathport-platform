@@ -29,6 +29,7 @@ export default async function StudentDocumentsPage() {
       .from("student_documents")
       .select("*")
       .eq("student_id", user.id)
+      .eq("is_active",  true)
       .order("uploaded_at", { ascending: false }),
   ]);
 
