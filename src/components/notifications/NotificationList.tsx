@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import type { Notification } from "@/types/timeline";
 import { NOTIFICATION_TYPE_META } from "@/types/timeline";
 import Link from "next/link";
-import { CheckCheck, Loader2 } from "lucide-react";
+import { CheckCheck, Loader2, AlertCircle } from "lucide-react";
 
 interface NotificationListProps {
   notifications:  Notification[];
@@ -22,8 +22,9 @@ export default function NotificationList({
   applicationBasePath,
 }: NotificationListProps) {
   const router = useRouter();
-  const [items,   setItems]   = useState<Notification[]>(initial);
-  const [marking, setMarking] = useState(false);
+  const [items,      setItems]     = useState<Notification[]>(initial);
+  const [marking,    setMarking]   = useState(false);
+  const [markError,  setMarkError] = useState<string | null>(null);
 
   const markAsRead = async (id: string) => {
     const supabase = createClient();
@@ -33,12 +34,13 @@ export default function NotificationList({
       .eq("id", id);
     if (!error) {
       setItems(prev => prev.map(n => n.id === id ? { ...n, read_at: new Date().toISOString() } : n));
-      router.refresh(); // re-fetches layout so sidebar badge updates
+      router.refresh();
     }
   };
 
   const markAllRead = async () => {
     setMarking(true);
+    setMarkError(null);
     const supabase    = createClient();
     const unreadIds   = items.filter(n => !n.read_at).map(n => n.id);
     if (unreadIds.length === 0) { setMarking(false); return; }
@@ -52,7 +54,9 @@ export default function NotificationList({
       const now = new Date().toISOString();
       setItems(prev => prev.map(n => ({ ...n, read_at: n.read_at ?? now })));
       onAllRead?.();
-      router.refresh(); // re-fetches layout so sidebar badge clears
+      router.refresh();
+    } else {
+      setMarkError("Failed to mark notifications as read. Please try again.");
     }
     setMarking(false);
   };
@@ -73,6 +77,13 @@ export default function NotificationList({
             {marking ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCheck className="w-3.5 h-3.5" />}
             Mark all read
           </button>
+        </div>
+      )}
+
+      {markError && (
+        <div className="flex items-start gap-2 p-3 rounded-xl bg-red-500/[0.08] border border-red-400/20">
+          <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
+          <p className="text-red-400 font-body text-xs">{markError}</p>
         </div>
       )}
 
