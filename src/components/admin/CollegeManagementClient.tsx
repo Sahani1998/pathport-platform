@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Plus, Building2, Globe, Pencil, Power, Trash2, X, Save, Loader2, BookOpen, ArrowRight } from "lucide-react";
+import { Plus, Building2, Globe, Pencil, Power, Trash2, X, Save, Loader2, BookOpen, ArrowRight, CreditCard, Hash } from "lucide-react";
 
 interface College {
   id: string;
@@ -13,6 +13,7 @@ interface College {
   city: string;
   website: string | null;
   is_active: boolean;
+  short_code: string | null;
   created_at: string;
 }
 
@@ -21,8 +22,8 @@ interface Props {
   courseCounts: Record<string, number>;
 }
 
-type FormValues = { name: string; slug: string; city: string; country: string; website: string };
-const EMPTY: FormValues = { name: "", slug: "", city: "Singapore", country: "Singapore", website: "" };
+type FormValues = { name: string; slug: string; city: string; country: string; website: string; short_code: string };
+const EMPTY: FormValues = { name: "", slug: "", city: "Singapore", country: "Singapore", website: "", short_code: "" };
 
 function slugify(s: string) {
   return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
@@ -50,7 +51,10 @@ export default function CollegeManagementClient({ colleges: initial, courseCount
 
   const openAdd = () => { setForm(EMPTY); setEditId(null); setError(null); setShowForm(true); };
   const openEdit = (c: College) => {
-    setForm({ name: c.name, slug: c.slug, city: c.city, country: c.country, website: c.website ?? "" });
+    setForm({
+      name: c.name, slug: c.slug, city: c.city, country: c.country,
+      website: c.website ?? "", short_code: c.short_code ?? "",
+    });
     setEditId(c.id);
     setError(null);
     setShowForm(true);
@@ -63,10 +67,21 @@ export default function CollegeManagementClient({ colleges: initial, courseCount
     try {
       const url    = editId ? `/api/colleges/${editId}` : "/api/colleges";
       const method = editId ? "PATCH" : "POST";
+      const payload: Record<string, unknown> = { ...form, website: form.website || null };
+      const trimmedCode = form.short_code.trim().toUpperCase();
+      if (trimmedCode === "") {
+        // Allow clearing short_code on edit; omit on create (server will derive).
+        if (editId) payload.short_code = null; else delete payload.short_code;
+      } else {
+        if (!/^[A-Z]{2,6}$/.test(trimmedCode)) {
+          throw new Error("Short code must be 2–6 uppercase letters (e.g. DIM, MDIS)");
+        }
+        payload.short_code = trimmedCode;
+      }
       const res  = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, website: form.website || null }),
+        body: JSON.stringify(payload),
       });
       const data = await res.json() as College & { error?: string };
       if (!res.ok) throw new Error(data.error ?? "Failed to save");
@@ -166,15 +181,30 @@ export default function CollegeManagementClient({ colleges: initial, courseCount
             ))}
           </div>
 
-          <div>
-            <label className="block text-white/40 font-body text-[10px] uppercase tracking-wider mb-1.5">Website</label>
-            <input
-              type="url"
-              value={form.website}
-              onChange={setField("website")}
-              placeholder="https://www.college.edu.sg"
-              className="w-full px-3 py-2.5 rounded-xl bg-white/[0.06] border border-white/[0.1] text-white placeholder-white/20 font-body text-sm focus:outline-none focus:border-gold-400/50 transition-colors"
-            />
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="sm:col-span-2">
+              <label className="block text-white/40 font-body text-[10px] uppercase tracking-wider mb-1.5">Website</label>
+              <input
+                type="url"
+                value={form.website}
+                onChange={setField("website")}
+                placeholder="https://www.college.edu.sg"
+                className="w-full px-3 py-2.5 rounded-xl bg-white/[0.06] border border-white/[0.1] text-white placeholder-white/20 font-body text-sm focus:outline-none focus:border-gold-400/50 transition-colors"
+              />
+            </div>
+            <div>
+              <label className="block text-white/40 font-body text-[10px] uppercase tracking-wider mb-1.5">Short Code</label>
+              <input
+                value={form.short_code}
+                onChange={(e) => setForm(f => ({ ...f, short_code: e.target.value.toUpperCase() }))}
+                placeholder="DIM"
+                maxLength={6}
+                pattern="[A-Z]{2,6}"
+                title="2–6 uppercase letters"
+                className="w-full px-3 py-2.5 rounded-xl bg-white/[0.06] border border-white/[0.1] text-white placeholder-white/20 font-body text-sm font-mono focus:outline-none focus:border-gold-400/50 transition-colors"
+              />
+              <p className="mt-1 text-white/55 font-body text-[10px]">Used in invoice numbers: <span className="font-mono text-white/75">{(form.short_code || "XXX").trim().toUpperCase()}-INV-2026-0001</span></p>
+            </div>
           </div>
 
           {error && <p className="text-red-400 font-body text-xs">{error}</p>}
@@ -214,9 +244,16 @@ export default function CollegeManagementClient({ colleges: initial, courseCount
                 </span>
               </div>
 
-              <div className="flex items-center gap-2 text-white/35 font-body text-xs">
-                <Building2 className="w-3 h-3 flex-shrink-0" />
-                <span>{c.city}, {c.country}</span>
+              <div className="flex items-center gap-3 flex-wrap text-white/35 font-body text-xs">
+                <span className="flex items-center gap-1.5">
+                  <Building2 className="w-3 h-3 flex-shrink-0" />
+                  {c.city}, {c.country}
+                </span>
+                {c.short_code && (
+                  <span className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-white/[0.05] border border-white/[0.08] font-mono text-[10px] text-white/55">
+                    <Hash className="w-2.5 h-2.5" /> {c.short_code}
+                  </span>
+                )}
               </div>
 
               <div className="flex items-center justify-between">
@@ -237,13 +274,19 @@ export default function CollegeManagementClient({ colleges: initial, courseCount
               </div>
 
               {/* Actions */}
-              <div className="flex items-center gap-2 pt-1 border-t border-white/[0.06]">
+              <div className="flex items-center gap-2 pt-1 border-t border-white/[0.06] flex-wrap">
                 <button
                   onClick={() => openEdit(c)}
                   className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-white/[0.1] text-white/45 font-body text-xs hover:text-white/70 hover:border-white/20 transition-all"
                 >
                   <Pencil className="w-3 h-3" /> Edit
                 </button>
+                <Link
+                  href={`/dashboard/admin/colleges/${c.id}/payment-settings`}
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-white/[0.1] text-white/45 font-body text-xs hover:text-gold-400 hover:border-gold-400/25 transition-all"
+                >
+                  <CreditCard className="w-3 h-3" /> Payments
+                </Link>
                 <button
                   onClick={() => toggleActive(c)}
                   disabled={busyId === c.id}

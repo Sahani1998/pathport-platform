@@ -5,7 +5,7 @@ import DeleteCourseButton from "@/components/courses/DeleteCourseButton";
 import type { Course } from "@/types/courses";
 import {
   BookOpen, Plus, Edit2, Users, ChevronRight,
-  Building2, GraduationCap, Info,
+  Building2, GraduationCap, Info, Receipt,
 } from "lucide-react";
 
 function fmtSGD(n: number) {
@@ -204,6 +204,13 @@ export default async function InstitutionCoursesPage() {
                       </td>
                       <td className="px-5 py-4">
                         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Link
+                            href={`/dashboard/institution/courses/${course.id}/fee-schedules`}
+                            className="p-2 rounded-xl text-white/40 hover:text-gold-400 hover:bg-gold-400/10 border border-transparent hover:border-gold-400/20 transition-all"
+                            title="Fee Schedules"
+                          >
+                            <Receipt className="w-4 h-4" />
+                          </Link>
                           <Link
                             href={`/dashboard/institution/courses/${course.id}/edit`}
                             className="p-2 rounded-xl text-white/40 hover:text-gold-400 hover:bg-gold-400/10 border border-transparent hover:border-gold-400/20 transition-all"

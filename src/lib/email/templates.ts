@@ -58,6 +58,11 @@ export type EmailTemplate =
   | "offer_letter_accepted"
   | "offer_letter_decision_internal"
   | "fee_payment_reminder"
+  | "invoice_issued"
+  | "payment_verified"
+  | "payment_rejected"
+  | "payment_info_requested"
+  | "official_receipt_issued"
   | "ipa_processing"
   | "ipa_approved"
   | "arrival_preparation"
@@ -77,6 +82,8 @@ export interface TemplateContext {
   applicationId?: string;
   amount?: string;
   dueDate?: string;
+  invoiceNumber?: string;
+  receiptNumber?: string;
   studentName?: string;
   documentType?: string;
   comment?: string | null;
@@ -230,6 +237,19 @@ export const TEMPLATES: Record<EmailTemplate, (ctx: TemplateContext) => Rendered
     ),
   }),
 
+  invoice_issued: ctx => ({
+    subject: `Invoice ${ctx.invoiceNumber ?? "issued"} — ${ctx.courseName ?? "your course"}`,
+    html: shell(
+      h1("Your invoice is ready") +
+      p(`Hi ${ctx.name ?? "there"}, ${ctx.collegeName ?? "your college"} has issued an invoice for <strong style="color:#fff">${ctx.courseName ?? "your course"}</strong>.`) +
+      (ctx.invoiceNumber ? highlight("Invoice Number", ctx.invoiceNumber) : "") +
+      (ctx.amount       ? highlight("Amount Due",     ctx.amount)        : "") +
+      (ctx.dueDate      ? p(`<strong style="color:rgba(255,255,255,.85)">Due by:</strong> ${ctx.dueDate}`) : "") +
+      p("Sign in to view the invoice, choose a payment method (Bank Transfer or Wise) and upload your transfer proof when ready.") +
+      cta(dashboardUrl, "View Invoice →")
+    ),
+  }),
+
   ipa_processing: ctx => ({
     subject: "Your IPA application is being processed",
     html: shell(
@@ -341,6 +361,52 @@ export const TEMPLATES: Record<EmailTemplate, (ctx: TemplateContext) => Rendered
       (ctx.reason ? highlight("Reason", ctx.reason) : "") +
       p("If you believe this is an error or would like to discuss further, please reply to this email. You are welcome to reapply in the future.") +
       cta(`${SITE_URL}/partner-with-us`, "Apply Again →")
+    ),
+  }),
+
+  payment_verified: ctx => ({
+    subject: `Payment confirmed — ${ctx.invoiceNumber ?? "your invoice"}`,
+    html: shell(
+      h1("Your payment has been verified") +
+      p(`Hi ${ctx.name ?? "there"}, great news! Your payment for <strong style="color:#fff">${ctx.courseName ?? "your course"}</strong> has been verified by ${ctx.collegeName ?? "the institution"}.`) +
+      (ctx.invoiceNumber ? highlight("Invoice", ctx.invoiceNumber) : "") +
+      (ctx.amount ? highlight("Amount Confirmed", ctx.amount) : "") +
+      p("Your application will now advance to the IPA processing stage. We'll notify you as soon as your In-Principle Approval is submitted to ICA.") +
+      cta(dashboardUrl, "Track My Application →")
+    ),
+  }),
+
+  payment_rejected: ctx => ({
+    subject: `Payment not accepted — action required`,
+    html: shell(
+      h1("Payment could not be verified") +
+      p(`Hi ${ctx.name ?? "there"}, unfortunately the payment proof you submitted for <strong style="color:#fff">${ctx.courseName ?? "your course"}</strong> could not be verified.`) +
+      (ctx.reason ? highlight("Reason", ctx.reason) : "") +
+      p("Please review the feedback above and either upload a new proof or contact the college finance team if you believe this is an error.") +
+      cta(dashboardUrl, "View Invoice →")
+    ),
+  }),
+
+  payment_info_requested: ctx => ({
+    subject: `Additional information needed — payment verification`,
+    html: shell(
+      h1("Additional information requested") +
+      p(`Hi ${ctx.name ?? "there"}, the finance team at ${ctx.collegeName ?? "the institution"} has reviewed your payment proof for <strong style="color:#fff">${ctx.courseName ?? "your course"}</strong> and requires some additional information.`) +
+      (ctx.message ? quote(ctx.message) : "") +
+      p("Please upload updated proof or a revised document via your invoice page.") +
+      cta(dashboardUrl, "View Invoice →")
+    ),
+  }),
+
+  official_receipt_issued: ctx => ({
+    subject: `Official receipt issued — ${ctx.receiptNumber ?? "your payment"}`,
+    html: shell(
+      h1("Your official receipt is ready") +
+      p(`Hi ${ctx.name ?? "there"}, an official receipt has been issued for your payment towards <strong style="color:#fff">${ctx.courseName ?? "your course"}</strong> at ${ctx.collegeName ?? "the institution"}.`) +
+      (ctx.receiptNumber ? highlight("Receipt Number", ctx.receiptNumber) : "") +
+      (ctx.amount ? highlight("Amount Receipted", ctx.amount) : "") +
+      p("You can download your official receipt from your invoice page. Keep it for your records.") +
+      cta(dashboardUrl, "Download Receipt →")
     ),
   }),
 };

@@ -26,12 +26,12 @@ export default function ForgotPasswordPage() {
     setError(null);
     setLoading(true);
 
-    // Use the live browser origin — NOT NEXT_PUBLIC_SITE_URL — so the redirect
-    // always matches the domain the user is actually on (production, preview,
-    // or team domain). A mismatched URL gets silently replaced by Supabase
-    // with the project Site URL, landing users on the homepage.
-    const redirectUrl = `${window.location.origin}/reset-password`;
-    console.log("PASSWORD_RESET_REDIRECT", redirectUrl);
+    // Always use the canonical production URL — baked in at build time.
+    // window.location.origin would produce git-branch preview domains that are
+    // never on the Supabase redirect allowlist, causing Supabase to silently
+    // substitute the Site URL (homepage) and break the reset flow.
+    const siteUrl     = process.env.NEXT_PUBLIC_SITE_URL ?? "https://pathport.sg";
+    const redirectUrl = `${siteUrl}/reset-password`;
     const { error: resetError } = await supabase.auth.resetPasswordForEmail(
       email.trim(),
       { redirectTo: redirectUrl }

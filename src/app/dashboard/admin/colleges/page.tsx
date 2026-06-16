@@ -15,7 +15,7 @@ export default async function AdminCollegesPage() {
   const [{ data: colleges }, { data: courseCounts }] = await Promise.all([
     supabase
       .from("colleges")
-      .select("id, name, slug, country, city, website, is_active, created_at")
+      .select("id, name, slug, country, city, website, is_active, short_code, created_at")
       .order("name"),
     supabase.from("courses").select("college_id"),
   ]);

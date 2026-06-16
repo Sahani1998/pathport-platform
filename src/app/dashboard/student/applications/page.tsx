@@ -17,9 +17,11 @@ import {
 } from "@/lib/application-workflow";
 import {
   FileText, Building2, BookOpen, CheckCircle2, XCircle,
-  Upload, Bell, Download,
+  Upload, Bell, Download, Receipt, ChevronRight,
 } from "lucide-react";
 import WithdrawButton from "@/components/applications/WithdrawButton";
+import { INVOICE_STATUS_META, type StudentInvoice } from "@/types/payment";
+import { formatCents } from "@/lib/payments/invoice-helpers";
 
 function fmtSGD(n: number) {
   return `S$${n.toLocaleString("en-SG")}`;
@@ -43,6 +45,7 @@ export default async function StudentApplicationsPage() {
     { data: events },
     { data: offerLetterRows },
     ipaRes,
+    { data: invoiceRows },
   ] = await Promise.all([
     supabase
       .from("applications")
@@ -75,6 +78,12 @@ export default async function StudentApplicationsPage() {
     supabase
       .from("ipa_records")
       .select("*")
+      .order("created_at", { ascending: false }),
+
+    supabase
+      .from("student_invoices")
+      .select("id, application_id, public_id, status, amount_cents, currency, due_date, source")
+      .eq("student_id", user.id)
       .order("created_at", { ascending: false }),
   ]);
 
@@ -114,6 +123,14 @@ export default async function StudentApplicationsPage() {
   for (const evt of (events ?? []) as ApplicationTimelineEvent[]) {
     if (!eventsMap.has(evt.application_id)) eventsMap.set(evt.application_id, []);
     eventsMap.get(evt.application_id)!.push(evt);
+  }
+
+  // Invoices map (Sprint 17)
+  type StudentInvoiceLite = Pick<StudentInvoice, "id" | "application_id" | "public_id" | "status" | "amount_cents" | "currency" | "due_date" | "source">;
+  const invoicesMap = new Map<string, StudentInvoiceLite[]>();
+  for (const inv of ((invoiceRows ?? []) as StudentInvoiceLite[])) {
+    if (!invoicesMap.has(inv.application_id)) invoicesMap.set(inv.application_id, []);
+    invoicesMap.get(inv.application_id)!.push(inv);
   }
 
   const stats = {
@@ -278,6 +295,39 @@ export default async function StudentApplicationsPage() {
             {appOfferLetters.length > 0 && (
               <div className="px-5 pb-4">
                 <StudentOfferLetterCard letters={appOfferLetters} />
+              </div>
+            )}
+
+            {/* Invoices — only when at least one issued invoice exists (Sprint 17) */}
+            {(invoicesMap.get(app.id) ?? []).length > 0 && (
+              <div className="px-5 pb-4 space-y-2">
+                {(invoicesMap.get(app.id) ?? []).map(inv => {
+                  const meta = INVOICE_STATUS_META[inv.status];
+                  const actionable = inv.status === "pending" || inv.status === "payment_action_required";
+                  return (
+                    <Link key={inv.id} href={`/dashboard/student/invoices/${inv.id}`}
+                      className={`flex items-center justify-between gap-3 p-4 rounded-2xl border transition-all group ${
+                        actionable
+                          ? "bg-gold-400/[0.06] border-gold-400/30 hover:bg-gold-400/[0.12] hover:border-gold-400/50"
+                          : "bg-white/[0.04] border-white/[0.08] hover:border-white/[0.15]"
+                      }`}>
+                      <div className="flex items-center gap-3 min-w-0">
+                        <Receipt className={`w-4 h-4 flex-shrink-0 ${actionable ? "text-gold-400" : "text-white/45"}`} />
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="font-mono font-semibold text-sm text-white/85">{inv.public_id ?? "Invoice"}</p>
+                            <span className={`px-2 py-0.5 rounded-full border font-body text-[10px] font-semibold ${meta.color}`}>{meta.label}</span>
+                          </div>
+                          <p className="font-body text-xs text-white/45 mt-0.5">
+                            {formatCents(inv.amount_cents, inv.currency)}
+                            {inv.due_date && <> · due {new Date(inv.due_date).toLocaleDateString("en-SG", { dateStyle: "medium" })}</>}
+                          </p>
+                        </div>
+                      </div>
+                      <ChevronRight className={`w-4 h-4 flex-shrink-0 ${actionable ? "text-gold-400" : "text-white/30"} group-hover:translate-x-0.5 transition-transform`} />
+                    </Link>
+                  );
+                })}
               </div>
             )}
 

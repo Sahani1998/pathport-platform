@@ -1,9 +1,9 @@
-// Rate limiter — sliding window per IP.
+// Rate limiter — fixed window per IP.
 //
-// Default: in-memory Map (good for low-traffic, single-instance deployments).
-// Production swap: set UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN and the
-// limiter automatically uses Upstash via @upstash/ratelimit when installed.
-// The adapter is a thin interface so we can drop in any backend.
+// Default: in-memory Map (adequate for dev / single-instance).
+// Production: set UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN env vars
+// and the limiter automatically switches to Upstash (shared across all
+// serverless instances, survives cold starts).
 
 interface Backend {
   check(key: string, limit: number, windowMs: number): Promise<RateLimitResult>;
@@ -38,10 +38,52 @@ const inMemoryBackend: Backend = {
   },
 };
 
+// ─── Upstash Redis backend ────────────────────────────────────────────────────
+// Uses the Upstash REST API via fetch — no SDK required. Activates when both
+// env vars are present; falls back to in-memory if Redis is unreachable.
+
+const upstashBackend: Backend = {
+  async check(key, limit, windowMs) {
+    const url   = process.env.UPSTASH_REDIS_REST_URL!;
+    const token = process.env.UPSTASH_REDIS_REST_TOKEN!;
+    const now        = Date.now();
+    const windowSec  = Math.ceil(windowMs / 1000);
+    const windowSlot = Math.floor(now / windowMs);
+    const windowKey  = `rl:${key}:${windowSlot}`;
+    const resetAt    = (windowSlot + 1) * windowMs;
+
+    try {
+      const res = await fetch(`${url}/pipeline`, {
+        method:  "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body:    JSON.stringify([
+          ["INCR",   windowKey],
+          ["EXPIRE", windowKey, windowSec],
+        ]),
+        signal: AbortSignal.timeout(2_000),
+      });
+
+      if (!res.ok) throw new Error(`Upstash ${res.status}`);
+
+      const data  = await res.json() as [{ result: number }, unknown];
+      const count = data[0]?.result ?? 1;
+
+      if (count > limit) {
+        return { success: false, remaining: 0, resetAt };
+      }
+      return { success: true, remaining: limit - count, resetAt };
+    } catch (err) {
+      // Fail open: never block a request because Redis is down
+      console.error("[RateLimit] Upstash error (fail-open):", err);
+      return { success: true, remaining: limit - 1, resetAt };
+    }
+  },
+};
+
 // ─── Active backend ───────────────────────────────────────────────────────────
-// To switch to Upstash, replace this with a backend that calls the Upstash REST
-// API. We keep the contract identical so call sites never change.
-const backend: Backend = inMemoryBackend;
+const backend: Backend = (
+  process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN
+) ? upstashBackend : inMemoryBackend;
 
 // ─── Public API ───────────────────────────────────────────────────────────────
 //
@@ -123,4 +165,14 @@ export const LIMITS = {
   offerDecision:       { limit: 10, windowMs: 60_000  },
   ipaWrite:            { limit: 20, windowMs: 60_000  },
   notes:               { limit: 30, windowMs: 60_000  },
+  coursesDelete:       { limit: 10, windowMs: 60_000  },
+
+  // Sprint 17 — finance
+  invoiceRead:         { limit: 60, windowMs: 60_000  },
+  invoiceWrite:        { limit: 20, windowMs: 60_000  },
+  proofUpload:         { limit: 10, windowMs: 60_000  },
+  paymentVerify:       { limit: 30, windowMs: 60_000  },
+  verificationQueue:   { limit: 60, windowMs: 60_000  },
+  paymentSettings:     { limit: 20, windowMs: 60_000  },
+  feeSchedule:         { limit: 20, windowMs: 60_000  },
 } as const;

@@ -30,6 +30,19 @@ export async function PATCH(
     if (field in body) updates[field] = body[field];
   }
 
+  // short_code — 2–6 uppercase letters or null to clear. Migration enforces format
+  // + uniqueness at the DB level; we validate here for a nicer error message.
+  if ("short_code" in body) {
+    const v = body.short_code;
+    if (v === null || v === "") {
+      updates.short_code = null;
+    } else if (typeof v === "string" && /^[A-Z]{2,6}$/.test(v.trim().toUpperCase())) {
+      updates.short_code = v.trim().toUpperCase();
+    } else {
+      return NextResponse.json({ error: "short_code must be 2–6 uppercase letters" }, { status: 400 });
+    }
+  }
+
   const { data, error } = await supabase
     .from("colleges")
     .update(updates)
@@ -37,7 +50,12 @@ export async function PATCH(
     .select()
     .single();
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    if (error.code === "23505") {
+      return NextResponse.json({ error: "Short code already used by another college" }, { status: 409 });
+    }
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
   return NextResponse.json(data);
 }
 
