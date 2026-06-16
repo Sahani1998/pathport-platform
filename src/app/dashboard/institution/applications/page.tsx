@@ -4,6 +4,7 @@ import Link from "next/link";
 import StatusUpdateSelect from "@/components/courses/StatusUpdateSelect";
 import type { ApplicationWithCourse } from "@/types/courses";
 import { APPLICATION_STATUSES } from "@/types/courses";
+import { resolveStage } from "@/lib/application-stage-mapping";
 import {
   FileText, Search, Users,
   CheckCircle2, Clock, TrendingUp, ChevronLeft, ChevronRight,
@@ -297,7 +298,7 @@ export default async function InstitutionApplicationsPage({
                         <div className="flex items-center gap-2">
                           <StatusUpdateSelect
                             applicationId={app.id}
-                            currentStage={(app.current_stage as import("@/types/timeline").ApplicationStage) ?? "application_submitted"}
+                            currentStage={resolveStage(app.current_stage, app.status)}
                           />
                           <Link
                             href={`/dashboard/institution/applications/${app.id}`}

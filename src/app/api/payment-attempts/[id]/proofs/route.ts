@@ -105,28 +105,43 @@ export async function POST(
     return NextResponse.json({ error: insErr.message }, { status: 500 });
   }
 
+  // Status transitions MUST run through the admin (service-role) client.
+  // Student RLS on payment_attempts and student_invoices grants SELECT/INSERT
+  // only — there is NO student UPDATE policy — so a user-scoped update silently
+  // matches 0 rows and the proof would appear stuck on "Initiated" with the
+  // invoice stuck on "Awaiting Payment", hiding the institution's verification
+  // actions. The student_invoices guard trigger only blocks financial-field
+  // changes, so a status-only update is permitted.
+  const adminDb = createAdminClient();
+
   // Advance attempt → proof_submitted (only if currently initiated/info_requested/rejected).
   // 'rejected' attempts can accept a new proof — they go back to proof_submitted.
   if (attempt.status === "initiated" || attempt.status === "info_requested" || attempt.status === "rejected") {
-    await supabase
+    const { error: attStatusErr } = await adminDb
       .from("payment_attempts")
       .update({ status: "proof_submitted" })
       .eq("id", attemptId);
+    if (attStatusErr) {
+      // The proof row exists but the attempt is still "initiated" — surface this
+      // rather than letting it fail silently, so the queue never goes stale.
+      console.error("[Proof] attempt status update failed:", attStatusErr.message);
+      return NextResponse.json(
+        { error: "Proof uploaded, but the payment status could not be updated. Please contact support." },
+        { status: 500 },
+      );
+    }
   }
 
   // Advance invoice → under_verification if currently pending or payment_action_required.
-  const { data: inv } = await supabase
+  const { data: inv } = await adminDb
     .from("student_invoices").select("status, public_id, currency, amount_cents").eq("id", attempt.invoice_id).single();
   if (inv && (inv.status === "pending" || inv.status === "payment_action_required")) {
-    await supabase
+    const { error: invStatusErr } = await adminDb
       .from("student_invoices")
       .update({ status: "under_verification" })
       .eq("id", attempt.invoice_id);
+    if (invStatusErr) console.error("[Proof] invoice status update failed:", invStatusErr.message);
   }
-
-  // Side effects: notify institution finance contact + timeline event.
-  // Admin client because students can't write to notifications / audit.
-  const adminDb = createAdminClient();
 
   const [{ data: appRow }, { data: studentProfile }] = await Promise.all([
     adminDb.from("applications").select("current_stage").eq("id", attempt.application_id).single(),
