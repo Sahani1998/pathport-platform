@@ -4,6 +4,7 @@ import Link from "next/link";
 import { resolveStage } from "@/lib/application-stage-mapping";
 import type { ApplicationStage } from "@/types/timeline";
 import { getStageMeta } from "@/types/timeline";
+import type { InstitutionDashboardSummary } from "@/types/analytics";
 import {
   GraduationCap, FileText, BookOpen, ChevronRight, BarChart2,
   AlertCircle, Users, Clock, CheckCircle2, XCircle, RefreshCw,
@@ -48,6 +49,13 @@ type TimelineRow = {
   description:    string | null;
   created_at:     string;
 };
+
+// Live-display slice sizes — small bounded queries for the lists below the metrics
+const RECENT_APPS_LIMIT     = 5;
+const REVIEW_QUEUE_LIMIT    = 5;
+const OFFER_QUEUE_LIMIT     = 5;
+const RECENT_OFFERS_LIMIT   = 5;
+const RECENT_ACTIVITY_LIMIT = 10;
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
@@ -95,7 +103,7 @@ export default async function InstitutionDashboardPage() {
 
   const institutionName = college?.name ?? profile?.full_name ?? "Your Institution";
 
-  // ── Course IDs for this college ────────────────────────────────────────────
+  // ── Course IDs for this college (still need course list + titles for UI) ───
   const { data: courseRows } = await supabase
     .from("courses")
     .select("id, title, status, seats_total, seats_filled, intake_date")
@@ -106,15 +114,75 @@ export default async function InstitutionDashboardPage() {
   const courseIds = courses.map(c => c.id);
   const courseMap = new Map(courses.map(c => [c.id, c.title]));
 
-  // ── Fetch applications for this college's courses ──────────────────────────
-  const { data: appsRaw } = courseIds.length
-    ? await supabase.from("applications")
-        .select("id, status, current_stage, submitted_at, student_id, course_id")
-        .in("course_id", courseIds)
-        .order("submitted_at", { ascending: false })
-    : { data: [] };
+  // ── Single SQL aggregation call replaces all bulk metric calculations ──────
+  const { data: summaryData, error: summaryErr } = await supabase.rpc(
+    "get_institution_dashboard_summary",
+    { p_college_id: collegeId },
+  );
 
-  const apps: AppRow[] = ((appsRaw ?? []) as Array<Record<string, unknown>>).map(a => ({
+  if (summaryErr) console.error("[InstitutionDashboard] RPC error:", summaryErr.code, summaryErr.message);
+
+  const summary = (summaryData ?? null) as InstitutionDashboardSummary | null;
+
+  // Fall back to safe zero defaults if the RPC fails — the UI still renders.
+  const m: InstitutionDashboardSummary = summary ?? {
+    total_applications: 0, pending_documents: 0, approved_applications: 0,
+    rejected_applications: 0, offer_letters_issued: 0, ipa_processing: 0,
+    ipa_approved: 0, conversion_rate: 0, avg_processing_days: 0,
+    new_apps_7d: 0, apps_this_month: 0, offers_pending: 0, arrived_students: 0,
+    docs_awaiting: 0, verified_docs: 0, rejected_docs: 0, pipeline_counts: {},
+  };
+
+  // ── Live small queries — only what the lists below the metric cards show ───
+  const [
+    { data: recentAppsRaw },
+    { data: reviewQueueRaw },
+    { data: needsOfferRaw },
+    { data: recentOffersRaw },
+    { data: timelineRaw },
+  ] = await Promise.all([
+    courseIds.length
+      ? supabase.from("applications")
+          .select("id, status, current_stage, submitted_at, student_id, course_id")
+          .in("course_id", courseIds)
+          .order("submitted_at", { ascending: false })
+          .limit(RECENT_APPS_LIMIT)
+      : Promise.resolve({ data: [] as Array<Record<string, unknown>> }),
+    courseIds.length
+      ? supabase.from("student_documents")
+          .select("id, document_type, status, uploaded_at, student_id, application_id, applications!inner(course_id)")
+          .in("applications.course_id", courseIds)
+          .eq("is_active", true)
+          .in("status", ["pending", "reupload_required"])
+          .order("uploaded_at", { ascending: false })
+          .limit(REVIEW_QUEUE_LIMIT)
+      : Promise.resolve({ data: [] as Array<Record<string, unknown>> }),
+    // Apps that need an offer letter — bounded fetch, joined to offer_letters via NOT IN subquery
+    courseIds.length
+      ? supabase.from("applications")
+          .select("id, status, current_stage, submitted_at, student_id, course_id")
+          .in("course_id", courseIds)
+          .in("current_stage", ["documents_verified", "offer_letter_processing"])
+          .order("submitted_at", { ascending: false })
+          .limit(OFFER_QUEUE_LIMIT * 3) // over-fetch then JS-filter out those that already have offers
+      : Promise.resolve({ data: [] as Array<Record<string, unknown>> }),
+    courseIds.length
+      ? supabase.from("offer_letters")
+          .select("id, application_id, file_name, version, created_at, applications!inner(course_id)")
+          .in("applications.course_id", courseIds)
+          .order("created_at", { ascending: false })
+          .limit(RECENT_OFFERS_LIMIT)
+      : Promise.resolve({ data: [] as Array<Record<string, unknown>> }),
+    courseIds.length
+      ? supabase.from("application_timeline_events")
+          .select("id, application_id, stage, title, description, created_at, applications!inner(course_id)")
+          .in("applications.course_id", courseIds)
+          .order("created_at", { ascending: false })
+          .limit(RECENT_ACTIVITY_LIMIT)
+      : Promise.resolve({ data: [] as Array<Record<string, unknown>> }),
+  ]);
+
+  const recentApps: AppRow[] = ((recentAppsRaw ?? []) as Array<Record<string, unknown>>).map(a => ({
     id:            String(a.id),
     status:        String(a.status ?? "submitted"),
     current_stage: (a.current_stage as string | null) ?? null,
@@ -124,37 +192,7 @@ export default async function InstitutionDashboardPage() {
     course_title:  courseMap.get(String(a.course_id)) ?? "—",
   }));
 
-  const appIds = apps.map(a => a.id);
-
-  // ── Fetch documents, offer letters, timeline events scoped by appIds ───────
-  const [
-    { data: docsRaw },
-    { data: offersRaw },
-    { data: timelineRaw },
-  ] = await Promise.all([
-    appIds.length
-      ? supabase.from("student_documents")
-          .select("id, document_type, status, uploaded_at, student_id, application_id")
-          .in("application_id", appIds)
-          .eq("is_active", true)
-          .order("uploaded_at", { ascending: false })
-      : Promise.resolve({ data: [] as Array<Record<string, unknown>> }),
-    appIds.length
-      ? supabase.from("offer_letters")
-          .select("id, application_id, file_name, version, created_at")
-          .in("application_id", appIds)
-          .order("created_at", { ascending: false })
-      : Promise.resolve({ data: [] as Array<Record<string, unknown>> }),
-    appIds.length
-      ? supabase.from("application_timeline_events")
-          .select("id, application_id, stage, title, description, created_at")
-          .in("application_id", appIds)
-          .order("created_at", { ascending: false })
-          .limit(20)
-      : Promise.resolve({ data: [] as Array<Record<string, unknown>> }),
-  ]);
-
-  const docs: DocRow[] = ((docsRaw ?? []) as Array<Record<string, unknown>>).map(d => ({
+  const reviewQueue: DocRow[] = ((reviewQueueRaw ?? []) as Array<Record<string, unknown>>).map(d => ({
     id:             String(d.id),
     document_type:  String(d.document_type ?? "other"),
     status:         String(d.status ?? "pending"),
@@ -163,7 +201,18 @@ export default async function InstitutionDashboardPage() {
     application_id: (d.application_id as string | null) ?? null,
   }));
 
-  const offers: OfferRow[] = ((offersRaw ?? []) as Array<Record<string, unknown>>).map(o => ({
+  // Offer queue: apps in offer-required stages MINUS those already having an offer
+  const offerCandidates: AppRow[] = ((needsOfferRaw ?? []) as Array<Record<string, unknown>>).map(a => ({
+    id:            String(a.id),
+    status:        String(a.status ?? "submitted"),
+    current_stage: (a.current_stage as string | null) ?? null,
+    submitted_at:  String(a.submitted_at ?? new Date().toISOString()),
+    student_id:    String(a.student_id ?? ""),
+    course_id:     String(a.course_id ?? ""),
+    course_title:  courseMap.get(String(a.course_id)) ?? "—",
+  }));
+
+  const recentOffers: OfferRow[] = ((recentOffersRaw ?? []) as Array<Record<string, unknown>>).map(o => ({
     id:             String(o.id),
     application_id: String(o.application_id),
     file_name:      String(o.file_name ?? "offer-letter.pdf"),
@@ -180,10 +229,19 @@ export default async function InstitutionDashboardPage() {
     created_at:     String(e.created_at ?? new Date().toISOString()),
   }));
 
-  // ── Batch-fetch student profiles for joined display ────────────────────────
+  // Filter offer candidates by checking which already have offers (limited list)
+  const offerAppIds = offerCandidates.map(a => a.id);
+  const { data: existingOffers } = offerAppIds.length
+    ? await supabase.from("offer_letters").select("application_id").in("application_id", offerAppIds)
+    : { data: [] };
+  const appsWithOffers = new Set((existingOffers ?? []).map(o => (o as { application_id: string }).application_id));
+  const needsOffer = offerCandidates.filter(a => !appsWithOffers.has(a.id)).slice(0, OFFER_QUEUE_LIMIT);
+
+  // ── Student profiles for visible rows only (bounded) ───────────────────────
   const studentIds = Array.from(new Set([
-    ...apps.map(a => a.student_id),
-    ...docs.map(d => d.student_id),
+    ...recentApps.map(a => a.student_id),
+    ...reviewQueue.map(d => d.student_id),
+    ...needsOffer.map(a => a.student_id),
   ].filter(Boolean)));
 
   const { data: studentProfiles } = studentIds.length
@@ -191,52 +249,23 @@ export default async function InstitutionDashboardPage() {
     : { data: [] };
   const studentMap = new Map((studentProfiles ?? []).map(p => [p.id as string, p as { full_name: string | null; email: string }]));
 
-  // ── Application IDs needing offer letters (have docs verified but no offer issued) ──
-  const appsWithOffers = new Set(offers.map(o => o.application_id));
-  const appsByStage = (stage: ApplicationStage) =>
-    apps.filter(a => resolveStage(a.current_stage, a.status) === stage);
+  // ── Header / metric aliases from RPC ───────────────────────────────────────
+  const totalApps        = m.total_applications;
+  const newApps          = m.new_apps_7d;
+  const appsThisMonth    = m.apps_this_month;
+  const pendingDocs      = m.pending_documents;
+  const verifiedDocs     = m.verified_docs;
+  const rejectedDocs     = m.rejected_docs;
+  const docsAwaiting     = m.docs_awaiting;
+  const offersIssued     = m.offer_letters_issued;
+  const offersPending    = m.offers_pending;
+  const approvedStudents = m.approved_applications;
+  const arrivedStudents  = m.arrived_students;
+  const rejectedApps     = m.rejected_applications;
+  const approvalRate     = Math.round(m.conversion_rate);
+  const avgProcessingDays = Math.round(m.avg_processing_days);
 
-  // ── Metrics ────────────────────────────────────────────────────────────────
-  const now            = new Date();
-  const monthStart     = new Date(now.getFullYear(), now.getMonth(), 1);
-  const sevenDaysAgo   = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-
-  const totalApps        = apps.length;
-  const newApps          = apps.filter(a => new Date(a.submitted_at) >= sevenDaysAgo).length;
-  const appsThisMonth    = apps.filter(a => new Date(a.submitted_at) >= monthStart).length;
-  const pendingDocs      = docs.filter(d => d.status === "pending").length;
-  const reuploadDocs     = docs.filter(d => d.status === "reupload_required").length;
-  const verifiedDocs     = docs.filter(d => d.status === "verified").length;
-  const rejectedDocs     = docs.filter(d => d.status === "rejected").length;
-  const docsAwaiting     = pendingDocs + reuploadDocs;
-  const offersIssued     = offers.length;
-  const offersPending    = apps.filter(a => {
-    const stage = resolveStage(a.current_stage, a.status);
-    return (stage === "documents_verified" || stage === "offer_letter_processing") && !appsWithOffers.has(a.id);
-  }).length;
-  const approvedStudents = apps.filter(a => ["approved", "arrival_preparation", "arrived_singapore"].includes(resolveStage(a.current_stage, a.status))).length;
-  const arrivedStudents  = apps.filter(a => resolveStage(a.current_stage, a.status) === "arrived_singapore").length;
-  const rejectedApps     = apps.filter(a => resolveStage(a.current_stage, a.status) === "rejected").length;
-
-  const approvalRate = totalApps > 0
-    ? Math.round((approvedStudents / totalApps) * 100)
-    : 0;
-
-  // Average processing time (submitted_at → approved) — use timeline events for approval
-  const approvalEvents = events.filter(e => e.stage === "approved");
-  const approvalAppMap = new Map(approvalEvents.map(e => [e.application_id, e.created_at]));
-  const processingTimes = apps
-    .filter(a => approvalAppMap.has(a.id))
-    .map(a => {
-      const submitted = new Date(a.submitted_at).getTime();
-      const approved  = new Date(approvalAppMap.get(a.id)!).getTime();
-      return Math.max(0, Math.round((approved - submitted) / (24 * 60 * 60 * 1000)));
-    });
-  const avgProcessingDays = processingTimes.length > 0
-    ? Math.round(processingTimes.reduce((s, n) => s + n, 0) / processingTimes.length)
-    : 0;
-
-  // ── Pipeline counts (by canonical stage) ───────────────────────────────────
+  // ── Pipeline counts (by canonical stage, from RPC) ─────────────────────────
   const pipelineStages: { key: ApplicationStage; label: string; emoji: string }[] = [
     { key: "application_submitted",  label: "Submitted",    emoji: "📋" },
     { key: "documents_pending",      label: "Docs Pending", emoji: "📎" },
@@ -250,31 +279,12 @@ export default async function InstitutionDashboardPage() {
 
   const stageCounts = pipelineStages.map(s => ({
     ...s,
-    count: appsByStage(s.key).length,
+    count: m.pipeline_counts[s.key] ?? 0,
   }));
   const pipelineMax = Math.max(1, ...stageCounts.map(s => s.count));
 
-  // ── Recent applications (last 5) ───────────────────────────────────────────
-  const recentApps = apps.slice(0, 5);
-
-  // ── Documents awaiting review (last 5 pending/reupload) ────────────────────
-  const reviewQueue = docs
-    .filter(d => d.status === "pending" || d.status === "reupload_required")
-    .slice(0, 5);
-
-  // ── Offer letter queue ─────────────────────────────────────────────────────
-  // Applications needing offer letters (stage = documents_verified or offer_letter_processing, no offer yet)
-  const needsOffer = apps
-    .filter(a => {
-      const stage = resolveStage(a.current_stage, a.status);
-      return (stage === "documents_verified" || stage === "offer_letter_processing") && !appsWithOffers.has(a.id);
-    })
-    .slice(0, 5);
-
-  const recentOffers = offers.slice(0, 5);
-
   // ── Activity feed (last 10) ────────────────────────────────────────────────
-  const recentActivity = events.slice(0, 10);
+  const recentActivity = events.slice(0, RECENT_ACTIVITY_LIMIT);
 
   return (
     <div className="space-y-7 max-w-7xl">
@@ -622,7 +632,7 @@ export default async function InstitutionDashboardPage() {
             { label: "Offer Letters Issued",  value: String(offersIssued),                   icon: Upload,      sub: "All time" },
             { label: "Approval Rate",         value: `${approvalRate}%`,                     icon: CheckCircle2,sub: `${approvedStudents} of ${totalApps}` },
             { label: "Avg. Processing Time",  value: avgProcessingDays > 0 ? `${avgProcessingDays}d` : "—",  icon: Clock, sub: "Submit → approve" },
-            { label: "Applications This Month", value: String(appsThisMonth),                icon: Calendar,    sub: now.toLocaleDateString("en-SG", { month: "long" }) },
+            { label: "Applications This Month", value: String(appsThisMonth),                icon: Calendar,    sub: new Date().toLocaleDateString("en-SG", { month: "long" }) },
             { label: "Students Arrived",      value: String(arrivedStudents),                icon: Plane,       sub: "In Singapore" },
             { label: "Not Progressed",        value: String(rejectedApps),                   icon: XCircle,     sub: "Closed apps" },
           ].map(({ label, value, icon: Icon, sub }) => (
