@@ -64,12 +64,21 @@ export async function POST(
     // Fetch document + application + course + student
     const { data: doc, error: docError } = await supabase
       .from("student_documents")
-      .select("id, student_id, application_id, document_type, status, file_name")
+      .select("id, student_id, application_id, document_type, status, file_name, is_active")
       .eq("id", id)
       .single();
 
     if (docError || !doc) {
       return NextResponse.json({ error: "Document not found" }, { status: 404 });
+    }
+
+    // Reviewers can only act on the active (latest) version. Superseded uploads
+    // are historical records — the student has already replaced them.
+    if (!doc.is_active) {
+      return NextResponse.json(
+        { error: "This document has been replaced by a newer upload. Refresh the queue to review the latest version." },
+        { status: 409 },
+      );
     }
 
     // Institution: verify the document belongs to their college

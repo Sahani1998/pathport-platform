@@ -62,7 +62,8 @@ export default async function StudentApplicationsPage() {
     supabase
       .from("student_documents")
       .select("application_id, document_type, status")
-      .eq("student_id", user.id),
+      .eq("student_id", user.id)
+      .eq("is_active",  true),
 
     supabase
       .from("application_timeline_events")

@@ -50,6 +50,9 @@ export interface StudentDocument {
   uploaded_at:      string;
   reviewed_at:      string | null;
   reviewed_by:      string | null;
+  // Dedup: only the latest upload per (application_id, document_type) is
+  // is_active=true. Historical rows retained for audit + review history.
+  is_active:        boolean;
 }
 
 // With reviewer profile joined
