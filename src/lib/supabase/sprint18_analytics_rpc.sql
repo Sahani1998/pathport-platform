@@ -87,7 +87,7 @@ BEGIN
     GROUP BY date_trunc('month', c.intake_date)
     ORDER BY count DESC
     LIMIT 10
-  ),
+  )
   SELECT jsonb_build_object(
     'total_students',     (SELECT COUNT(*)::int FROM public.profiles WHERE role = 'student'),
     'total_applications', (SELECT COUNT(*)::int FROM apps),
