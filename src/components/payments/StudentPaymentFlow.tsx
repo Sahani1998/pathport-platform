@@ -4,7 +4,7 @@ import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import {
   Landmark, Globe2, Upload, Loader2, AlertCircle, Copy, CheckCircle2,
-  FileText, Download,
+  FileText, Download, XCircle, HelpCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -55,10 +55,14 @@ export default function StudentPaymentFlow({ invoice, attempts: initialAttempts,
   const [creating, setCreating] = useState(false);
   const [uploadingId, setUploadingId] = useState<string | null>(null);
 
-  // Most recent active attempt — student typically continues this rather than starting a fresh one.
+  // Most recent active attempt the student can act on.
+  // info_requested and rejected allow re-upload; initiated awaits proof upload.
   const activeAttempt = attempts.find(a =>
     ["initiated", "info_requested", "rejected"].includes(a.status),
   ) ?? null;
+
+  // The most recent verified attempt, if any.
+  const verifiedAttempt = attempts.find(a => a.status === "verified") ?? null;
 
   const allowed = invoice.payment_methods_allowed ?? [];
   const bankAvailable = allowed.includes("bank_transfer") && (instructions?.bank_transfer_enabled ?? false);
@@ -132,7 +136,47 @@ export default function StudentPaymentFlow({ invoice, attempts: initialAttempts,
         </div>
       )}
 
-      {!activeAttempt && invoice.status !== "paid" && (
+      {/* Paid / verified success banner */}
+      {(invoice.status === "paid" || verifiedAttempt) && (
+        <div className="flex items-start gap-3 p-4 rounded-2xl bg-emerald-500/10 border border-emerald-400/25">
+          <CheckCircle2 className="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="font-display text-base text-emerald-400">Payment confirmed</p>
+            <p className="font-body text-sm text-emerald-300/70 mt-1">
+              Your payment has been verified by the college finance team. Your IPA application is now being processed.
+            </p>
+            {verifiedAttempt && (
+              <p className="font-mono text-[11px] text-emerald-300/50 mt-1">{verifiedAttempt.payment_reference}</p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Info requested banner (actionable — student must re-upload) */}
+      {activeAttempt?.status === "info_requested" && activeAttempt.info_request_message && (
+        <div className="flex items-start gap-3 p-4 rounded-2xl bg-amber-500/10 border border-amber-400/25">
+          <HelpCircle className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="font-display text-base text-amber-400">Additional information requested</p>
+            <p className="font-body text-sm text-amber-300/70 mt-1">{activeAttempt.info_request_message}</p>
+            <p className="font-body text-xs text-amber-300/50 mt-1">Please upload an updated proof below.</p>
+          </div>
+        </div>
+      )}
+
+      {/* Rejected banner (actionable — student must re-upload) */}
+      {activeAttempt?.status === "rejected" && activeAttempt.rejection_reason && (
+        <div className="flex items-start gap-3 p-4 rounded-2xl bg-red-500/10 border border-red-400/25">
+          <XCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="font-display text-base text-red-400">Payment not accepted</p>
+            <p className="font-body text-sm text-red-300/70 mt-1">{activeAttempt.rejection_reason}</p>
+            <p className="font-body text-xs text-red-300/50 mt-1">Please upload a new proof below.</p>
+          </div>
+        </div>
+      )}
+
+      {!activeAttempt && invoice.status !== "paid" && !verifiedAttempt && (
         <section className="space-y-3">
           <p className="font-display text-lg text-white">Choose a Payment Method</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

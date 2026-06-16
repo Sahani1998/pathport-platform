@@ -2,13 +2,15 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import {
-  ArrowLeft, Download, Receipt, FileText, ExternalLink, Clock,
+  ArrowLeft, Download, Receipt, FileText, Clock,
 } from "lucide-react";
 import {
-  INVOICE_STATUS_META, INVOICE_LINE_TYPE_LABEL, PAYMENT_ATTEMPT_STATUS_META,
-  type StudentInvoice, type InvoiceLineItem, type PaymentAttempt, type PaymentProof,
+  INVOICE_STATUS_META, INVOICE_LINE_TYPE_LABEL,
+  type StudentInvoice, type InvoiceLineItem, type PaymentAttempt,
+  type PaymentProof, type OfficialReceipt,
 } from "@/types/payment";
 import { formatCents } from "@/lib/payments/invoice-helpers";
+import VerificationPanel from "@/components/payments/VerificationPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -48,11 +50,25 @@ export default async function InstitutionInvoiceDetailPage({
     supabase.from("applications").select("id, public_id").eq("id", invoice.application_id).single(),
   ]);
 
-  // Load proofs for these attempts (RLS allows institution scoped via parent attempt).
   const attemptIds = ((attempts ?? []) as PaymentAttempt[]).map(a => a.id);
-  const { data: proofs } = attemptIds.length
-    ? await supabase.from("payment_proofs").select("*").in("payment_attempt_id", attemptIds).order("created_at", { ascending: false })
-    : { data: [] as PaymentProof[] };
+
+  const [{ data: proofs }, { data: receipts }] = await Promise.all([
+    attemptIds.length
+      ? supabase.from("payment_proofs").select("*").in("payment_attempt_id", attemptIds).order("created_at", { ascending: false })
+      : Promise.resolve({ data: [] as PaymentProof[] }),
+    attemptIds.length
+      ? supabase.from("official_receipts").select("*").in("payment_attempt_id", attemptIds)
+      : Promise.resolve({ data: [] as OfficialReceipt[] }),
+  ]);
+
+  const proofsByAttempt: Record<string, PaymentProof[]> = {};
+  for (const p of ((proofs ?? []) as PaymentProof[])) {
+    (proofsByAttempt[p.payment_attempt_id] ??= []).push(p);
+  }
+  const receiptByAttempt: Record<string, OfficialReceipt> = {};
+  for (const r of ((receipts ?? []) as OfficialReceipt[])) {
+    receiptByAttempt[r.payment_attempt_id] = r;
+  }
 
   const meta = INVOICE_STATUS_META[invoice.status as keyof typeof INVOICE_STATUS_META];
 
@@ -148,8 +164,8 @@ export default async function InstitutionInvoiceDetailPage({
         </section>
       )}
 
-      {/* Payment attempts */}
-      <section className="space-y-2">
+      {/* Payment attempts + verification */}
+      <section className="space-y-3">
         <p className="font-display text-base text-white">Payment Attempts</p>
         {((attempts ?? []) as PaymentAttempt[]).length === 0 ? (
           <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/[0.06] text-white/35 font-body text-sm flex items-center gap-2">
@@ -157,47 +173,22 @@ export default async function InstitutionInvoiceDetailPage({
           </div>
         ) : (
           <div className="space-y-2">
-            {((attempts ?? []) as PaymentAttempt[]).map(att => {
-              const am = PAYMENT_ATTEMPT_STATUS_META[att.status as keyof typeof PAYMENT_ATTEMPT_STATUS_META];
-              const attemptProofs = ((proofs ?? []) as PaymentProof[]).filter(p => p.payment_attempt_id === att.id);
-              return (
-                <div key={att.id} className="p-4 rounded-2xl bg-white/[0.04] border border-white/[0.08]">
-                  <div className="flex items-start justify-between gap-3 mb-2 flex-wrap">
-                    <div>
-                      <p className="font-mono font-semibold text-sm text-white/85">{att.payment_reference}</p>
-                      <p className="font-body text-[11px] text-white/40 mt-0.5">
-                        {att.payment_method.replace("_", " ")} · {new Date(att.created_at).toLocaleString("en-SG", { dateStyle: "medium", timeStyle: "short" })}
-                      </p>
-                    </div>
-                    <span className={`px-2 py-0.5 rounded-full border font-body text-[10px] font-semibold ${am.color}`}>{am.label}</span>
-                  </div>
-                  {attemptProofs.length > 0 && (
-                    <div className="space-y-1 pt-2 border-t border-white/[0.06]">
-                      <p className="text-white/35 font-body text-[10px] uppercase tracking-wider">Proofs</p>
-                      {attemptProofs.map(p => (
-                        <a key={p.id} href={`/api/payment-proofs/${p.id}/download`} target="_blank" rel="noopener noreferrer"
-                          className="flex items-center justify-between gap-3 px-3 py-2 rounded-lg bg-white/[0.03] border border-white/[0.07] hover:border-gold-400/30 transition-colors group">
-                          <span className="flex items-center gap-2 min-w-0">
-                            <FileText className="w-3.5 h-3.5 text-white/35 flex-shrink-0" />
-                            <span className="font-body text-xs text-white/65 truncate">{p.file_name}</span>
-                            <span className="font-body text-[10px] text-white/30 flex-shrink-0">
-                              {(p.file_size_bytes / 1024).toFixed(0)} KB
-                            </span>
-                          </span>
-                          <ExternalLink className="w-3 h-3 text-white/30 group-hover:text-gold-400 transition-colors" />
-                        </a>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+            {((attempts ?? []) as PaymentAttempt[]).map(att => (
+              <VerificationPanel
+                key={att.id}
+                attempt={att}
+                proofs={proofsByAttempt[att.id] ?? []}
+                receipt={receiptByAttempt[att.id] ?? null}
+                invoiceAmountCents={invoice.amount_cents}
+                invoiceCurrency={invoice.currency}
+              />
+            ))}
           </div>
         )}
       </section>
 
-      <p className="text-white/30 font-body text-[11px] text-center">
-        App {(app as { public_id: string | null } | null)?.public_id ?? invoice.application_id.slice(0, 8)} · Verification actions arrive in PR-D.
+      <p className="text-white/30 font-body text-[11px] text-center font-mono">
+        App {(app as { public_id: string | null } | null)?.public_id ?? invoice.application_id.slice(0, 8)}
       </p>
     </div>
   );
