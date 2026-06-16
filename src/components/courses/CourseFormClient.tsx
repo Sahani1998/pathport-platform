@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, type FormEvent, type ChangeEvent } from "react";
-import { createClient } from "@/lib/supabase/client";
 import GoldButton from "@/components/ui/GoldButton";
 import { Loader2, ArrowLeft, ChevronDown, ChevronRight, Image, Video, Briefcase, Link2 } from "lucide-react";
 import type { Course } from "@/types/courses";
@@ -119,56 +118,60 @@ export default function CourseFormClient({ collegeId, collegeName, course }: Cou
     setError(null);
     setLoading(true);
 
+    const controller = new AbortController();
+    const timeoutId  = setTimeout(() => controller.abort(), 30_000);
+
     try {
-      const supabase = createClient();
-
-      // Build the payload — always include core fields
-      const corePayload = {
-        college_id:      collegeId,
-        title:           form.title.trim(),
-        slug:            isEdit ? course!.slug : `${slugify(form.title)}-${Date.now().toString(36)}`,
-        category:        form.category,
-        description:     form.description.trim() || null,
-        duration_months: parseInt(form.duration_months) || 12,
-        tuition_fee:     parseFloat(form.tuition_fee) || 0,
-        application_fee: parseFloat(form.application_fee) || 109,
-        intake_date:     form.intake_date || null,
-        seats_total:     parseInt(form.seats_total) || 30,
-        study_mode:      form.study_mode,
-        level:           form.level,
-        status:          form.status,
-      };
-
-      // Optional fields: only include if non-empty to avoid overwriting with nulls
-      const optionalPayload = {
-        thumbnail_url:                form.thumbnail_url.trim()  || null,
-        video_url:                    form.video_url.trim()       || null,
-        brochure_url:                 form.brochure_url.trim()    || null,
-        gallery_images:               lines(form.gallery_images).length  ? lines(form.gallery_images)  : null,
-        career_outcomes:              lines(form.career_outcomes).length  ? lines(form.career_outcomes) : null,
-        industries:                   commas(form.industries).length      ? commas(form.industries)      : null,
-        internship_available:         form.internship_available,
-        internship_duration_months:   parseInt(form.internship_duration_months) || null,
+      const payload = {
+        college_id:                     collegeId,
+        title:                          form.title.trim(),
+        slug:                           isEdit ? course!.slug : `${slugify(form.title)}-${Date.now().toString(36)}`,
+        category:                       form.category,
+        description:                    form.description.trim() || null,
+        duration_months:                parseInt(form.duration_months) || 12,
+        tuition_fee:                    parseFloat(form.tuition_fee) || 0,
+        application_fee:                parseFloat(form.application_fee) || 109,
+        intake_date:                    form.intake_date || null,
+        seats_total:                    parseInt(form.seats_total) || 30,
+        study_mode:                     form.study_mode,
+        level:                          form.level,
+        status:                         form.status,
+        thumbnail_url:                  form.thumbnail_url.trim() || null,
+        video_url:                      form.video_url.trim()     || null,
+        brochure_url:                   form.brochure_url.trim()  || null,
+        gallery_images:                 lines(form.gallery_images).length  ? lines(form.gallery_images)  : null,
+        career_outcomes:                lines(form.career_outcomes).length  ? lines(form.career_outcomes) : null,
+        industries:                     commas(form.industries).length     ? commas(form.industries)     : null,
+        internship_available:           form.internship_available,
+        internship_duration_months:     parseInt(form.internship_duration_months) || null,
         estimated_internship_allowance: parseFloat(form.estimated_internship_allowance) || null,
-        pathway_description:          form.pathway_description.trim()    || null,
-        job_outlook_description:      form.job_outlook_description.trim() || null,
+        pathway_description:            form.pathway_description.trim()    || null,
+        job_outlook_description:        form.job_outlook_description.trim() || null,
       };
 
-      const payload = { ...corePayload, ...optionalPayload };
+      const url = isEdit
+        ? `/api/institution/courses/${course!.id}`
+        : "/api/institution/courses";
 
-      if (isEdit) {
-        console.log("[InstitutionPortal] updating course:", course!.id);
-        const { error: updateError } = await supabase.from("courses").update(payload).eq("id", course!.id);
-        if (updateError) throw new Error(updateError.message);
-      } else {
-        console.log("[InstitutionPortal] creating course for college:", collegeId);
-        const { error: insertError } = await supabase.from("courses").insert(payload);
-        if (insertError) throw new Error(insertError.message);
-      }
+      const res = await fetch(url, {
+        method:  isEdit ? "PATCH" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify(payload),
+        signal:  controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+      const json = await res.json() as { error?: string };
+
+      if (!res.ok) throw new Error(json.error ?? `Server error (${res.status})`);
 
       window.location.href = "/dashboard/institution/courses";
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
+      clearTimeout(timeoutId);
+      const isAbort = err instanceof Error && err.name === "AbortError";
+      const msg = isAbort
+        ? "Request timed out after 30 seconds. Please try again."
+        : err instanceof Error ? err.message : String(err);
       console.error("[InstitutionPortal] course form error:", msg);
       setError(msg);
     } finally {
