@@ -4,7 +4,7 @@ import { useState, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import DocumentStatusBadge from "@/components/documents/DocumentStatusBadge";
 import {
-  Upload, FileText, Eye, Loader2, AlertCircle, RefreshCw, Download,
+  Upload, FileText, Eye, Loader2, AlertCircle, RefreshCw,
 } from "lucide-react";
 import type { DocumentTypeMeta, StudentDocument } from "@/types/documents";
 import { ALLOWED_MIME_TYPES, MAX_FILE_SIZE_BYTES, fmtFileSize } from "@/types/documents";
@@ -16,6 +16,8 @@ interface DocumentUploadCardProps {
   existing?:     StudentDocument | null;
   onUploaded?:   (doc: StudentDocument) => void;
 }
+
+const UPLOAD_TIMEOUT_MS = 30_000;
 
 export default function DocumentUploadCard({
   meta,
@@ -29,7 +31,6 @@ export default function DocumentUploadCard({
   const [uploading,    setUploading] = useState(false);
   const [error,        setError]    = useState<string | null>(null);
   const [progress,     setProgress] = useState(0);
-  const [signedUrl,    setSignedUrl] = useState<string | null>(null);
   const [loadingUrl,   setLoadingUrl] = useState(false);
 
   const canReupload = !doc || doc.status === "rejected";
@@ -40,14 +41,11 @@ export default function DocumentUploadCard({
     setLoadingUrl(true);
     try {
       const supabase = createClient();
-      const { data, error } = await supabase.storage
+      const { data, error: urlError } = await supabase.storage
         .from("student-documents")
-        .createSignedUrl(doc.file_path, 3600); // 1 hour
-      if (error) { setError(`Preview failed: ${error.message}`); return; }
-      if (data?.signedUrl) {
-        setSignedUrl(data.signedUrl);
-        window.open(data.signedUrl, "_blank");
-      }
+        .createSignedUrl(doc.file_path, 3600);
+      if (urlError) { setError(`Preview failed: ${urlError.message}`); return; }
+      if (data?.signedUrl) window.open(data.signedUrl, "_blank");
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Preview error");
     } finally {
@@ -61,88 +59,60 @@ export default function DocumentUploadCard({
     if (!file) return;
     setError(null);
 
-    // Validate type
     if (!ALLOWED_MIME_TYPES.includes(file.type)) {
       setError("Only PDF, JPG, JPEG, PNG files are allowed.");
       return;
     }
-    // Validate size
     if (file.size > MAX_FILE_SIZE_BYTES) {
       setError(`File too large. Maximum size is 10 MB (${fmtFileSize(file.size)} uploaded).`);
       return;
     }
 
     setUploading(true);
-    setProgress(0);
+    setProgress(10);
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), UPLOAD_TIMEOUT_MS);
 
     try {
-      const supabase   = createClient();
-      const ext        = file.name.split(".").pop()?.toLowerCase() ?? "bin";
-      const timestamp  = Date.now();
-      const storagePath = `${studentId}/${applicationId}/${meta.value}-${timestamp}.${ext}`;
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("applicationId", applicationId);
+      formData.append("documentType", meta.value);
 
-      console.log("[DocumentUpload] uploading to:", storagePath);
+      setProgress(30);
 
-      // Upload to Supabase Storage — race against a 60-second hard timeout so
-      // a stalled network request can't leave the button stuck on "Uploading…".
-      const uploadPromise = supabase.storage
-        .from("student-documents")
-        .upload(storagePath, file, { upsert: true });
+      const res = await fetch("/api/documents/upload", {
+        method: "POST",
+        body:   formData,
+        signal: controller.signal,
+      });
 
-      const timeoutPromise = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error("Upload timed out. Check your connection and try again.")), 60_000)
-      );
+      setProgress(80);
 
-      const uploadResult = await Promise.race([uploadPromise, timeoutPromise]) as Awaited<typeof uploadPromise>;
-      const uploadError  = uploadResult?.error;
+      const json = await res.json() as { document?: StudentDocument; error?: string };
 
-      if (uploadError) {
-        console.error("[DocumentUpload] storage error:", uploadError.message);
-        setError(`Upload failed: ${uploadError.message}`);
-        return;
-      }
-
-      setProgress(70);
-      console.log("[DocumentUpload] storage upload complete, inserting DB record");
-
-      // Upsert DB record — if same type + application already exists, update it
-      const { data: inserted, error: dbError } = await supabase
-        .from("student_documents")
-        .insert({
-          student_id:    studentId,
-          application_id: applicationId,
-          document_type: meta.value,
-          file_name:     file.name,
-          file_url:      storagePath,
-          file_path:     storagePath,
-          mime_type:     file.type,
-          file_size:     file.size,
-          status:        "pending",
-        })
-        .select()
-        .single();
-
-      if (dbError) {
-        console.error("[DocumentUpload] DB error:", dbError.message);
-        setError(`Database error: ${dbError.message}`);
+      if (!res.ok) {
+        setError(json.error ?? `Upload failed (${res.status})`);
         return;
       }
 
       setProgress(100);
-      console.log("[DocumentUpload] success — id:", inserted?.id);
-      const newDoc = inserted as StudentDocument;
+      const newDoc = json.document!;
       setDoc(newDoc);
-      setSignedUrl(null);
       onUploaded?.(newDoc);
 
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      console.error("[DocumentUpload] unexpected error:", msg);
-      setError(`Unexpected error: ${msg}`);
+      if (err instanceof DOMException && err.name === "AbortError") {
+        setError("Upload timed out. Check your connection and try again.");
+      } else {
+        const msg = err instanceof Error ? err.message : String(err);
+        setError(`Unexpected error: ${msg}`);
+      }
     } finally {
+      clearTimeout(timer);
       setUploading(false);
       setProgress(0);
-      // Reset file input so same file can be re-selected
       if (inputRef.current) inputRef.current.value = "";
     }
   };
