@@ -65,8 +65,9 @@ function Field({ label, required, children }: { label: string; required?: boolea
   );
 }
 
-const inputCls = "w-full px-4 py-3 rounded-xl bg-white/[0.06] border border-white/[0.1] text-white placeholder-white/25 font-body text-sm focus:outline-none focus:border-gold-400/50 transition-colors";
-const selectCls = "w-full px-4 py-3 rounded-xl bg-navy-950 border border-white/[0.1] text-white font-body text-sm focus:outline-none focus:border-gold-400/50 transition-colors";
+const inputCls    = "w-full px-4 py-3 rounded-xl bg-white/[0.06] border border-white/[0.1] text-white placeholder-white/25 font-body text-sm focus:outline-none focus:border-gold-400/50 transition-colors";
+const selectCls   = "w-full px-4 py-3 rounded-xl bg-navy-950 border border-white/[0.1] text-white font-body text-sm focus:outline-none focus:border-gold-400/50 transition-colors [color-scheme:dark]";
+const OPTION_STYLE = { backgroundColor: "#0a1024", color: "#fff" } as const;
 
 // ─── Section card ─────────────────────────────────────────────────────────────
 
@@ -158,15 +159,15 @@ export default function ProfileEditForm({ personal, passport, emergency, educati
           <Field label="Country of Residence">
             <select value={pers.country} onChange={e => setPers(v => ({ ...v, country: e.target.value }))}
               className={selectCls}>
-              <option value="">Select country</option>
-              {COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}
+              <option value="" style={OPTION_STYLE}>Select country</option>
+              {COUNTRIES.map(c => <option key={c} value={c} style={OPTION_STYLE}>{c}</option>)}
             </select>
           </Field>
           <Field label="Nationality">
             <select value={pers.nationality} onChange={e => setPers(v => ({ ...v, nationality: e.target.value }))}
               className={selectCls}>
-              <option value="">Select nationality</option>
-              {COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}
+              <option value="" style={OPTION_STYLE}>Select nationality</option>
+              {COUNTRIES.map(c => <option key={c} value={c} style={OPTION_STYLE}>{c}</option>)}
             </select>
           </Field>
         </div>
@@ -185,8 +186,8 @@ export default function ProfileEditForm({ personal, passport, emergency, educati
           <Field label="Issuing Country">
             <select value={pass.passport_country} onChange={e => setPass(v => ({ ...v, passport_country: e.target.value }))}
               className={selectCls}>
-              <option value="">Select country</option>
-              {COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}
+              <option value="" style={OPTION_STYLE}>Select country</option>
+              {COUNTRIES.map(c => <option key={c} value={c} style={OPTION_STYLE}>{c}</option>)}
             </select>
           </Field>
           <Field label="Expiry Date">
@@ -208,8 +209,8 @@ export default function ProfileEditForm({ personal, passport, emergency, educati
             <select value={emerg.emergency_contact_relationship}
               onChange={e => setEmerg(v => ({ ...v, emergency_contact_relationship: e.target.value }))}
               className={selectCls}>
-              <option value="">Select</option>
-              {RELATIONSHIPS.map(r => <option key={r} value={r}>{r}</option>)}
+              <option value="" style={OPTION_STYLE}>Select</option>
+              {RELATIONSHIPS.map(r => <option key={r} value={r} style={OPTION_STYLE}>{r}</option>)}
             </select>
           </Field>
         </div>
@@ -350,8 +351,8 @@ function EducationList({ items, onChange }: { items: StudentEducation[]; onChang
               <select value={form.qualification}
                 onChange={e => setForm(f => ({ ...f, qualification: e.target.value }))}
                 className={selectCls} required>
-                <option value="">Select</option>
-                {QUALIFICATIONS.map(q => <option key={q} value={q}>{q}</option>)}
+                <option value="" style={OPTION_STYLE}>Select</option>
+                {QUALIFICATIONS.map(q => <option key={q} value={q} style={OPTION_STYLE}>{q}</option>)}
               </select>
             </Field>
             <Field label="Field of Study">

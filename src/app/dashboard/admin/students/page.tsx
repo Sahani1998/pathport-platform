@@ -7,14 +7,14 @@ export default async function AdminStudentsPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
+  const [{ data: profile }, { data: students }] = await Promise.all([
+    supabase.from("profiles").select("role").eq("id", user.id).single(),
+    supabase.from("profiles")
+      .select("id, full_name, email, phone, country, created_at")
+      .eq("role", "student")
+      .order("created_at", { ascending: false }),
+  ]);
   if (profile?.role !== "admin") redirect("/dashboard");
-
-  const { data: students } = await supabase
-    .from("profiles")
-    .select("id, full_name, email, phone, country, created_at")
-    .eq("role", "student")
-    .order("created_at", { ascending: false });
 
   return (
     <div className="max-w-5xl space-y-6">

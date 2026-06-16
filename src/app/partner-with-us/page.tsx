@@ -7,7 +7,6 @@ import Footer from "@/components/layout/Footer";
 import GoldButton from "@/components/ui/GoldButton";
 import GlassCard from "@/components/ui/GlassCard";
 import Badge from "@/components/ui/Badge";
-import { createClient } from "@/lib/supabase/client";
 import {
   Send, CheckCircle2, Loader2, AlertCircle,
   Building2, Users, Briefcase,
@@ -100,24 +99,36 @@ export default function PartnerWithUsPage() {
     setLoading(true);
 
     try {
-      // Attempt to save to Supabase partner_applications table.
-      // If the table doesn't exist yet, this fails silently and we still
-      // show success — the admin can set up the table using schema.sql.
-      const supabase = createClient();
-      await supabase.from("partner_applications").insert({
-        org_name:     form.orgName.trim(),
-        contact_name: form.contactName.trim(),
-        email:        form.email.trim().toLowerCase(),
-        phone:        form.phone.trim(),
-        partner_type: form.partnerType,
-        country:      form.country.trim(),
-        website:      form.website.trim() || null,
-        message:      form.message.trim() || null,
-        status:       "pending",
+      const res = await fetch("/api/partner-applications", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          org_name:     form.orgName.trim(),
+          contact_name: form.contactName.trim(),
+          email:        form.email.trim().toLowerCase(),
+          phone:        form.phone.trim() || null,
+          partner_type: form.partnerType,
+          country:      form.country.trim() || null,
+          website:      form.website.trim() || null,
+          message:      form.message.trim() || null,
+        }),
       });
-    } catch {
-      // Table may not exist yet — application still shown as received.
-      // Admin will contact via email as fallback.
+
+      if (!res.ok) {
+        const data = await res.json() as { error?: string };
+        if (res.status === 429) {
+          setError("Too many submissions. Please try again later.");
+          setLoading(false);
+          return;
+        }
+        throw new Error(data.error ?? "Submission failed");
+      }
+    } catch (err) {
+      if (err instanceof Error && err.message !== "Submission failed") {
+        setError(err.message);
+        setLoading(false);
+        return;
+      }
     }
 
     setLoading(false);

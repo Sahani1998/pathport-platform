@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, type FormEvent, type ChangeEvent } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import GoldButton from "@/components/ui/GoldButton";
@@ -15,8 +14,9 @@ const INPUT = cn(
   "w-full bg-white/[0.06] border border-white/[0.10] rounded-xl px-4 py-3.5",
   "font-body text-sm text-white placeholder-white/25",
   "focus:outline-none focus:border-gold-400/60 focus:ring-1 focus:ring-gold-400/20",
-  "transition-all duration-200 [&>option]:bg-[#0D1530] [&>option]:text-white"
+  "transition-all duration-200 [color-scheme:dark] [&>option]:bg-[#0D1530] [&>option]:text-white"
 );
+const OPTION_STYLE = { backgroundColor: "#0a1024", color: "#fff" } as const;
 const LABEL = "block text-white/55 font-body text-sm mb-1.5 tracking-wide";
 
 // ─── Password strength indicator ─────────────────────────────────────────────
@@ -78,7 +78,6 @@ const INITIAL: StudentSignupData = {
  * Institution / Employer / Partner accounts are approved manually by admin.
  */
 export default function SignupForm() {
-  const router   = useRouter();
   const supabase = createClient();
 
   const [form,    setForm]    = useState<StudentSignupData>(INITIAL);
@@ -129,8 +128,7 @@ export default function SignupForm() {
         return;
       }
 
-      router.push("/dashboard/student");
-      router.refresh();
+      window.location.href = "/dashboard/student";
     } catch {
       setError("An unexpected error occurred. Please try again.");
     } finally {
@@ -239,7 +237,7 @@ export default function SignupForm() {
             className={cn(INPUT, "appearance-none cursor-pointer")}
           >
             {SUPPORTED_COUNTRIES.map(({ value, label }) => (
-              <option key={value} value={value}>{label}</option>
+              <option key={value} value={value} style={OPTION_STYLE}>{label}</option>
             ))}
           </select>
         </div>
@@ -254,9 +252,9 @@ export default function SignupForm() {
             value={form.courseInterest} onChange={onChange}
             className={cn(INPUT, "appearance-none cursor-pointer")}
           >
-            <option value="">Select a course</option>
+            <option value="" style={OPTION_STYLE}>Select a course</option>
             {COURSE_OPTIONS.map(c => (
-              <option key={c} value={c}>{c}</option>
+              <option key={c} value={c} style={OPTION_STYLE}>{c}</option>
             ))}
           </select>
         </div>
@@ -267,9 +265,9 @@ export default function SignupForm() {
             value={form.intendedIntake} onChange={onChange}
             className={cn(INPUT, "appearance-none cursor-pointer")}
           >
-            <option value="">Select intake</option>
+            <option value="" style={OPTION_STYLE}>Select intake</option>
             {INTAKE_OPTIONS.map(i => (
-              <option key={i} value={i}>{i}</option>
+              <option key={i} value={i} style={OPTION_STYLE}>{i}</option>
             ))}
           </select>
         </div>
@@ -309,7 +307,7 @@ export default function SignupForm() {
       </div>
 
       {/* Terms */}
-      <p className="text-center text-white/22 font-body text-xs">
+      <p className="text-center text-white/45 font-body text-xs">
         By registering you agree to our{" "}
         <Link href="#" className="text-white/40 hover:text-white/60 underline underline-offset-2">Terms</Link>
         {" "}and{" "}
