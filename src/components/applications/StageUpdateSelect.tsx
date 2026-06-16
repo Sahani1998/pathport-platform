@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { STAGE_META } from "@/types/timeline";
 import type { ApplicationStage } from "@/types/timeline";
+import { ALLOWED_TRANSITIONS } from "@/lib/application-workflow";
 import { Loader2, ChevronDown, Save } from "lucide-react";
 
 interface StageUpdateSelectProps {
@@ -84,6 +85,11 @@ export default function StageUpdateSelect({
     }
   };
 
+  // Only show the current stage + valid next stages so the UI never offers
+  // a transition that the backend would reject.
+  const validValues  = new Set<ApplicationStage>([currentStage, ...(ALLOWED_TRANSITIONS[currentStage] ?? [])]);
+  const stageOptions = STAGE_META.filter(s => validValues.has(s.value));
+
   if (compact) {
     return (
       <div className="flex items-center gap-2">
@@ -93,7 +99,7 @@ export default function StageUpdateSelect({
             onChange={e => setStage(e.target.value as ApplicationStage)}
             className="bg-white/[0.06] border border-white/[0.10] rounded-xl pl-3 pr-8 py-1.5 font-body text-xs text-white appearance-none cursor-pointer focus:outline-none focus:border-gold-400/50 transition-all [color-scheme:dark] [&>option]:bg-navy-800"
           >
-            {STAGE_META.map(s => (
+            {stageOptions.map(s => (
               <option key={s.value} value={s.value} style={OPTION_STYLE}>{s.emoji} {s.label}</option>
             ))}
           </select>
@@ -124,7 +130,7 @@ export default function StageUpdateSelect({
             onChange={e => setStage(e.target.value as ApplicationStage)}
             className={INPUT + " [&>option]:bg-navy-800"}
           >
-            {STAGE_META.map(s => (
+            {stageOptions.map(s => (
               <option key={s.value} value={s.value} style={OPTION_STYLE}>{s.emoji} {s.label}</option>
             ))}
           </select>
