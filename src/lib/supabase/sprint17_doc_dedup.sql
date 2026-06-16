@@ -34,6 +34,9 @@ WHERE sd.id = ranked.id
   AND ranked.rn > 1;
 
 -- 3. Partial unique index: ONE active row per (application_id, document_type)
+--    DROP + CREATE pattern ensures we overwrite any partial/corrupt index from
+--    a failed previous run. IF NOT EXISTS is intentionally omitted on CREATE
+--    because DROP IF EXISTS immediately precedes it — safe to run twice.
 DROP INDEX IF EXISTS public.student_docs_active_per_slot_idx;
 CREATE UNIQUE INDEX student_docs_active_per_slot_idx
   ON public.student_documents (application_id, document_type)
