@@ -22,10 +22,8 @@ export default async function InstitutionCoursesPage() {
     .select("role, full_name, college_id")
     .eq("id", user.id).single();
 
-  // PREVIEW MODE: role guard temporarily disabled
-  // if (profile?.role !== "institution") redirect("/dashboard");
-
   const isAdmin = profile?.role === "admin";
+  if (profile?.role !== "institution" && !isAdmin) redirect("/dashboard");
   console.log("[InstitutionPortal] loading courses, role:", profile?.role, "| college_id:", profile?.college_id);
 
   // Institution users MUST have a college linked.
