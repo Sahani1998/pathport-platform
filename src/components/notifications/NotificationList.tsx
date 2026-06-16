@@ -11,9 +11,27 @@ import { CheckCheck, Loader2, AlertCircle } from "lucide-react";
 interface NotificationListProps {
   notifications:  Notification[];
   onAllRead?:     () => void;
-  // Base path for "View application →" deep links — the application id is
-  // appended (institution/admin detail pages). Defaults to the student list.
+  // Base path for "View application →" deep links. Defaults to the student list.
   applicationBasePath?: string;
+}
+
+const API_TIMEOUT_MS = 15_000;
+
+async function apiFetch(url: string, method: string): Promise<{ ok: boolean; error?: string }> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), API_TIMEOUT_MS);
+  try {
+    const res  = await fetch(url, { method, signal: controller.signal });
+    const json = await res.json() as { error?: string };
+    return { ok: res.ok, error: json.error };
+  } catch (err: unknown) {
+    if (err instanceof DOMException && err.name === "AbortError") {
+      return { ok: false, error: "Request timed out. Please try again." };
+    }
+    return { ok: false, error: err instanceof Error ? err.message : "Network error" };
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 export default function NotificationList({
@@ -27,36 +45,31 @@ export default function NotificationList({
   const [markError,  setMarkError] = useState<string | null>(null);
 
   const markAsRead = async (id: string) => {
-    const supabase = createClient();
-    const { error } = await supabase
-      .from("notifications")
-      .update({ read_at: new Date().toISOString() })
-      .eq("id", id);
-    if (!error) {
+    const { ok, error } = await apiFetch(`/api/notifications/${id}/read`, "PATCH");
+    if (ok) {
       setItems(prev => prev.map(n => n.id === id ? { ...n, read_at: new Date().toISOString() } : n));
       router.refresh();
+    } else {
+      console.error("[Notifications] mark-read failed:", error);
     }
   };
 
   const markAllRead = async () => {
     setMarking(true);
     setMarkError(null);
-    const supabase    = createClient();
-    const unreadIds   = items.filter(n => !n.read_at).map(n => n.id);
+
+    const unreadIds = items.filter(n => !n.read_at).map(n => n.id);
     if (unreadIds.length === 0) { setMarking(false); return; }
 
-    const { error } = await supabase
-      .from("notifications")
-      .update({ read_at: new Date().toISOString() })
-      .in("id", unreadIds);
+    const { ok, error } = await apiFetch("/api/notifications/mark-all-read", "POST");
 
-    if (!error) {
+    if (ok) {
       const now = new Date().toISOString();
       setItems(prev => prev.map(n => ({ ...n, read_at: n.read_at ?? now })));
       onAllRead?.();
       router.refresh();
     } else {
-      setMarkError("Failed to mark notifications as read. Please try again.");
+      setMarkError(error ?? "Failed to mark notifications as read. Please try again.");
     }
     setMarking(false);
   };
