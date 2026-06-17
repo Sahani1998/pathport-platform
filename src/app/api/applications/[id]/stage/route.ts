@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import type { ApplicationStage } from "@/types/timeline";
-import { STAGE_META, STAGE_NOTIFICATION } from "@/types/timeline";
+import { STAGE_META, TIMELINE_STAGES, STAGE_NOTIFICATION, getStageMeta } from "@/types/timeline";
 import { STAGE_EMAIL, canTransition } from "@/lib/application-workflow";
 import { STAGE_TO_STATUS } from "@/lib/application-stage-mapping";
 import { recordTimelineEvent, notifyUser, logAudit } from "@/lib/application-timeline";
@@ -21,22 +21,25 @@ export async function PATCH(
   if (!rl.success) return rateLimitResponse(rl.resetAt);
 
   try {
-    let stage:           ApplicationStage;
-    let student_message: string | null;
-    let internal_notes:  string | null;
-    let next_action:     string | null;
+    let stage:             ApplicationStage;
+    let student_message:   string | null;
+    let internal_notes:    string | null;
+    let next_action:       string | null;
+    let skipIntermediates: boolean;
 
     try {
       const body = await request.json() as {
-        stage?:           string;
-        student_message?: string | null;
-        internal_notes?:  string | null;
-        next_action?:     string | null;
+        stage?:              string;
+        student_message?:    string | null;
+        internal_notes?:     string | null;
+        next_action?:        string | null;
+        skip_intermediates?: boolean;
       };
-      stage           = body.stage as ApplicationStage;
-      student_message = body.student_message ?? null;
-      internal_notes  = body.internal_notes  ?? null;
-      next_action     = body.next_action     ?? null;
+      stage              = body.stage as ApplicationStage;
+      student_message    = body.student_message    ?? null;
+      internal_notes     = body.internal_notes     ?? null;
+      next_action        = body.next_action        ?? null;
+      skipIntermediates  = body.skip_intermediates ?? false;
     } catch {
       return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
     }
@@ -80,7 +83,27 @@ export async function PATCH(
 
     // Enforce allowed transitions
     const fromStage = app.current_stage as ApplicationStage | null;
-    if (fromStage && !canTransition(fromStage, stage)) {
+
+    // Only admins can re-open rejected/withdrawn applications.
+    if ((fromStage === "rejected" || fromStage === "withdrawn") && profile.role !== "admin") {
+      return NextResponse.json(
+        { error: "Only administrators can re-open rejected or withdrawn applications" },
+        { status: 403 }
+      );
+    }
+
+    if (skipIntermediates) {
+      // Multi-stage forward jump: validate the target is forward, not a backwards move.
+      const fromStep = STAGE_META.find(s => s.value === fromStage)?.step ?? -1;
+      const toStep   = STAGE_META.find(s => s.value === stage)?.step ?? -1;
+      const isOffPath = stage === "rejected" || stage === "withdrawn";
+      if (!isOffPath && fromStep >= 0 && toStep <= fromStep) {
+        return NextResponse.json(
+          { error: "skip_intermediates can only be used for forward stage advances" },
+          { status: 422 }
+        );
+      }
+    } else if (fromStage && !canTransition(fromStage, stage)) {
       return NextResponse.json(
         { error: `Invalid transition: cannot move from "${fromStage}" to "${stage}"` },
         { status: 422 }
@@ -107,6 +130,31 @@ export async function PATCH(
     }
 
     // Side effects via helpers — non-fatal individually
+
+    // For multi-stage jumps, record each skipped stage in the timeline first.
+    if (skipIntermediates && fromStage) {
+      const fromStep = STAGE_META.find(s => s.value === fromStage)?.step ?? -1;
+      const toStep   = STAGE_META.find(s => s.value === stage)?.step ?? -1;
+      const intermediateStages = TIMELINE_STAGES
+        .filter(s => s.step > fromStep && s.step < toStep)
+        .map(s => s.value);
+      if (intermediateStages.length > 0) {
+        const targetLabel = getStageMeta(stage).label;
+        await Promise.all(
+          intermediateStages.map(s =>
+            recordTimelineEvent(supabase, {
+              applicationId: id,
+              stage:         s,
+              title:         getStageMeta(s).label,
+              description:   `Auto-recorded: application advanced to ${targetLabel}`,
+              createdBy:     user.id,
+              createdByRole: profile.role,
+            })
+          )
+        );
+      }
+    }
+
     await recordTimelineEvent(supabase, {
       applicationId: id,
       stage,
@@ -130,11 +178,11 @@ export async function PATCH(
       applicationId: id,
       actorId:       user.id,
       actorRole:     profile.role,
-      action:        "stage_changed",
+      action:        skipIntermediates ? "stage_advanced_with_skip" : "stage_changed",
       fromValue:     fromStage,
       toValue:       stage,
       comments:      student_message ?? null,
-      metadata:      { internal_notes, next_action },
+      metadata:      { internal_notes, next_action, skip_intermediates: skipIntermediates },
     });
 
     // Email — non-fatal
