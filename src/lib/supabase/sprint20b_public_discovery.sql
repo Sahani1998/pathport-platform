@@ -49,41 +49,41 @@ CREATE INDEX IF NOT EXISTS courses_published_status_idx
   WHERE is_published = true;
 
 
--- ── 5. Institution read-own policy ──────────────────────────────────────────────
--- Ensures institution users can see their own college in dashboard even when
--- is_published = false. Without this, restricting the public read policy would
--- break the institution dashboard.
-DROP POLICY IF EXISTS "colleges: institution read own" ON public.colleges;
-CREATE POLICY "colleges: institution read own"
-  ON public.colleges FOR SELECT
-  USING (public.user_owns_college(id));
+-- ── 5. Update public read policies — anon-only restriction ──────────────────────
+--
+-- Design: the public read policy must restrict ANONYMOUS visitors to only see
+-- published records, BUT must not regress access for authenticated users
+-- (students, institutions, recruitment partners). Authenticated users were
+-- previously able to see all records via USING (true).
+--
+-- Pattern: `is_published = true OR auth.uid() IS NOT NULL` means:
+--   - Anonymous (auth.uid() IS NULL): only published records visible.
+--   - Authenticated: full read access preserved (backward compatible).
+--
+-- This is safe because:
+--   - Admin still has full access via the "admin all" policy.
+--   - Institution still has full access to own records via "institution manage own".
+--   - Public pages (/colleges, /courses) additionally filter at the query level
+--     with .eq("is_published", true) — the RLS is a defence-in-depth layer.
 
-
--- ── 6. Update public read policies to require is_published ───────────────────────
--- Colleges: anonymous/public visitors only see published colleges.
--- Authenticated users (students, institution users who don't own the college)
--- only see published colleges via this policy. Admin sees all via "admin all".
 DROP POLICY IF EXISTS "colleges: public read" ON public.colleges;
 CREATE POLICY "colleges: public read"
   ON public.colleges FOR SELECT
-  USING (is_published = true);
+  USING (is_published = true OR auth.uid() IS NOT NULL);
 
--- Courses: anonymous/public visitors only see published courses.
 DROP POLICY IF EXISTS "courses: public read" ON public.courses;
 CREATE POLICY "courses: public read"
   ON public.courses FOR SELECT
-  USING (is_published = true);
-
--- Institution users can see courses for their own college regardless of is_published.
--- This enables institution admins to preview unpublished courses.
-DROP POLICY IF EXISTS "courses: institution manage own" ON public.courses;
-CREATE POLICY "courses: institution manage own"
-  ON public.courses FOR ALL
-  USING     (public.user_owns_college(college_id))
-  WITH CHECK (public.user_owns_college(college_id));
+  USING (is_published = true OR auth.uid() IS NOT NULL);
 
 
 -- ── Verification ────────────────────────────────────────────────────────────────
 -- After running, verify with:
 --   SELECT name, is_active, is_published FROM colleges ORDER BY name;
 --   SELECT title, status, is_published FROM courses ORDER BY created_at;
+--
+-- Test RLS:
+--   1. Anonymous query (no session)  → only published records returned.
+--   2. Student query                  → all records returned (backward compatible).
+--   3. Institution query              → all records returned + manage own.
+--   4. Admin query                    → all records via "admin all" policy.
