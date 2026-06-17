@@ -33,6 +33,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
 
+    // Require email verification before allowing applications
+    if (!user.email_confirmed_at) {
+      return NextResponse.json(
+        { error: "Please verify your email address before applying. Check your inbox for the confirmation link." },
+        { status: 403 },
+      );
+    }
+
     // Duplicate check
     const { data: existing, error: checkError } = await supabase
       .from("applications")
