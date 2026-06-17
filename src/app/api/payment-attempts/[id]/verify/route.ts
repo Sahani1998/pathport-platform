@@ -24,29 +24,10 @@ import { advanceApplicationStage, notifyUser, logAudit } from "@/lib/application
 import { sendTemplatedEmail } from "@/lib/email/send";
 import { formatCents } from "@/lib/payments/invoice-helpers";
 import { loadAttemptWithContext } from "@/lib/payments/verification-helpers";
+import { resolveStageAdvance } from "@/lib/payments/stage-advance";
 import type { Currency, InvoiceFeeType } from "@/types/payment";
 import type { ApplicationStage } from "@/types/timeline";
-
-// Sprint 19: decide which stage to advance to based on the invoice's fee_type
-// and the application's current stage. Legacy invoices (fee_type=null) fall
-// through to the original application-fee path so existing behaviour is
-// preserved.
-function resolveStageAdvance(
-  currentStage: ApplicationStage,
-  feeType: InvoiceFeeType | null,
-): { toStage: ApplicationStage; studentMessage: string } {
-  if (feeType === "tuition_fee" || currentStage === "tuition_fee_payment_pending") {
-    return {
-      toStage:        "arrival_preparation",
-      studentMessage: "Your tuition fee has been verified. Arrival preparation is now underway.",
-    };
-  }
-  // Application fee path (default — also covers legacy fee_type=null).
-  return {
-    toStage:        "ipa_processing",
-    studentMessage: "Your payment has been verified. Your IPA application is now being processed.",
-  };
-}
+import { getStageMeta } from "@/types/timeline";
 
 export async function POST(
   request: Request,
@@ -178,5 +159,9 @@ export async function POST(
     }).catch(err => console.error("[Verify] email failed (non-fatal):", err));
   }
 
-  return NextResponse.json({ attempt: updatedAttempt });
+  return NextResponse.json({
+    attempt:               updatedAttempt,
+    advanced_to_stage:     toStage,
+    advanced_to_label:     getStageMeta(toStage).label,
+  });
 }

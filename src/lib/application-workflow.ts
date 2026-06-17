@@ -84,9 +84,13 @@ export function canTransition(from: ApplicationStage, to: ApplicationStage): boo
 
 // ─── Terminal / activity helpers ─────────────────────────────────────────────
 export const TERMINAL_STAGES: ApplicationStage[] = ["completed", "rejected", "withdrawn"];
+// Stages that count as "IPA approved" or later. `tuition_fee_payment_pending`
+// is post-IPA-approval (student has been approved, is now paying tuition) and
+// MUST be included in approval/conversion metrics. Mirrored in
+// sprint20a_analytics_fix.sql — keep in sync.
 export const APPROVED_STAGES: ApplicationStage[] = [
-  "approved", "arrival_preparation", "arrived_singapore",
-  "enrolled", "internship_eligible", "completed",
+  "approved", "tuition_fee_payment_pending", "arrival_preparation",
+  "arrived_singapore", "enrolled", "internship_eligible", "completed",
 ];
 
 export function isTerminalStage(stage: ApplicationStage): boolean {

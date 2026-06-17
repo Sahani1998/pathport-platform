@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin-client";
 import { sendTemplatedEmail } from "@/lib/email/send";
 import { checkRateLimit, getClientIp, rateLimitResponse } from "@/lib/rate-limit";
+import { recordTimelineEvent, notifyUser, logAudit } from "@/lib/application-timeline";
+import { STAGE_NOTIFICATION } from "@/types/timeline";
 
 export async function POST(request: NextRequest) {
   const ip = getClientIp(request);
@@ -69,7 +72,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Fire confirmation email (non-fatal)
     const applicationId = inserted?.id as string;
 
     const [{ data: profile }, { data: course }] = await Promise.all([
@@ -81,16 +83,49 @@ export async function POST(request: NextRequest) {
         .single(),
     ]);
 
-    if (profile?.email) {
-      const collegeData = (course as { colleges?: { name: string } | { name: string }[] } | null)?.colleges;
-      const collegeName = Array.isArray(collegeData) ? collegeData[0]?.name : collegeData?.name;
+    const collegeData = (course as { colleges?: { name: string } | { name: string }[] } | null)?.colleges;
+    const collegeName = Array.isArray(collegeData) ? collegeData[0]?.name : collegeData?.name;
+    const courseName  = (course as { title?: string } | null)?.title ?? "your course";
 
+    // Side effects (Sprint 20A P0-3) — student lacks RLS to write audit/timeline,
+    // so use the admin client. All helpers log errors but never throw.
+    const adminDb       = createAdminClient();
+    const notifTemplate = STAGE_NOTIFICATION.application_submitted;
+
+    await Promise.all([
+      recordTimelineEvent(adminDb, {
+        applicationId,
+        stage:         "application_submitted",
+        createdBy:     user.id,
+        createdByRole: "student",
+      }),
+      notifTemplate
+        ? notifyUser(adminDb, {
+            userId:        user.id,
+            applicationId,
+            title:         notifTemplate.title,
+            message:       notifTemplate.message,
+            type:          notifTemplate.type,
+          })
+        : Promise.resolve(false),
+      logAudit(adminDb, {
+        applicationId,
+        actorId:       user.id,
+        actorRole:     "student",
+        action:        "application_created",
+        fromValue:     null,
+        toValue:       "application_submitted",
+        metadata:      { course_id: courseId, course_title: courseName, college_name: collegeName ?? null },
+      }),
+    ]);
+
+    if (profile?.email) {
       sendTemplatedEmail({
         to:            profile.email,
         template:      "application_submitted",
         context: {
           name:        profile.full_name ?? "Student",
-          courseName:  (course as { title?: string } | null)?.title ?? "your course",
+          courseName,
           collegeName: collegeName ?? "",
         },
         applicationId,

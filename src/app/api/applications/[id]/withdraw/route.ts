@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin-client";
 import { checkRateLimit, getClientIp, rateLimitResponse, LIMITS } from "@/lib/rate-limit";
 import { sendTemplatedEmail } from "@/lib/email/send";
+import { recordTimelineEvent, notifyUser, logAudit } from "@/lib/application-timeline";
 
 // Stages from which withdrawal is allowed
 const WITHDRAWABLE_STAGES = new Set([
@@ -116,45 +118,46 @@ export async function POST(
     .single();
   const studentName = studentProfile?.full_name ?? "A student";
 
-  // Audit log — internal record (separate from student-facing timeline)
-  await supabase.from("application_audit_log").insert({
-    application_id: id,
-    actor_id:       user.id,
-    actor_role:     "student",
-    action:         "withdrawn",
-    from_value:     stage,
-    to_value:       "withdrawn",
-    reason:         reason,
-    comments:       comments,
-    metadata: {
-      reason_label: reasonLabel,
-      course_title: courseName,
-      college_name: collegeName,
-      college_id:   collegeId ?? null,
-    },
-  });
+  // Sprint 20A P0-4: route the trio (audit / timeline / student notification)
+  // through the shared helpers so silent failures are logged. Students lack RLS
+  // to write audit + timeline rows, so use the admin client.
+  const adminDb = createAdminClient();
 
-  // Student-facing timeline event
-  await supabase.from("application_timeline_events").insert({
-    application_id:     id,
-    stage:              "withdrawn",
-    title:              "Application Withdrawn",
-    description:        comments
-      ? `Withdrawn: ${reasonLabel}. ${comments}`
-      : `Withdrawn: ${reasonLabel}.`,
-    created_by:         user.id,
-    created_by_role:    "student",
-    visible_to_student: true,
-  });
-
-  // Student in-app notification + confirmation email
-  await supabase.from("notifications").insert({
-    user_id:        user.id,
-    application_id: id,
-    title:          "Application Withdrawn",
-    message:        `Your application for ${courseName} has been successfully withdrawn.`,
-    type:           "application_update",
-  });
+  await Promise.all([
+    logAudit(adminDb, {
+      applicationId: id,
+      actorId:       user.id,
+      actorRole:     "student",
+      action:        "withdrawn",
+      fromValue:     stage,
+      toValue:       "withdrawn",
+      reason,
+      comments,
+      metadata: {
+        reason_label: reasonLabel,
+        course_title: courseName,
+        college_name: collegeName,
+        college_id:   collegeId ?? null,
+      },
+    }),
+    recordTimelineEvent(adminDb, {
+      applicationId: id,
+      stage:         "withdrawn",
+      title:         "Application Withdrawn",
+      description:   comments
+        ? `Withdrawn: ${reasonLabel}. ${comments}`
+        : `Withdrawn: ${reasonLabel}.`,
+      createdBy:     user.id,
+      createdByRole: "student",
+    }),
+    notifyUser(adminDb, {
+      userId:        user.id,
+      applicationId: id,
+      title:         "Application Withdrawn",
+      message:       `Your application for ${courseName} has been successfully withdrawn.`,
+      type:          "application_update",
+    }),
+  ]);
 
   if (studentProfile?.email) {
     sendTemplatedEmail({
@@ -173,19 +176,19 @@ export async function POST(
 
   // Notify institution staff that own this college
   if (collegeId) {
-    const { data: institutionUsers } = await supabase
+    const { data: institutionUsers } = await adminDb
       .from("profiles")
       .select("id, email, full_name")
       .eq("role", "institution")
       .eq("college_id", collegeId);
 
     for (const inst of (institutionUsers ?? []) as { id: string; email: string; full_name: string | null }[]) {
-      await supabase.from("notifications").insert({
-        user_id:        inst.id,
-        application_id: id,
-        title:          "Student withdrew application",
-        message:        `${studentName} withdrew their application for ${courseName}. Reason: ${reasonLabel}.`,
-        type:           "application_update",
+      await notifyUser(adminDb, {
+        userId:        inst.id,
+        applicationId: id,
+        title:         "Student withdrew application",
+        message:       `${studentName} withdrew their application for ${courseName}. Reason: ${reasonLabel}.`,
+        type:          "application_update",
       });
       if (inst.email) {
         sendTemplatedEmail({
@@ -207,18 +210,18 @@ export async function POST(
   }
 
   // Notify all admins
-  const { data: admins } = await supabase
+  const { data: admins } = await adminDb
     .from("profiles")
     .select("id, email")
     .eq("role", "admin");
 
   for (const admin of (admins ?? []) as { id: string; email: string }[]) {
-    await supabase.from("notifications").insert({
-      user_id:        admin.id,
-      application_id: id,
-      title:          "Application Withdrawn",
-      message:        `${studentName} withdrew their application for ${courseName}${collegeName ? ` at ${collegeName}` : ""}. Reason: ${reasonLabel}.`,
-      type:           "application_update",
+    await notifyUser(adminDb, {
+      userId:        admin.id,
+      applicationId: id,
+      title:         "Application Withdrawn",
+      message:       `${studentName} withdrew their application for ${courseName}${collegeName ? ` at ${collegeName}` : ""}. Reason: ${reasonLabel}.`,
+      type:          "application_update",
     });
     if (admin.email) {
       sendTemplatedEmail({

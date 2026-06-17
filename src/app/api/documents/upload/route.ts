@@ -4,6 +4,8 @@ import { createAdminClient } from "@/lib/supabase/admin-client";
 import { checkRateLimit, getClientIp, rateLimitResponse } from "@/lib/rate-limit";
 import { ALLOWED_MIME_TYPES, MAX_FILE_SIZE_BYTES, DOCUMENT_TYPES } from "@/types/documents";
 import type { StudentDocument, DocumentType } from "@/types/documents";
+import { resolveStage } from "@/lib/application-stage-mapping";
+import { recordTimelineEvent, notifyUser, logAudit } from "@/lib/application-timeline";
 
 const VALID_DOCUMENT_TYPES = DOCUMENT_TYPES.map(d => d.value);
 
@@ -66,7 +68,7 @@ export async function POST(request: NextRequest) {
   // Verify the application belongs to this student (user-scoped client enforces RLS)
   const { data: app, error: appError } = await supabase
     .from("applications")
-    .select("id")
+    .select("id, current_stage, status")
     .eq("id", applicationId)
     .eq("student_id", user.id)
     .maybeSingle();
@@ -162,6 +164,46 @@ export async function POST(request: NextRequest) {
       { status: 500 },
     );
   }
+
+  // Sprint 20A P1-2: record timeline + notification + audit trio so each
+  // upload is observable. All helpers are non-fatal (log on error, never throw).
+  const docMeta    = DOCUMENT_TYPES.find(d => d.value === documentType);
+  const docLabel   = docMeta?.label ?? documentType;
+  const stage      = resolveStage((app as { current_stage?: string }).current_stage, (app as { status?: string }).status);
+
+  await Promise.all([
+    recordTimelineEvent(adminDb, {
+      applicationId,
+      stage,
+      title:         `${docLabel} uploaded`,
+      description:   `Student uploaded ${docLabel} (${file.name}).`,
+      createdBy:     user.id,
+      createdByRole: "student",
+    }),
+    notifyUser(adminDb, {
+      userId:        user.id,
+      applicationId,
+      title:         "Document Uploaded 📤",
+      message:       `Your ${docLabel} has been uploaded successfully. Our team will review it shortly.`,
+      type:          "document_update",
+    }),
+    logAudit(adminDb, {
+      applicationId,
+      actorId:       user.id,
+      actorRole:     "student",
+      action:        "document_uploaded",
+      fromValue:     null,
+      toValue:       inserted.id,
+      metadata: {
+        document_type: documentType,
+        document_label: docLabel,
+        file_name:     file.name,
+        file_size:     file.size,
+        mime_type:     file.type,
+        document_id:   inserted.id,
+      },
+    }),
+  ]);
 
   console.log("[DocUpload] success — id:", inserted.id);
   return NextResponse.json({ document: inserted as StudentDocument }, { status: 201 });

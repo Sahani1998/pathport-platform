@@ -69,9 +69,13 @@ export default function VerificationPanel({ attempt, proofs, receipt, invoiceAmo
           reconciliation_memo: reconcMemo     || undefined,
         }),
       });
-      const data = await res.json() as { error?: string };
+      const data = await res.json() as { error?: string; advanced_to_label?: string };
       if (!res.ok) throw new Error(data.error ?? "Failed to verify");
-      setSuccess("Payment verified. Application advanced to IPA Processing.");
+      setSuccess(
+        data.advanced_to_label
+          ? `Payment verified. Application advanced to ${data.advanced_to_label}.`
+          : "Payment verified.",
+      );
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Verification failed");

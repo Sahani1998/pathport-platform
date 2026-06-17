@@ -104,7 +104,9 @@ export const NOTIFICATION_TYPE_META: Record<NotificationType, { label: string; e
 // ─── Stage → auto-notification copy ──────────────────────────────────────────
 // Used by the API route to generate the right notification when stage changes.
 export const STAGE_NOTIFICATION: Partial<Record<ApplicationStage, { title: string; message: string; type: NotificationType }>> = {
+  application_submitted:   { title: "Application Received 📋",                message: "Your application has been received. We'll guide you through every step from here.",   type: "application_update" },
   documents_pending:       { title: "Action Required: Upload Documents",      message: "Please upload your required admission documents to proceed.",                         type: "document_update"    },
+  documents_uploaded:      { title: "Documents Received 📤",                  message: "Your documents have been received. Our team will begin review shortly.",              type: "document_update"    },
   documents_under_review:  { title: "Documents Under Review",                 message: "Your documents have been received and are being reviewed by our team.",               type: "document_update"    },
   documents_verified:      { title: "Documents Verified ✅",                  message: "All your documents have been verified. Your offer letter is being prepared.",         type: "document_update"    },
   offer_letter_processing: { title: "Offer Letter Being Prepared",            message: "Your offer letter is being prepared by the college. We'll notify you when it's ready.", type: "offer_letter"     },
@@ -120,4 +122,5 @@ export const STAGE_NOTIFICATION: Partial<Record<ApplicationStage, { title: strin
   internship_eligible:     { title: "Internship Eligible 💼",                 message: "You are now eligible for internship placement. Explore opportunities in your dashboard.", type: "application_update" },
   completed:               { title: "Journey Completed 🏁",                   message: "Congratulations on completing your programme. We wish you every success ahead!",      type: "application_update" },
   rejected:                { title: "Application Update",                     message: "We regret to inform you that your application was not taken forward at this stage. Please contact your advisor.", type: "application_update" },
+  withdrawn:               { title: "Application Withdrawn ↩️",               message: "Your application has been withdrawn. You may apply to other programmes at any time.", type: "application_update" },
 };

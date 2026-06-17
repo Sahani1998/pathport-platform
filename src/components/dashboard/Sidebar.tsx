@@ -11,6 +11,7 @@ import {
   Users, Settings, LogOut, ChevronLeft, ChevronRight,
   GraduationCap, BarChart2, UserCircle, ClipboardList,
   Globe, Award, MessageSquare, Bell, Loader2, Stethoscope, CreditCard,
+  ScrollText,
 } from "lucide-react";
 
 // ─── Role-specific nav items ──────────────────────────────────────────────────
@@ -37,6 +38,7 @@ const NAV_ITEMS: Record<UserRole, { label: string; href: string; icon: React.Ele
     { label: "Payments",         href: "/dashboard/admin/payments",       icon: CreditCard      },
     { label: "Partners",         href: "/dashboard/admin/partner-applications", icon: Award      },
     { label: "Analytics",        href: "/dashboard/admin/analytics",      icon: BarChart2       },
+    { label: "Audit Log",        href: "/dashboard/admin/audit-log",      icon: ScrollText      },
     { label: "Notifications",    href: "/dashboard/admin/notifications",  icon: Bell            },
     { label: "Diagnostics",      href: "/dashboard/admin/diagnostic",     icon: Stethoscope     },
     { label: "Settings",         href: "/dashboard/admin/settings",       icon: Settings        },
