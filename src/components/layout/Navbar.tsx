@@ -263,6 +263,38 @@ export default function Navbar() {
         {/* ── Desktop Centre Nav ─────────────────────────────────────────── */}
         <ul className="hidden lg:flex items-center gap-1 flex-1 justify-center">
 
+          {/* Colleges */}
+          <li>
+            <Link
+              href="/colleges"
+              onClick={closeAll}
+              className={cn(
+                "px-4 py-2 rounded-xl font-body text-sm tracking-wide transition-all duration-200",
+                isActive("/colleges")
+                  ? "text-gold-300 bg-gold-400/[0.08]"
+                  : "text-white/60 hover:text-white/90 hover:bg-white/[0.05]"
+              )}
+            >
+              Colleges
+            </Link>
+          </li>
+
+          {/* Courses */}
+          <li>
+            <Link
+              href="/courses"
+              onClick={closeAll}
+              className={cn(
+                "px-4 py-2 rounded-xl font-body text-sm tracking-wide transition-all duration-200",
+                isActive("/courses")
+                  ? "text-gold-300 bg-gold-400/[0.08]"
+                  : "text-white/60 hover:text-white/90 hover:bg-white/[0.05]"
+              )}
+            >
+              Courses
+            </Link>
+          </li>
+
           {/* Students */}
           <li>
             <Link
@@ -291,7 +323,7 @@ export default function Navbar() {
                   : "text-white/60 hover:text-white/90 hover:bg-white/[0.05]"
               )}
             >
-              Study Destination
+              Destination
             </Link>
           </li>
 
@@ -398,6 +430,14 @@ export default function Navbar() {
         <div className="px-5 pt-3 pb-8 space-y-1">
 
           {/* Main links */}
+          <Link href="/colleges" onClick={closeAll}
+            className="block py-3 px-4 rounded-xl font-body text-base text-white/70 hover:text-white hover:bg-white/[0.05] transition-all">
+            Colleges
+          </Link>
+          <Link href="/courses" onClick={closeAll}
+            className="block py-3 px-4 rounded-xl font-body text-base text-white/70 hover:text-white hover:bg-white/[0.05] transition-all">
+            Courses
+          </Link>
           <Link href="/students" onClick={closeAll}
             className="block py-3 px-4 rounded-xl font-body text-base text-white/70 hover:text-white hover:bg-white/[0.05] transition-all">
             Students

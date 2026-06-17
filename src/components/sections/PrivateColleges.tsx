@@ -1,20 +1,26 @@
-"use client";
+// DB-driven server component — replaces hardcoded static data.
+// Fetches published colleges from the database.
+// Links through to /colleges/[slug] for the full public directory.
 
-import { useState } from "react";
+import Link from "next/link";
+import { createAdminClient } from "@/lib/supabase/admin-client";
 import GlassCard from "@/components/ui/GlassCard";
 import SectionHeader from "@/components/ui/SectionHeader";
-import Badge from "@/components/ui/Badge";
 import GoldButton from "@/components/ui/GoldButton";
-import { privateColleges, COLLEGE_SPECIALISMS, type CollegeSpecialism } from "@/data/private-colleges";
-import { Calendar } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { ChevronRight } from "lucide-react";
 
-export default function PrivateColleges() {
-  const [filter, setFilter] = useState<CollegeSpecialism>("All");
+export default async function PrivateColleges() {
+  const adminDb = createAdminClient();
 
-  const filtered = filter === "All"
-    ? privateColleges
-    : privateColleges.filter(c => c.specialisms.includes(filter));
+  const { data: colleges } = await adminDb
+    .from("colleges")
+    .select("id, name, slug, description")
+    .eq("is_active",    true)
+    .eq("is_published", true)
+    .order("name")
+    .limit(9);
+
+  const list = colleges ?? [];
 
   return (
     <section id="colleges" className="relative py-24">
@@ -36,71 +42,60 @@ export default function PrivateColleges() {
           </p>
         </div>
 
-        {/* Filter tabs */}
-        <div className="flex flex-wrap justify-center gap-2 mb-10" role="tablist">
-          {COLLEGE_SPECIALISMS.map(spec => (
-            <button
-              key={spec}
-              role="tab"
-              aria-selected={filter === spec}
-              onClick={() => setFilter(spec)}
-              className={cn(
-                "px-5 py-2 rounded-full font-body text-sm font-medium transition-all duration-200",
-                filter === spec
-                  ? "bg-gold-400/20 border border-gold-400/45 text-gold-300"
-                  : "bg-white/[0.04] border border-white/[0.09] text-white/48 hover:border-white/20 hover:text-white/70"
-              )}
-            >
-              {spec}
-            </button>
+        {/* College grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-10">
+          {list.map(college => (
+            <Link key={college.id} href={`/colleges/${college.slug}`}>
+              <GlassCard className="p-6 group h-full cursor-pointer">
+                <div className="flex items-start gap-3 mb-3">
+                  {/* College initial avatar */}
+                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-pathBlue-700 to-pathBlue-900 border border-pathBlue-500/30 flex items-center justify-center flex-shrink-0 shadow-blue-sm">
+                    <span className="font-display font-bold text-pathBlue-300 text-base leading-none">
+                      {college.name.slice(0, 2).toUpperCase()}
+                    </span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-body font-semibold text-white/90 text-sm leading-snug group-hover:text-white transition-colors">
+                      {college.name}
+                    </h3>
+                  </div>
+                </div>
+
+                {college.description ? (
+                  <p className="text-white/38 font-body text-xs leading-relaxed line-clamp-2 mb-3">
+                    {college.description}
+                  </p>
+                ) : (
+                  <p className="text-white/35 font-body text-xs mb-3 italic">
+                    EduTrust-certified Singapore private college
+                  </p>
+                )}
+
+                <div className="flex items-center gap-1.5 text-gold-400/65 group-hover:text-gold-400 font-body text-xs font-semibold transition-colors mt-auto">
+                  View programmes <ChevronRight className="w-3.5 h-3.5" />
+                </div>
+              </GlassCard>
+            </Link>
           ))}
         </div>
 
-        {/* College cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" aria-live="polite">
-          {filtered.map((college, i) => (
-            <GlassCard key={college.id} className="p-6 group">
-              <div className="flex items-start justify-between gap-3 mb-3">
-                {/* College initial avatar */}
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-pathBlue-700 to-pathBlue-900 border border-pathBlue-500/30 flex items-center justify-center flex-shrink-0 shadow-blue-sm">
-                  <span className="font-display font-bold text-pathBlue-300 text-base leading-none">
-                    {(college.shortName ?? college.name).slice(0, 2).toUpperCase()}
-                  </span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-body font-semibold text-white/90 text-sm leading-snug">{college.name}</h3>
-                </div>
-              </div>
-
-              {/* Popular label */}
-              <p className="text-white/35 font-body text-xs mb-3 italic">
-                Popular Singapore private college option
-              </p>
-
-              {/* Specialisms */}
-              <div className="flex flex-wrap gap-1.5 mb-4">
-                {college.specialisms.map(s => (
-                  <Badge key={s} variant="navy">{s}</Badge>
-                ))}
-              </div>
-
-              {/* Intakes */}
-              <div className="flex items-center gap-2 text-white/38 font-body text-xs">
-                <Calendar className="w-3.5 h-3.5 flex-shrink-0" />
-                <span>Intakes: {college.intakes.join(" · ")}</span>
-              </div>
-            </GlassCard>
-          ))}
-        </div>
-
-        {/* CTA note */}
-        <div className="mt-10 text-center">
+        {/* View all CTA */}
+        <div className="text-center">
           <p className="text-white/40 font-body text-sm mb-4">
             Not sure which college is right for you? PathPort advisors help you compare options based on your budget, course interest, and background.
           </p>
-          <GoldButton variant="outline-gold" size="md">
-            Get a Free College Comparison
-          </GoldButton>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <Link href="/colleges">
+              <GoldButton variant="outline-gold" size="md">
+                Browse All Colleges <ChevronRight className="w-4 h-4 inline-block" />
+              </GoldButton>
+            </Link>
+            <Link href="/colleges">
+              <GoldButton variant="solid-gold" size="md">
+                Get a Free College Comparison
+              </GoldButton>
+            </Link>
+          </div>
         </div>
       </div>
     </section>

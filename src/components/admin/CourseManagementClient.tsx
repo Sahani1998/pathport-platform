@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Plus, BookOpen, Pencil, Trash2, X, Save, Loader2,
-  Search, ArchiveRestore, Archive, FileEdit,
+  Search, ArchiveRestore, Archive, FileEdit, Eye, EyeOff,
 } from "lucide-react";
 import {
   COURSE_CATEGORIES,
@@ -27,6 +27,7 @@ interface Course {
   study_mode:      CourseStudyMode;
   level:           CourseLevel;
   status:          CourseStatus;
+  is_published:    boolean;
   created_at:      string;
 }
 
@@ -217,6 +218,24 @@ export default function CourseManagementClient({
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status }),
+      });
+      const data = await res.json() as Course & { error?: string };
+      if (!res.ok) throw new Error(data.error ?? "Failed to update");
+      setCourses(cs => cs.map(c => c.id === course.id ? data : c));
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to update");
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const togglePublished = async (course: Course) => {
+    setBusyId(course.id);
+    try {
+      const res = await fetch(`/api/courses/${course.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ is_published: !course.is_published }),
       });
       const data = await res.json() as Course & { error?: string };
       if (!res.ok) throw new Error(data.error ?? "Failed to update");
@@ -443,11 +462,20 @@ export default function CourseManagementClient({
                       {college?.name ?? "Unknown college"} · {course.category}
                     </p>
                   </div>
-                  {status && (
-                    <span className={`flex-shrink-0 px-2 py-0.5 rounded-full border font-body text-[10px] font-semibold ${status.color}`}>
-                      {status.label}
+                  <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                    {status && (
+                      <span className={`px-2 py-0.5 rounded-full border font-body text-[10px] font-semibold ${status.color}`}>
+                        {status.label}
+                      </span>
+                    )}
+                    <span className={`px-2 py-0.5 rounded-full border font-body text-[10px] font-semibold ${
+                      course.is_published
+                        ? "bg-pathBlue-500/10 border-pathBlue-400/30 text-pathBlue-400"
+                        : "bg-white/[0.04] border-white/[0.07] text-white/25"
+                    }`}>
+                      {course.is_published ? "Published" : "Unpublished"}
                     </span>
-                  )}
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-3 gap-2 text-white/50 font-body text-[11px]">
@@ -514,6 +542,18 @@ export default function CourseManagementClient({
                       Publish
                     </button>
                   )}
+                  <button
+                    onClick={() => togglePublished(course)}
+                    disabled={busyId === course.id}
+                    className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border font-body text-xs transition-all disabled:opacity-50 ${
+                      course.is_published
+                        ? "border-white/[0.1] text-white/45 hover:text-amber-400 hover:border-amber-400/25"
+                        : "border-pathBlue-400/20 text-pathBlue-400/60 hover:text-pathBlue-400"
+                    }`}
+                  >
+                    {busyId === course.id ? <Loader2 className="w-3 h-3 animate-spin" /> : course.is_published ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                    {course.is_published ? "Unpublish" : "Publish"}
+                  </button>
                   <button
                     onClick={() => handleDelete(course)}
                     disabled={busyId === course.id}

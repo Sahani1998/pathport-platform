@@ -25,7 +25,7 @@ export default async function AdminCoursesPage({ searchParams }: PageProps) {
         id, college_id, title, slug, category, description,
         duration_months, tuition_fee, application_fee,
         intake_date, seats_total, seats_filled,
-        study_mode, level, status, created_at
+        study_mode, level, status, is_published, created_at
       `)
       .order("created_at", { ascending: false }),
     supabase

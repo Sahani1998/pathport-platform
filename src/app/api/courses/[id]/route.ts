@@ -85,6 +85,10 @@ export async function PATCH(
     updates.intake_date = body.intake_date ? String(body.intake_date) : null;
   }
 
+  if (typeof body.is_published === "boolean") {
+    updates.is_published = body.is_published;
+  }
+
   if (Object.keys(updates).length === 0)
     return NextResponse.json({ error: "No valid fields to update" }, { status: 400 });
 

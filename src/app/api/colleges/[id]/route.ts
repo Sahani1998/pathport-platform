@@ -24,7 +24,7 @@ export async function PATCH(
   if (forbidden) return forbidden;
 
   const body = await request.json().catch(() => ({})) as Record<string, unknown>;
-  const ALLOWED = ["name", "city", "country", "website", "description", "is_active"] as const;
+  const ALLOWED = ["name", "city", "country", "website", "description", "is_active", "is_published"] as const;
   const updates: Record<string, unknown> = {};
   for (const field of ALLOWED) {
     if (field in body) updates[field] = body[field];

@@ -3,18 +3,19 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Plus, Building2, Globe, Pencil, Power, Trash2, X, Save, Loader2, BookOpen, ArrowRight, CreditCard, Hash } from "lucide-react";
+import { Plus, Building2, Globe, Pencil, Power, Trash2, X, Save, Loader2, BookOpen, ArrowRight, CreditCard, Hash, Eye, EyeOff } from "lucide-react";
 
 interface College {
-  id: string;
-  name: string;
-  slug: string;
-  country: string;
-  city: string;
-  website: string | null;
-  is_active: boolean;
-  short_code: string | null;
-  created_at: string;
+  id:           string;
+  name:         string;
+  slug:         string;
+  country:      string;
+  city:         string;
+  website:      string | null;
+  is_active:    boolean;
+  is_published: boolean;
+  short_code:   string | null;
+  created_at:   string;
 }
 
 interface Props {
@@ -107,6 +108,24 @@ export default function CollegeManagementClient({ colleges: initial, courseCount
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ is_active: !college.is_active }),
+      });
+      const data = await res.json() as College & { error?: string };
+      if (!res.ok) throw new Error(data.error ?? "Failed to update");
+      setColleges(cs => cs.map(c => c.id === college.id ? data : c));
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to update");
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const togglePublished = async (college: College) => {
+    setBusyId(college.id);
+    try {
+      const res = await fetch(`/api/colleges/${college.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ is_published: !college.is_published }),
       });
       const data = await res.json() as College & { error?: string };
       if (!res.ok) throw new Error(data.error ?? "Failed to update");
@@ -235,13 +254,22 @@ export default function CollegeManagementClient({ colleges: initial, courseCount
             <div key={c.id} className={`p-5 rounded-2xl border space-y-3 ${c.is_active ? "bg-white/[0.04] border-white/[0.08]" : "bg-white/[0.02] border-white/[0.05] opacity-70"}`}>
               <div className="flex items-start justify-between gap-3">
                 <p className="font-body font-semibold text-sm text-white/85 leading-snug">{c.name}</p>
-                <span className={`flex-shrink-0 px-2 py-0.5 rounded-full border font-body text-[10px] font-semibold ${
-                  c.is_active
-                    ? "bg-emerald-500/10 border-emerald-400/30 text-emerald-400"
-                    : "bg-white/[0.05] border-white/10 text-white/30"
-                }`}>
-                  {c.is_active ? "Active" : "Inactive"}
-                </span>
+                <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                  <span className={`px-2 py-0.5 rounded-full border font-body text-[10px] font-semibold ${
+                    c.is_active
+                      ? "bg-emerald-500/10 border-emerald-400/30 text-emerald-400"
+                      : "bg-white/[0.05] border-white/10 text-white/30"
+                  }`}>
+                    {c.is_active ? "Active" : "Inactive"}
+                  </span>
+                  <span className={`px-2 py-0.5 rounded-full border font-body text-[10px] font-semibold ${
+                    c.is_published
+                      ? "bg-pathBlue-500/10 border-pathBlue-400/30 text-pathBlue-400"
+                      : "bg-white/[0.04] border-white/[0.07] text-white/25"
+                  }`}>
+                    {c.is_published ? "Published" : "Unpublished"}
+                  </span>
+                </div>
               </div>
 
               <div className="flex items-center gap-3 flex-wrap text-white/35 font-body text-xs">
@@ -298,6 +326,18 @@ export default function CollegeManagementClient({ colleges: initial, courseCount
                 >
                   {busyId === c.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Power className="w-3 h-3" />}
                   {c.is_active ? "Deactivate" : "Activate"}
+                </button>
+                <button
+                  onClick={() => togglePublished(c)}
+                  disabled={busyId === c.id}
+                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border font-body text-xs transition-all disabled:opacity-50 ${
+                    c.is_published
+                      ? "border-white/[0.1] text-white/45 hover:text-amber-400 hover:border-amber-400/25"
+                      : "border-pathBlue-400/20 text-pathBlue-400/60 hover:text-pathBlue-400"
+                  }`}
+                >
+                  {busyId === c.id ? <Loader2 className="w-3 h-3 animate-spin" /> : c.is_published ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                  {c.is_published ? "Unpublish" : "Publish"}
                 </button>
                 <button
                   onClick={() => handleDelete(c)}
