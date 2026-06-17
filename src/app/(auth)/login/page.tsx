@@ -15,6 +15,7 @@ export default async function LoginPage({ searchParams }: PageProps) {
   const successMessage = params.message === "password-updated"
     ? "Password updated successfully. Sign in with your new password."
     : undefined;
+  const redirectAfterLogin = params.redirect || undefined;
 
   return (
     <>
@@ -24,7 +25,7 @@ export default async function LoginPage({ searchParams }: PageProps) {
           Sign in to access your PathPort dashboard.
         </p>
       </div>
-      <LoginForm successMessage={successMessage} />
+      <LoginForm successMessage={successMessage} redirectAfterLogin={redirectAfterLogin} />
     </>
   );
 }

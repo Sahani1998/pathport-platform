@@ -385,9 +385,11 @@ export default async function PublicCourseDetailPage({ params }: PageProps) {
               {/* About college */}
               <div className="bg-white/[0.04] border border-white/[0.08] rounded-2xl p-6">
                 <h2 className="font-display text-xl text-white mb-3">About {college?.name}</h2>
-                <p className="text-white/55 font-body text-sm leading-relaxed mb-4">
-                  {college?.description ?? "One of Singapore's leading EduTrust-certified private education institutions."}
-                </p>
+                {college?.description && (
+                  <p className="text-white/55 font-body text-sm leading-relaxed mb-4">
+                    {college.description}
+                  </p>
+                )}
                 <div className="flex flex-wrap gap-3 mb-3">
                   {[
                     { icon: Globe,        text: `${college?.city ?? "Singapore"}, Singapore` },

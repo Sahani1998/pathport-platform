@@ -6,6 +6,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { createAdminClient } from "@/lib/supabase/admin-client";
+import Image from "next/image";
 import {
   ArrowLeft, Globe, Building2, BookOpen, Clock,
   ChevronRight, DollarSign, Calendar, CheckCircle2,
@@ -51,7 +52,7 @@ export default async function CollegeDetailPage({ params }: PageProps) {
 
   const { data: college } = await adminDb
     .from("colleges")
-    .select("id, name, slug, description, website, city, country")
+    .select("id, name, slug, description, website, city, country, logo_url")
     .eq("slug",         slug)
     .eq("is_published", true)
     .eq("is_active",    true)
@@ -114,10 +115,20 @@ export default async function CollegeDetailPage({ params }: PageProps) {
           {/* College header */}
           <div className="bg-white/[0.04] border border-white/[0.08] rounded-2xl p-6 mb-8">
             <div className="flex items-start gap-5">
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-pathBlue-700 to-pathBlue-900 border border-pathBlue-500/30 flex items-center justify-center flex-shrink-0 shadow-blue-sm">
-                <span className="font-display font-bold text-pathBlue-300 text-xl leading-none">
-                  {college.name.slice(0, 2).toUpperCase()}
-                </span>
+              <div className="w-16 h-16 rounded-2xl border border-white/[0.08] flex items-center justify-center flex-shrink-0 overflow-hidden bg-gradient-to-br from-pathBlue-700 to-pathBlue-900">
+                {(college as { logo_url?: string | null }).logo_url ? (
+                  <Image
+                    src={(college as { logo_url: string }).logo_url}
+                    alt={`${college.name} logo`}
+                    width={64} height={64}
+                    className="object-contain w-full h-full"
+                    unoptimized
+                  />
+                ) : (
+                  <span className="font-display font-bold text-pathBlue-300 text-xl leading-none">
+                    {college.name.slice(0, 2).toUpperCase()}
+                  </span>
+                )}
               </div>
               <div className="flex-1 min-w-0">
                 <h1 className="font-display text-3xl text-white mb-2 leading-tight">{college.name}</h1>
@@ -230,13 +241,13 @@ export default async function CollegeDetailPage({ params }: PageProps) {
             </p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <Link
-                href="/signup?role=student"
+                href={`/signup?role=student&redirect=/colleges/${slug}`}
                 className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-gold-500 to-gold-400 text-navy-900 font-body font-bold text-sm hover:shadow-gold-sm transition-all"
               >
                 Register &amp; Apply
               </Link>
               <Link
-                href="/login"
+                href={`/login?redirect=/colleges/${slug}`}
                 className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl border border-white/[0.15] text-white/70 hover:text-white hover:border-white/30 font-body text-sm transition-all"
               >
                 Already have an account? Login

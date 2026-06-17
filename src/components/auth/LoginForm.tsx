@@ -16,7 +16,7 @@ const INPUT = cn(
   "transition-all duration-200"
 );
 
-export default function LoginForm({ successMessage }: { successMessage?: string }) {
+export default function LoginForm({ successMessage, redirectAfterLogin }: { successMessage?: string; redirectAfterLogin?: string }) {
   const supabase = createClient();
 
   const [email,    setEmail]    = useState("");
@@ -81,6 +81,11 @@ export default function LoginForm({ successMessage }: { successMessage?: string 
       if (profile?.role) {
         const roleMeta = ROLE_META.find(r => r.value === (profile.role as UserRole));
         if (roleMeta) redirectTo = roleMeta.dashboardPath;
+      }
+
+      // Honor ?redirect= param — but only allow relative internal paths
+      if (redirectAfterLogin && redirectAfterLogin.startsWith("/")) {
+        redirectTo = redirectAfterLogin;
       }
 
       // ── Step 3: Hard navigate ─────────────────────────────────────────────

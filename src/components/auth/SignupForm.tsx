@@ -77,7 +77,7 @@ const INITIAL: StudentSignupData = {
  * Role is hardcoded to "student" — not shown to the user.
  * Institution / Employer / Partner accounts are approved manually by admin.
  */
-export default function SignupForm() {
+export default function SignupForm({ redirectAfterSignup }: { redirectAfterSignup?: string }) {
   const supabase = createClient();
 
   const [form,    setForm]    = useState<StudentSignupData>(INITIAL);
@@ -128,7 +128,10 @@ export default function SignupForm() {
         return;
       }
 
-      window.location.href = "/dashboard/student";
+      const dest = (redirectAfterSignup && redirectAfterSignup.startsWith("/"))
+        ? redirectAfterSignup
+        : "/dashboard/student";
+      window.location.href = dest;
     } catch {
       setError("An unexpected error occurred. Please try again.");
     } finally {
