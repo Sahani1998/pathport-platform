@@ -1,3 +1,6 @@
+// DB-driven sections (PrivateColleges) require a live Supabase connection.
+export const dynamic = "force-dynamic";
+
 import Navbar              from "@/components/layout/Navbar";
 import Footer              from "@/components/layout/Footer";
 import HeroSection         from "@/components/sections/HeroSection";

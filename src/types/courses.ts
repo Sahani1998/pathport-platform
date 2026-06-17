@@ -1,16 +1,17 @@
 // ─── Colleges ─────────────────────────────────────────────────────────────────
 
 export interface College {
-  id:          string;
-  name:        string;
-  slug:        string;
-  logo_url:    string | null;
-  country:     string;
-  city:        string;
-  description: string | null;
-  website:     string | null;
-  is_active:   boolean;
-  created_at:  string;
+  id:           string;
+  name:         string;
+  slug:         string;
+  logo_url:     string | null;
+  country:      string;
+  city:         string;
+  description:  string | null;
+  website:      string | null;
+  is_active:    boolean;
+  is_published: boolean;
+  created_at:   string;
 }
 
 // ─── Courses ──────────────────────────────────────────────────────────────────
@@ -50,6 +51,8 @@ export interface Course {
   level:           CourseLevel;
   status:          CourseStatus;
   created_at:      string;
+
+  is_published:    boolean;
 
   // ── Optional: Media & Assets ───────────────────────────────────────────────
   thumbnail_url:   string | null;
