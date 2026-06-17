@@ -14,7 +14,14 @@ import { checkRateLimit, getClientIp, rateLimitResponse, LIMITS } from "@/lib/ra
 import {
   validateInvoiceLines, validatePaymentMethods, isAllowedCurrency,
 } from "@/lib/payments/invoice-helpers";
-import type { Currency, InvoiceSource, StudentInvoice, PaymentMethod } from "@/types/payment";
+import type { Currency, InvoiceSource, InvoiceFeeType, StudentInvoice, PaymentMethod } from "@/types/payment";
+
+const ALLOWED_FEE_TYPES = new Set<InvoiceFeeType>(["application_fee", "tuition_fee", "other"]);
+function parseFeeType(value: unknown): InvoiceFeeType | null {
+  return typeof value === "string" && ALLOWED_FEE_TYPES.has(value as InvoiceFeeType)
+    ? (value as InvoiceFeeType)
+    : null;
+}
 
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
 const ALLOWED_MIME   = new Set(["application/pdf"]);
@@ -106,6 +113,7 @@ async function handleGenerated(
   const dueDate     = typeof body.due_date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(body.due_date) ? body.due_date : null;
   const methods     = validatePaymentMethods(body.payment_methods_allowed) ?? ["bank_transfer", "wise"] as PaymentMethod[];
   if (methods.length === 0) return NextResponse.json({ error: "At least one payment method required" }, { status: 400 });
+  const feeType = parseFeeType(body.fee_type);
 
   const lv = validateInvoiceLines(body.line_items, currency);
   if (!lv.ok) return NextResponse.json({ error: lv.error }, { status: 400 });
@@ -119,6 +127,7 @@ async function handleGenerated(
       college_id:     app.college_id,
       course_id:      app.course_id,
       source:         "generated" satisfies InvoiceSource,
+      fee_type:       feeType,
       status:         "draft",
       currency,
       due_date:       dueDate,
@@ -188,6 +197,7 @@ async function handleUploaded(
   if (!methods || methods.length === 0) {
     return NextResponse.json({ error: "At least one valid payment method required" }, { status: 400 });
   }
+  const feeType = parseFeeType(form.get("fee_type"));
 
   // Upload to storage first — we hold the path even on DB failure (rolled back below).
   const timestamp   = Date.now();
@@ -206,6 +216,7 @@ async function handleUploaded(
       college_id:     app.college_id,
       course_id:      app.course_id,
       source:         "uploaded" satisfies InvoiceSource,
+      fee_type:       feeType,
       status:         "draft",
       amount_cents:   amountRaw,
       currency:       currencyRaw,

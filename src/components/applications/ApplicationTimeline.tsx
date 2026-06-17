@@ -1,7 +1,9 @@
-import { TIMELINE_STAGES, getStageMeta } from "@/types/timeline";
+import { getStageMeta } from "@/types/timeline";
 import type { ApplicationStage, ApplicationTimelineEvent } from "@/types/timeline";
-import { CheckCircle2, Circle, AlertCircle, MessageSquare, ArrowRight } from "lucide-react";
+import { AlertCircle, MessageSquare, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
+import JourneyTracker from "@/components/student/JourneyTracker";
+import { getActiveMilestone, STUDENT_MILESTONE_COUNT } from "@/lib/student-journey";
 
 interface ApplicationTimelineProps {
   currentStage:   ApplicationStage;
@@ -21,7 +23,8 @@ export default function ApplicationTimeline({
   const isOffPath   = isRejected || isWithdrawn;
   const currentMeta = getStageMeta(currentStage);
 
-  const currentStep = isOffPath ? -1 : (TIMELINE_STAGES.find(s => s.value === currentStage)?.step ?? 1);
+  // Student-facing milestone (1..10) for the simplified journey.
+  const activeMilestone = isOffPath ? 0 : getActiveMilestone(currentStage);
 
   return (
     <div className="space-y-5">
@@ -42,10 +45,10 @@ export default function ApplicationTimeline({
             </div>
             <p className="text-white/50 font-body text-xs mt-1">{currentMeta.description}</p>
           </div>
-          {!isOffPath && (
+          {!isOffPath && activeMilestone > 0 && (
             <div className="text-right flex-shrink-0">
               <p className="text-white/30 font-body text-[10px]">Step</p>
-              <p className="font-display text-2xl text-gold-400">{currentStep}<span className="text-white/30 text-sm font-body">/{TIMELINE_STAGES.length}</span></p>
+              <p className="font-display text-2xl text-gold-400">{activeMilestone}<span className="text-white/30 text-sm font-body">/{STUDENT_MILESTONE_COUNT}</span></p>
             </div>
           )}
         </div>
@@ -70,53 +73,9 @@ export default function ApplicationTimeline({
         )}
       </div>
 
-      {/* Visual stage progress */}
-      {!isOffPath && (
-        <div className="overflow-x-auto pb-2">
-          <div className="flex items-start min-w-max gap-0">
-            {TIMELINE_STAGES.map((stage, i) => {
-              const isComplete = currentStep > stage.step;
-              const isCurrent  = currentStep === stage.step;
-              const isLast     = i === TIMELINE_STAGES.length - 1;
-
-              return (
-                <div key={stage.value} className="flex items-start">
-                  {/* Stage node */}
-                  <div className="flex flex-col items-center w-[72px]">
-                    <div className={cn(
-                      "w-8 h-8 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all",
-                      isComplete ? "bg-emerald-500 border-emerald-400"
-                      : isCurrent ? "bg-gold-500 border-gold-300 ring-4 ring-gold-400/20 animate-pulse"
-                      : "bg-white/[0.04] border-white/20"
-                    )}>
-                      {isComplete
-                        ? <CheckCircle2 className="w-4 h-4 text-white" />
-                        : <span className="font-display text-[10px] font-bold text-white/60">{stage.step}</span>
-                      }
-                    </div>
-                    <p className={cn(
-                      "font-body text-[9px] mt-1.5 text-center leading-tight w-[64px]",
-                      isCurrent  ? "text-gold-400 font-semibold"
-                      : isComplete ? "text-emerald-400/60"
-                      : "text-white/20"
-                    )}>
-                      {stage.label}
-                    </p>
-                  </div>
-
-                  {/* Connector */}
-                  {!isLast && (
-                    <div className={cn(
-                      "h-0.5 w-4 mt-4 flex-shrink-0",
-                      isComplete ? "bg-emerald-500/50" : "bg-white/[0.08]"
-                    )} />
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
+      {/* Simplified 10-milestone student journey (replaces the internal
+          operational stage strip — internal stages remain unchanged). */}
+      {!isOffPath && <JourneyTracker currentStage={currentStage} />}
 
       {/* Rejected / withdrawn state */}
       {isOffPath && (

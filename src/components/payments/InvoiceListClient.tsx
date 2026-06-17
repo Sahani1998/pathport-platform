@@ -10,21 +10,23 @@ import {
 import { cn } from "@/lib/utils";
 import IssueInvoiceForm from "./IssueInvoiceForm";
 import {
-  INVOICE_STATUS_META,
+  INVOICE_STATUS_META, INVOICE_FEE_TYPE_META,
   type StudentInvoice, type CourseFeeSchedule, type Currency,
 } from "@/types/payment";
 import { formatCents } from "@/lib/payments/invoice-helpers";
+import type { ApplicationStage } from "@/types/timeline";
 
 interface Props {
   applicationId:   string;
   invoices:        StudentInvoice[];
   feeSchedules:    CourseFeeSchedule[];
   defaultCurrency: Currency;
+  currentStage?:   ApplicationStage | null;
   detailHrefBase:  string;
 }
 
 export default function InvoiceListClient({
-  applicationId, invoices: initial, feeSchedules, defaultCurrency, detailHrefBase,
+  applicationId, invoices: initial, feeSchedules, defaultCurrency, currentStage, detailHrefBase,
 }: Props) {
   const router = useRouter();
   const [invoices, setInvoices] = useState(initial);
@@ -95,6 +97,7 @@ export default function InvoiceListClient({
           applicationId={applicationId}
           defaultCurrency={defaultCurrency}
           feeSchedules={feeSchedules}
+          currentStage={currentStage}
           onCreated={handleCreated}
           onCancel={() => setCreating(false)}
         />
@@ -123,6 +126,11 @@ export default function InvoiceListClient({
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 mb-1 flex-wrap">
                     <p className="font-body font-semibold text-sm text-white/85 font-mono">{inv.public_id ?? "(draft)"}</p>
+                    {inv.fee_type && (
+                      <span className={cn("px-2 py-0.5 rounded-full border font-body text-[10px] font-semibold", INVOICE_FEE_TYPE_META[inv.fee_type].color)}>
+                        {INVOICE_FEE_TYPE_META[inv.fee_type].short}
+                      </span>
+                    )}
                     <span className={cn("px-2 py-0.5 rounded-full border font-body text-[10px] font-semibold", meta.color)}>
                       {meta.label}
                     </span>
