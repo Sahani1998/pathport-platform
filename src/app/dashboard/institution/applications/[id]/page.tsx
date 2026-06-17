@@ -40,7 +40,7 @@ export default async function InstitutionApplicationDetailPage({
   const { data: app, error: appError } = await supabase
     .from("applications")
     .select(`
-      id, status, notes, submitted_at, updated_at,
+      id, status, current_stage, notes, submitted_at, updated_at,
       courses (id, title, slug, category, college_id,
         colleges (id, name)),
       student_id
