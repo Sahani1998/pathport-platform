@@ -22,6 +22,26 @@ export type Currency = "SGD" | "USD" | "INR" | "GBP" | "EUR" | "AUD";
 
 export type InvoiceSource = "generated" | "uploaded";
 
+// Invoice-level fee category (Sprint 19). Distinct from InvoiceLineType, which
+// is line-level. fee_type is the source of truth for stage routing on the
+// payment-verify route. Nullable on legacy rows (treated as application_fee).
+export type InvoiceFeeType = "application_fee" | "tuition_fee" | "other";
+
+export const INVOICE_FEE_TYPE_LABEL: Record<InvoiceFeeType, string> = {
+  application_fee: "Application Fee",
+  tuition_fee:     "Tuition Fee",
+  other:           "Other",
+};
+
+export const INVOICE_FEE_TYPE_META: Record<
+  InvoiceFeeType,
+  { label: string; short: string; color: string }
+> = {
+  application_fee: { label: "Application Fee", short: "APP FEE", color: "text-pathBlue-400 bg-pathBlue-500/10 border-pathBlue-500/25" },
+  tuition_fee:     { label: "Tuition Fee",     short: "TUITION", color: "text-gold-400 bg-gold-400/10 border-gold-400/25" },
+  other:           { label: "Other",           short: "OTHER",   color: "text-white/50 bg-white/[0.05] border-white/[0.10]" },
+};
+
 export type InvoiceStatus =
   | "draft"
   | "pending"
@@ -169,6 +189,7 @@ export interface StudentInvoice {
   college_id:               string;
   course_id:                string;
   source:                   InvoiceSource;
+  fee_type:                 InvoiceFeeType | null;   // Sprint 19; null on legacy rows
   status:                   InvoiceStatus;
   amount_cents:             number;        // sum of line items (denormalised)
   currency:                 Currency;

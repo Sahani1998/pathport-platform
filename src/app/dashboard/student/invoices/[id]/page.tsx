@@ -7,9 +7,9 @@ import {
 } from "lucide-react";
 import StudentPaymentFlow from "@/components/payments/StudentPaymentFlow";
 import {
-  INVOICE_STATUS_META, INVOICE_LINE_TYPE_LABEL,
+  INVOICE_STATUS_META, INVOICE_LINE_TYPE_LABEL, INVOICE_FEE_TYPE_META,
   type StudentInvoice, type InvoiceLineItem, type PaymentAttempt, type PaymentProof,
-  type OfficialReceipt, type CollegePaymentSettings,
+  type OfficialReceipt, type CollegePaymentSettings, type InvoiceFeeType,
 } from "@/types/payment";
 import { formatCents } from "@/lib/payments/invoice-helpers";
 
@@ -81,7 +81,8 @@ export default async function StudentInvoicePage({
 
   const receiptList = (receipts ?? []) as OfficialReceipt[];
 
-  const meta = INVOICE_STATUS_META[invoice.status as keyof typeof INVOICE_STATUS_META];
+  const meta    = INVOICE_STATUS_META[invoice.status as keyof typeof INVOICE_STATUS_META];
+  const feeMeta = invoice.fee_type ? INVOICE_FEE_TYPE_META[invoice.fee_type as InvoiceFeeType] : null;
 
   return (
     <div className="max-w-3xl space-y-6">
@@ -98,6 +99,9 @@ export default async function StudentInvoicePage({
           <p className="font-mono text-white/45 font-body text-sm mt-1">{invoice.public_id ?? ""}</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap justify-end">
+          {feeMeta && (
+            <span className={`px-3 py-1 rounded-full border font-body text-xs font-semibold ${feeMeta.color}`}>{feeMeta.label}</span>
+          )}
           <span className={`px-3 py-1 rounded-full border font-body text-xs font-semibold ${meta.color}`}>{meta.label}</span>
           <a href={`/api/invoices/${id}/download`} target="_blank" rel="noopener noreferrer"
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-white/[0.1] text-white/55 font-body text-xs hover:text-white hover:border-white/25 transition-all">

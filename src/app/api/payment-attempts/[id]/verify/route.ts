@@ -24,7 +24,29 @@ import { advanceApplicationStage, notifyUser, logAudit } from "@/lib/application
 import { sendTemplatedEmail } from "@/lib/email/send";
 import { formatCents } from "@/lib/payments/invoice-helpers";
 import { loadAttemptWithContext } from "@/lib/payments/verification-helpers";
-import type { Currency } from "@/types/payment";
+import type { Currency, InvoiceFeeType } from "@/types/payment";
+import type { ApplicationStage } from "@/types/timeline";
+
+// Sprint 19: decide which stage to advance to based on the invoice's fee_type
+// and the application's current stage. Legacy invoices (fee_type=null) fall
+// through to the original application-fee path so existing behaviour is
+// preserved.
+function resolveStageAdvance(
+  currentStage: ApplicationStage,
+  feeType: InvoiceFeeType | null,
+): { toStage: ApplicationStage; studentMessage: string } {
+  if (feeType === "tuition_fee" || currentStage === "tuition_fee_payment_pending") {
+    return {
+      toStage:        "arrival_preparation",
+      studentMessage: "Your tuition fee has been verified. Arrival preparation is now underway.",
+    };
+  }
+  // Application fee path (default — also covers legacy fee_type=null).
+  return {
+    toStage:        "ipa_processing",
+    studentMessage: "Your payment has been verified. Your IPA application is now being processed.",
+  };
+}
 
 export async function POST(
   request: Request,
@@ -92,25 +114,32 @@ export async function POST(
   // ─── Side effects (non-fatal, admin client) ────────────────────────────────
   const adminDb = createAdminClient();
 
-  // 3. Advance stage fee_payment_pending → ipa_processing
+  // 3. Advance stage — fee-type aware (Sprint 19).
+  //    application_fee (or legacy null): fee_payment_pending → ipa_processing
+  //    tuition_fee:                      tuition_fee_payment_pending → arrival_preparation
   const { data: appRow } = await adminDb
     .from("applications")
     .select("current_stage, status")
     .eq("id", ctx.applicationId)
     .single();
 
+  const currentStage = (appRow?.current_stage ?? "fee_payment_pending") as ApplicationStage;
+  const feeType      = (ctx.invoice.fee_type ?? null) as InvoiceFeeType | null;
+  const { toStage, studentMessage } = resolveStageAdvance(currentStage, feeType);
+
   const stageResult = await advanceApplicationStage(adminDb, {
     applicationId:  ctx.applicationId,
     studentId:      ctx.studentId,
-    fromStage:      (appRow?.current_stage ?? "fee_payment_pending") as Parameters<typeof advanceApplicationStage>[1]["fromStage"],
-    toStage:        "ipa_processing",
+    fromStage:      currentStage,
+    toStage,
     actorId:        user.id,
     actorRole:      profile.role,
-    studentMessage: "Your payment has been verified. Your IPA application is now being processed.",
+    studentMessage,
     auditAction:    "payment_verified",
     auditMetadata: {
       invoice_id:   ctx.invoice.id,
       attempt_id:   id,
+      fee_type:     feeType,
       amount_cents: ctx.invoice.amount_cents,
       currency:     ctx.invoice.currency,
       notes,

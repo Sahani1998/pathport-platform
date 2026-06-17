@@ -3,8 +3,8 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { CheckCircle2, Clock, XCircle, HelpCircle, ExternalLink } from "lucide-react";
 import {
-  PAYMENT_ATTEMPT_STATUS_META, INVOICE_STATUS_META,
-  type PaymentAttempt, type StudentInvoice,
+  PAYMENT_ATTEMPT_STATUS_META, INVOICE_STATUS_META, INVOICE_FEE_TYPE_META,
+  type PaymentAttempt, type StudentInvoice, type InvoiceFeeType,
 } from "@/types/payment";
 import { formatCents } from "@/lib/payments/invoice-helpers";
 
@@ -55,14 +55,14 @@ export default async function InstitutionPaymentsPage({
 
   const [{ data: invoices }, { data: studentProfiles }] = await Promise.all([
     invoiceIds.length
-      ? supabase.from("student_invoices").select("id, public_id, amount_cents, currency, status").in("id", invoiceIds)
+      ? supabase.from("student_invoices").select("id, public_id, amount_cents, currency, status, fee_type").in("id", invoiceIds)
       : Promise.resolve({ data: [] }),
     studentIds.length
       ? supabase.from("profiles").select("id, full_name, public_id").in("id", studentIds)
       : Promise.resolve({ data: [] }),
   ]);
 
-  const invoiceMap: Record<string, Pick<StudentInvoice, "id" | "public_id" | "amount_cents" | "currency" | "status">> = {};
+  const invoiceMap: Record<string, Pick<StudentInvoice, "id" | "public_id" | "amount_cents" | "currency" | "status" | "fee_type">> = {};
   for (const inv of (invoices ?? [])) invoiceMap[(inv as { id: string }).id] = inv as typeof invoiceMap[string];
 
   const studentMap: Record<string, { full_name: string | null; public_id: string | null }> = {};
@@ -119,6 +119,11 @@ export default async function InstitutionPaymentsPage({
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 flex-wrap mb-1">
                     <p className="font-mono text-sm text-white/85 font-semibold">{att.payment_reference}</p>
+                    {inv?.fee_type && (
+                      <span className={`px-2 py-0.5 rounded-full border font-body text-[10px] font-semibold ${INVOICE_FEE_TYPE_META[inv.fee_type as InvoiceFeeType].color}`}>
+                        {INVOICE_FEE_TYPE_META[inv.fee_type as InvoiceFeeType].short}
+                      </span>
+                    )}
                     <span className={`px-2 py-0.5 rounded-full border font-body text-[10px] font-semibold ${am.color}`}>
                       {am.label}
                     </span>

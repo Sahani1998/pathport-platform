@@ -45,31 +45,32 @@ export const STUDENT_MILESTONES: StudentMilestone[] = [
 export const STUDENT_MILESTONE_COUNT = STUDENT_MILESTONES.length; // 10
 
 // Internal stage → active student-milestone step (1..10).
-// Steps 4 and 7 are deliberately absent (future fee milestones).
+// Sprint 19: fee_payment_pending now correctly maps to milestone 4
+// (Application Fee Paid), and the new tuition_fee_payment_pending stage maps
+// to milestone 7 (Tuition Fee Paid).
 const STAGE_TO_MILESTONE: Partial<Record<ApplicationStage, number>> = {
-  application_submitted:   1,
+  application_submitted:        1,
 
-  documents_pending:       2,
-  documents_uploaded:      2,
-  documents_under_review:  2,
-  documents_verified:      2,
+  documents_pending:            2,
+  documents_uploaded:           2,
+  documents_under_review:       2,
+  documents_verified:           2,
 
-  offer_letter_processing: 3,
-  offer_letter_ready:      3,
-  offer_letter_accepted:   3,
+  offer_letter_processing:      3,
+  offer_letter_ready:           3,
+  offer_letter_accepted:        3,
 
-  // No application-fee stage exists yet → bridges to IPA Processing (5).
-  fee_payment_pending:     5,
-  ipa_processing:          5,
+  fee_payment_pending:          4,   // Application Fee Paid (in progress)
+  ipa_processing:               5,
+  approved:                     6,
+  tuition_fee_payment_pending:  7,   // Tuition Fee Paid (in progress)
 
-  approved:                6,
+  arrival_preparation:          8,
+  arrived_singapore:            9,
 
-  arrival_preparation:     8,
-  arrived_singapore:       9,
-
-  enrolled:                10,
-  internship_eligible:     10,
-  completed:               10,
+  enrolled:                     10,
+  internship_eligible:          10,
+  completed:                    10,
 };
 
 export type MilestoneState = "completed" | "current" | "upcoming";

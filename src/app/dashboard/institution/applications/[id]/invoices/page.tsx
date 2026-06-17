@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import InvoiceListClient from "@/components/payments/InvoiceListClient";
 import type { StudentInvoice, CourseFeeSchedule, Currency } from "@/types/payment";
+import { resolveStage } from "@/lib/application-stage-mapping";
 
 export const metadata = { title: "Invoices — Institution" };
 export const dynamic  = "force-dynamic";
@@ -27,11 +28,11 @@ export default async function InstitutionApplicationInvoicesPage({
   // Load application + course context.
   const { data: app } = await supabase
     .from("applications")
-    .select("id, public_id, student_id, course_id, courses!inner(id, title, college_id, colleges(name))")
+    .select("id, public_id, student_id, course_id, current_stage, status, courses!inner(id, title, college_id, colleges(name))")
     .eq("id", applicationId)
     .single();
   if (!app) notFound();
-  type Row = { id: string; public_id: string | null; student_id: string; course_id: string; courses: { id: string; title: string; college_id: string; colleges: { name: string } | { name: string }[] | null } | { id: string; title: string; college_id: string; colleges: { name: string } | { name: string }[] | null }[] | null };
+  type Row = { id: string; public_id: string | null; student_id: string; course_id: string; current_stage: string | null; status: string | null; courses: { id: string; title: string; college_id: string; colleges: { name: string } | { name: string }[] | null } | { id: string; title: string; college_id: string; colleges: { name: string } | { name: string }[] | null }[] | null };
   const r = app as unknown as Row;
   const course  = Array.isArray(r.courses) ? r.courses[0] : r.courses;
   if (!course) notFound();
@@ -88,6 +89,7 @@ export default async function InstitutionApplicationInvoicesPage({
         invoices={(invoicesRaw ?? []) as StudentInvoice[]}
         feeSchedules={(schedulesRaw ?? []) as CourseFeeSchedule[]}
         defaultCurrency={defaultCurrency}
+        currentStage={resolveStage(r.current_stage, r.status)}
         detailHrefBase={`/dashboard/institution/invoices`}
       />
     </div>

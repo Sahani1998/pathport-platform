@@ -8,10 +8,20 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
-  INVOICE_LINE_TYPE_LABEL,
+  INVOICE_LINE_TYPE_LABEL, INVOICE_FEE_TYPE_LABEL,
   type CourseFeeSchedule, type CourseFeeScheduleLine,
-  type Currency, type InvoiceLineType, type PaymentMethod, type StudentInvoice,
+  type Currency, type InvoiceFeeType, type InvoiceLineType, type PaymentMethod, type StudentInvoice,
 } from "@/types/payment";
+import type { ApplicationStage } from "@/types/timeline";
+
+const FEE_TYPES: InvoiceFeeType[] = ["application_fee", "tuition_fee", "other"];
+
+// Smart default based on the application's current stage.
+function defaultFeeTypeFor(stage: ApplicationStage | null | undefined): InvoiceFeeType {
+  if (stage === "offer_letter_accepted" || stage === "fee_payment_pending") return "application_fee";
+  if (stage === "approved" || stage === "tuition_fee_payment_pending")      return "tuition_fee";
+  return "other";
+}
 
 const CURRENCIES: Currency[] = ["SGD", "USD", "INR", "GBP", "EUR", "AUD"];
 const LINE_TYPES: InvoiceLineType[] = [
@@ -32,6 +42,7 @@ interface Props {
   applicationId:   string;
   defaultCurrency: Currency;
   feeSchedules:    CourseFeeSchedule[];
+  currentStage?:   ApplicationStage | null;   // Sprint 19: drives fee-type default
   onCreated:       (invoice: StudentInvoice) => void;
   onCancel:        () => void;
 }
@@ -65,7 +76,7 @@ function emptyLine(currency: Currency): LineDraft {
 }
 
 export default function IssueInvoiceForm({
-  applicationId, defaultCurrency, feeSchedules, onCreated, onCancel,
+  applicationId, defaultCurrency, feeSchedules, currentStage, onCreated, onCancel,
 }: Props) {
   const router = useRouter();
   const [mode, setMode] = useState<"generated" | "uploaded">("generated");
@@ -76,6 +87,7 @@ export default function IssueInvoiceForm({
   const defaultSched = feeSchedules.find(s => s.is_default) ?? feeSchedules[0] ?? null;
 
   // ── Generated state ──
+  const [feeType,    setFeeType]    = useState<InvoiceFeeType>(defaultFeeTypeFor(currentStage));
   const [scheduleId, setScheduleId] = useState(defaultSched?.id ?? "");
   const [currency,   setCurrency]   = useState<Currency>(defaultCurrency);
   const [dueDate,    setDueDate]    = useState("");
@@ -119,6 +131,7 @@ export default function IssueInvoiceForm({
       if (mode === "generated") {
         if (lines.length === 0) throw new Error("Add at least one line item");
         const payload = {
+          fee_type:    feeType,
           currency,
           description: description.trim() || null,
           due_date:    dueDate || null,
@@ -148,6 +161,7 @@ export default function IssueInvoiceForm({
         form.append("file", file);
         form.append("amount_cents", String(Math.round(n * 100)));
         form.append("currency", currency);
+        form.append("fee_type", feeType);
         if (dueDate)     form.append("due_date", dueDate);
         if (description) form.append("description", description.trim());
         if (externalRef) form.append("external_invoice_number", externalRef.trim());
@@ -204,6 +218,30 @@ export default function IssueInvoiceForm({
             <Icon className="w-4 h-4" /> {label}
           </button>
         ))}
+      </div>
+
+      {/* Fee type (Sprint 19) — drives stage routing on verify */}
+      <div>
+        <label className={LABEL}>Fee Type *</label>
+        <div className="grid grid-cols-3 gap-2">
+          {FEE_TYPES.map(t => (
+            <button
+              key={t} type="button"
+              onClick={() => setFeeType(t)}
+              className={cn(
+                "px-3 py-2 rounded-xl border font-body text-xs font-semibold transition-all",
+                feeType === t
+                  ? "bg-gold-400/15 border-gold-400/40 text-gold-400"
+                  : "bg-white/[0.03] border-white/[0.08] text-white/55 hover:text-white/75",
+              )}
+            >
+              {INVOICE_FEE_TYPE_LABEL[t]}
+            </button>
+          ))}
+        </div>
+        <p className="text-white/35 font-body text-[11px] mt-1.5">
+          Determines which stage the application advances to when the payment is verified.
+        </p>
       </div>
 
       {/* Common: description + due date + methods */}
