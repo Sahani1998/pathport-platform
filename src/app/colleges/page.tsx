@@ -5,6 +5,7 @@
 
 import type { Metadata } from "next";
 import Link from "next/link";
+import Image from "next/image";
 import { createAdminClient } from "@/lib/supabase/admin-client";
 import { Building2, Globe, Search, ChevronRight } from "lucide-react";
 
@@ -37,7 +38,7 @@ export default async function CollegesPage({ searchParams }: PageProps) {
 
   let query = adminDb
     .from("colleges")
-    .select("id, name, slug, description, website, city, country", { count: "exact" })
+    .select("id, name, slug, description, website, city, country, logo_url", { count: "exact" })
     .eq("is_active",    true)
     .eq("is_published", true)
     .order("name");
@@ -147,11 +148,21 @@ export default async function CollegesPage({ searchParams }: PageProps) {
                   href={`/colleges/${college.slug}`}
                   className="group block bg-white/[0.04] border border-white/[0.08] rounded-2xl p-6 hover:border-gold-400/30 hover:bg-gold-400/[0.03] transition-all duration-200"
                 >
-                  {/* Avatar */}
-                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-pathBlue-700 to-pathBlue-900 border border-pathBlue-500/30 flex items-center justify-center flex-shrink-0 mb-4 shadow-blue-sm">
-                    <span className="font-display font-bold text-pathBlue-300 text-base leading-none">
-                      {college.name.slice(0, 2).toUpperCase()}
-                    </span>
+                  {/* Logo / Avatar */}
+                  <div className="w-12 h-12 rounded-xl border border-white/[0.08] flex items-center justify-center flex-shrink-0 mb-4 overflow-hidden bg-gradient-to-br from-pathBlue-700 to-pathBlue-900">
+                    {(college as { logo_url?: string | null }).logo_url ? (
+                      <Image
+                        src={(college as { logo_url: string }).logo_url}
+                        alt={`${college.name} logo`}
+                        width={48} height={48}
+                        className="object-contain w-full h-full"
+                        unoptimized
+                      />
+                    ) : (
+                      <span className="font-display font-bold text-pathBlue-300 text-base leading-none">
+                        {college.name.slice(0, 2).toUpperCase()}
+                      </span>
+                    )}
                   </div>
 
                   <h2 className="font-body font-semibold text-white/90 text-sm leading-snug mb-2 group-hover:text-white transition-colors">
@@ -165,13 +176,11 @@ export default async function CollegesPage({ searchParams }: PageProps) {
                   )}
 
                   <div className="flex items-center justify-between">
-                    {college.website && (
-                      <span className="flex items-center gap-1.5 text-white/25 font-body text-[10px]">
-                        <Globe className="w-3 h-3" />
-                        {college.city}, {college.country}
-                      </span>
-                    )}
-                    <span className="flex items-center gap-1 text-gold-400/70 group-hover:text-gold-400 font-body text-xs font-semibold transition-colors ml-auto">
+                    <span className="flex items-center gap-1.5 text-white/25 font-body text-[10px]">
+                      <Globe className="w-3 h-3" />
+                      {college.city}, {college.country}
+                    </span>
+                    <span className="flex items-center gap-1 text-gold-400/70 group-hover:text-gold-400 font-body text-xs font-semibold transition-colors">
                       View courses <ChevronRight className="w-3.5 h-3.5" />
                     </span>
                   </div>

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Plus, Building2, Globe, Pencil, Power, Trash2, X, Save, Loader2, BookOpen, ArrowRight, CreditCard, Hash, Eye, EyeOff } from "lucide-react";
+import { Plus, Building2, Globe, Pencil, Power, Trash2, X, Save, Loader2, BookOpen, ArrowRight, CreditCard, Hash, Eye, EyeOff, AlertTriangle } from "lucide-react";
 
 interface College {
   id:           string;
@@ -11,6 +11,7 @@ interface College {
   slug:         string;
   country:      string;
   city:         string;
+  description:  string | null;
   website:      string | null;
   is_active:    boolean;
   is_published: boolean;
@@ -252,6 +253,19 @@ export default function CollegeManagementClient({ colleges: initial, courseCount
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {colleges.map(c => (
             <div key={c.id} className={`p-5 rounded-2xl border space-y-3 ${c.is_active ? "bg-white/[0.04] border-white/[0.08]" : "bg-white/[0.02] border-white/[0.05] opacity-70"}`}>
+              {/* Content completeness warnings */}
+              {(() => {
+                const missing: string[] = [];
+                if (!c.description) missing.push("description");
+                if (!c.website)     missing.push("website");
+                return missing.length > 0 ? (
+                  <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-amber-500/[0.07] border border-amber-400/20">
+                    <AlertTriangle className="w-3 h-3 text-amber-400/70 flex-shrink-0" />
+                    <p className="text-amber-400/70 font-body text-[10px]">Missing: {missing.join(", ")}</p>
+                  </div>
+                ) : null;
+              })()}
+
               <div className="flex items-start justify-between gap-3">
                 <p className="font-body font-semibold text-sm text-white/85 leading-snug">{c.name}</p>
                 <div className="flex flex-col items-end gap-1 flex-shrink-0">

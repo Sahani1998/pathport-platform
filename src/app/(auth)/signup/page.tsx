@@ -7,7 +7,14 @@ export const metadata: Metadata = {
     "Create your free PathPort student account and start your Singapore diploma journey. Apply from India — offer letter in 24 hours.",
 };
 
-export default function SignupPage() {
+interface PageProps {
+  searchParams: Promise<Record<string, string>>;
+}
+
+export default async function SignupPage({ searchParams }: PageProps) {
+  const params = await searchParams;
+  const redirectAfterSignup = params.redirect || undefined;
+
   return (
     <>
       <div className="text-center mb-8">
@@ -23,7 +30,7 @@ export default function SignupPage() {
           Courses from <span className="text-gold-400">SGD 4,000/year</span>.
         </p>
       </div>
-      <SignupForm />
+      <SignupForm redirectAfterSignup={redirectAfterSignup} />
     </>
   );
 }

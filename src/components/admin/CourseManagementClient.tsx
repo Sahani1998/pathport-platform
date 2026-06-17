@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Plus, BookOpen, Pencil, Trash2, X, Save, Loader2,
-  Search, ArchiveRestore, Archive, FileEdit, Eye, EyeOff,
+  Search, ArchiveRestore, Archive, FileEdit, Eye, EyeOff, AlertTriangle,
 } from "lucide-react";
 import {
   COURSE_CATEGORIES,
@@ -455,6 +455,22 @@ export default function CourseManagementClient({
             const college  = collegeById[course.college_id];
             return (
               <div key={course.id} className={`p-5 rounded-2xl border space-y-3 ${course.status === "closed" ? "bg-white/[0.02] border-white/[0.05] opacity-75" : "bg-white/[0.04] border-white/[0.08]"}`}>
+                {/* Content completeness warnings */}
+                {(() => {
+                  const missing: string[] = [];
+                  if (!course.description)     missing.push("description");
+                  if (!course.intake_date)      missing.push("intake date");
+                  if (course.tuition_fee <= 0)  missing.push("tuition fee");
+                  return missing.length > 0 ? (
+                    <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-amber-500/[0.07] border border-amber-400/20">
+                      <AlertTriangle className="w-3 h-3 text-amber-400/70 flex-shrink-0" />
+                      <p className="text-amber-400/70 font-body text-[10px]">
+                        Missing: {missing.join(", ")}
+                      </p>
+                    </div>
+                  ) : null;
+                })()}
+
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="font-body font-semibold text-sm text-white/90 leading-snug truncate">{course.title}</p>
