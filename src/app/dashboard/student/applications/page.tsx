@@ -85,6 +85,7 @@ export default async function StudentApplicationsPage() {
       .from("student_invoices")
       .select("id, application_id, public_id, status, amount_cents, currency, due_date, source")
       .eq("student_id", user.id)
+      .in("status", ["pending", "under_verification", "partially_paid", "paid", "refunded", "payment_action_required"])
       .order("created_at", { ascending: false }),
   ]);
 
