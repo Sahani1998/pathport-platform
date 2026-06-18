@@ -1,16 +1,17 @@
 // Public college detail page — no auth required.
-// Shows college info + list of published, non-draft courses at this college.
-// Apply CTA → /signup for unauthenticated users.
+// Shows college branding header, about section, programmes list, gallery, and apply CTA.
 
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
-import Link from "next/link";
+import { notFound }      from "next/navigation";
+import Link              from "next/link";
 import { createAdminClient } from "@/lib/supabase/admin-client";
-import Image from "next/image";
+import Image             from "next/image";
 import {
   ArrowLeft, Globe, Building2, BookOpen, Clock,
   ChevronRight, DollarSign, Calendar, CheckCircle2,
 } from "lucide-react";
+import type { InstitutionMedia } from "@/types/institution-media";
+import { MEDIA_CATEGORIES } from "@/types/institution-media";
 
 export const revalidate = 300;
 
@@ -27,21 +28,25 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const adminDb  = createAdminClient();
   const { data } = await adminDb
     .from("colleges")
-    .select("name, description")
+    .select("name, description, short_description, tagline, cover_image_url, logo_url")
     .eq("slug", slug)
     .eq("is_published", true)
     .maybeSingle();
 
   if (!data) return { title: "College Not Found | PathPort" };
 
+  const desc = data.short_description ?? data.description ??
+    `Study at ${data.name} — Singapore diploma and advanced diploma programmes. Apply through PathPort.`;
+
   return {
     title:       `${data.name} | PathPort Singapore`,
-    description: data.description ?? `Study at ${data.name} — Singapore diploma and advanced diploma programmes. Apply through PathPort.`,
+    description: desc,
     alternates:  { canonical: `/colleges/${slug}` },
     openGraph: {
       title:       `${data.name} | PathPort`,
-      description: data.description ?? `Diploma programmes at ${data.name} in Singapore.`,
+      description: desc,
       type:        "website",
+      images:      data.cover_image_url ? [{ url: data.cover_image_url, width: 1200, height: 675 }] : undefined,
     },
   };
 }
@@ -52,7 +57,11 @@ export default async function CollegeDetailPage({ params }: PageProps) {
 
   const { data: college } = await adminDb
     .from("colleges")
-    .select("id, name, slug, description, website, city, country, logo_url")
+    .select(`
+      id, name, slug, description, website, city, country, logo_url,
+      cover_image_url, tagline, brand_colour_primary, brand_colour_secondary,
+      short_description, mission, vision, introduction
+    `)
     .eq("slug",         slug)
     .eq("is_published", true)
     .eq("is_active",    true)
@@ -60,22 +69,44 @@ export default async function CollegeDetailPage({ params }: PageProps) {
 
   if (!college) notFound();
 
-  const { data: filteredCourses } = await adminDb
-    .from("courses")
-    .select("id, title, slug, category, level, duration_months, tuition_fee, status, intake_date, seats_total, seats_filled, internship_available")
-    .eq("college_id",   college.id)
-    .eq("is_published", true)
-    .neq("status",      "draft")
-    .order("status")
-    .order("title");
+  const [{ data: filteredCourses }, { data: galleryRows }] = await Promise.all([
+    adminDb
+      .from("courses")
+      .select("id, title, slug, category, level, duration_months, tuition_fee, status, intake_date, seats_total, seats_filled, internship_available")
+      .eq("college_id",   college.id)
+      .eq("is_published", true)
+      .neq("status",      "draft")
+      .order("status")
+      .order("title"),
+
+    adminDb
+      .from("institution_media")
+      .select("id, public_url, alt_text, title, caption, category")
+      .eq("college_id", college.id)
+      .eq("media_type",  "gallery_image")
+      .eq("status",      "published")
+      .order("sort_order")
+      .order("published_at", { ascending: false })
+      .limit(24),
+  ]);
 
   const courseList = filteredCourses ?? [];
+  const gallery    = (galleryRows ?? []) as Pick<InstitutionMedia, "id" | "public_url" | "alt_text" | "title" | "caption" | "category">[];
+
+  // Group gallery by category
+  const galleryByCategory = MEDIA_CATEGORIES.reduce<Record<string, typeof gallery>>((acc, cat) => {
+    acc[cat.value] = gallery.filter(g => g.category === cat.value);
+    return acc;
+  }, { other: gallery.filter(g => !g.category) });
+  const hasGallery = gallery.length > 0;
 
   const jsonLd = {
     "@context": "https://schema.org",
     "@type":    "EducationalOrganization",
     name:       college.name,
     url:        college.website ?? `https://pathport.in/colleges/${slug}`,
+    logo:       college.logo_url ?? undefined,
+    image:      college.cover_image_url ?? undefined,
     address: {
       "@type":           "PostalAddress",
       addressLocality:   college.city,
@@ -93,6 +124,8 @@ export default async function CollegeDetailPage({ params }: PageProps) {
       })),
     } : undefined,
   };
+
+  const primaryColour = college.brand_colour_primary ?? null;
 
   return (
     <>
@@ -112,26 +145,55 @@ export default async function CollegeDetailPage({ params }: PageProps) {
             <ArrowLeft className="w-4 h-4" /> All Colleges
           </Link>
 
+          {/* Cover image hero */}
+          {college.cover_image_url && (
+            <div className="relative w-full h-48 md:h-64 rounded-2xl overflow-hidden mb-6 border border-white/[0.08]">
+              <Image
+                src={college.cover_image_url}
+                alt={`${college.name} campus`}
+                fill
+                className="object-cover"
+                unoptimized
+                priority
+              />
+              {/* Gradient overlay for text legibility */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
+            </div>
+          )}
+
           {/* College header */}
-          <div className="bg-white/[0.04] border border-white/[0.08] rounded-2xl p-6 mb-8">
+          <div
+            className="bg-white/[0.04] border border-white/[0.08] rounded-2xl p-6 mb-6"
+            style={primaryColour ? { borderColor: `${primaryColour}22` } : undefined}
+          >
             <div className="flex items-start gap-5">
-              <div className="w-16 h-16 rounded-2xl border border-white/[0.08] flex items-center justify-center flex-shrink-0 overflow-hidden bg-gradient-to-br from-pathBlue-700 to-pathBlue-900">
-                {(college as { logo_url?: string | null }).logo_url ? (
+              <div
+                className="w-16 h-16 rounded-2xl border border-white/[0.08] flex items-center justify-center flex-shrink-0 overflow-hidden"
+                style={{ background: primaryColour ? `linear-gradient(135deg, ${primaryColour}33, ${primaryColour}11)` : undefined }}
+              >
+                {college.logo_url ? (
                   <Image
-                    src={(college as { logo_url: string }).logo_url}
+                    src={college.logo_url}
                     alt={`${college.name} logo`}
                     width={64} height={64}
                     className="object-contain w-full h-full"
                     unoptimized
                   />
                 ) : (
-                  <span className="font-display font-bold text-pathBlue-300 text-xl leading-none">
+                  <span
+                    className="font-display font-bold text-xl leading-none"
+                    style={{ color: primaryColour ?? undefined }}
+                  >
                     {college.name.slice(0, 2).toUpperCase()}
                   </span>
                 )}
               </div>
+
               <div className="flex-1 min-w-0">
-                <h1 className="font-display text-3xl text-white mb-2 leading-tight">{college.name}</h1>
+                <h1 className="font-display text-3xl text-white mb-1 leading-tight">{college.name}</h1>
+                {college.tagline && (
+                  <p className="font-body text-sm text-white/55 italic mb-2">{college.tagline}</p>
+                )}
                 <div className="flex flex-wrap items-center gap-3 mb-3">
                   <span className="flex items-center gap-1.5 text-white/40 font-body text-xs">
                     <Building2 className="w-3.5 h-3.5" /> {college.city}, {college.country}
@@ -140,8 +202,10 @@ export default async function CollegeDetailPage({ params }: PageProps) {
                     <CheckCircle2 className="w-3.5 h-3.5" /> EduTrust Certified
                   </span>
                 </div>
-                {college.description && (
-                  <p className="text-white/55 font-body text-sm leading-relaxed">{college.description}</p>
+                {(college.short_description ?? college.description) && (
+                  <p className="text-white/55 font-body text-sm leading-relaxed">
+                    {college.short_description ?? college.description}
+                  </p>
                 )}
                 {college.website && (
                   <a
@@ -157,8 +221,36 @@ export default async function CollegeDetailPage({ params }: PageProps) {
             </div>
           </div>
 
+          {/* About — introduction, mission, vision */}
+          {(college.introduction || college.mission || college.vision) && (
+            <div className="bg-white/[0.04] border border-white/[0.08] rounded-2xl p-6 mb-6 space-y-5">
+              <h2 className="font-display text-xl text-white">About {college.name}</h2>
+
+              {college.introduction && (
+                <p className="text-white/60 font-body text-sm leading-relaxed">{college.introduction}</p>
+              )}
+
+              {(college.mission || college.vision) && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                  {college.mission && (
+                    <div className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+                      <p className="text-white/30 font-body text-[10px] uppercase tracking-wider mb-1.5">Our Mission</p>
+                      <p className="text-white/65 font-body text-sm leading-relaxed">{college.mission}</p>
+                    </div>
+                  )}
+                  {college.vision && (
+                    <div className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+                      <p className="text-white/30 font-body text-[10px] uppercase tracking-wider mb-1.5">Our Vision</p>
+                      <p className="text-white/65 font-body text-sm leading-relaxed">{college.vision}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Courses */}
-          <div>
+          <div className="mb-8">
             <h2 className="font-display text-2xl text-white mb-5">
               Programmes at {college.name}
               <span className="ml-3 text-white/30 font-body text-base font-normal">
@@ -233,8 +325,46 @@ export default async function CollegeDetailPage({ params }: PageProps) {
             )}
           </div>
 
+          {/* Campus Gallery */}
+          {hasGallery && (
+            <div className="mb-8">
+              <h2 className="font-display text-2xl text-white mb-5">Campus Gallery</h2>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                {gallery.map(img => (
+                  <div key={img.id} className="group relative aspect-video rounded-xl overflow-hidden border border-white/[0.08]">
+                    <Image
+                      src={img.public_url}
+                      alt={img.alt_text ?? img.title ?? `${college.name} campus photo`}
+                      fill
+                      className="object-cover group-hover:scale-105 transition-transform duration-300"
+                      unoptimized
+                    />
+                    {(img.title || img.caption) && (
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-2">
+                        <p className="text-white font-body text-[11px] leading-snug">{img.title ?? img.caption}</p>
+                      </div>
+                    )}
+                    {img.category && (
+                      <span className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded-md bg-black/50 border border-white/10 text-white/70 font-body text-[9px]">
+                        {MEDIA_CATEGORIES.find(c => c.value === img.category)?.label ?? img.category}
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Apply CTA */}
-          <div className="mt-12 text-center p-8 rounded-2xl bg-gradient-to-br from-gold-500/[0.07] to-transparent border border-gold-400/20">
+          <div
+            className="text-center p-8 rounded-2xl border"
+            style={{
+              background: primaryColour
+                ? `linear-gradient(135deg, ${primaryColour}10, transparent)`
+                : "linear-gradient(135deg, rgba(var(--color-gold-500)/0.07), transparent)",
+              borderColor: primaryColour ? `${primaryColour}33` : "rgba(var(--color-gold-400)/0.2)",
+            }}
+          >
             <p className="font-display text-2xl text-white mb-2">Apply to {college.name}</p>
             <p className="text-white/45 font-body text-sm mb-5 max-w-md mx-auto">
               PathPort handles your application, documents, and offer letter process — usually within 24 hours.
@@ -254,6 +384,7 @@ export default async function CollegeDetailPage({ params }: PageProps) {
               </Link>
             </div>
           </div>
+
         </div>
       </main>
     </>

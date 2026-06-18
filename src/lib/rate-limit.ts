@@ -180,4 +180,9 @@ export const LIMITS = {
   offerLifecycle:    { limit: 20, windowMs: 60_000  },
   ipaLifecycle:      { limit: 20, windowMs: 60_000  },
   appArchive:        { limit: 10, windowMs: 60_000  },
+
+  // Sprint 24A — institution media
+  brandingWrite:     { limit: 20, windowMs: 60_000  },
+  mediaUpload:       { limit: 20, windowMs: 60_000  },
+  mediaWrite:        { limit: 30, windowMs: 60_000  },
 } as const;
