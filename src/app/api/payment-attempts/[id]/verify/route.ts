@@ -4,18 +4,18 @@
 //
 // Sprint 22 (payment safety):
 //   - paid_amount_cents + paid_currency are REQUIRED.
-//   - Amount is compared to invoice: if paid < invoice, accept_partial: true
-//     must be sent explicitly. Partial payments do not advance the stage and
-//     cannot receive an official receipt until the full amount is verified.
-//   - UPDATE is atomic: WHERE status='proof_submitted' closes the TOCTOU race
-//     where two concurrent verify calls would both mark the invoice paid.
+//   - All previously verified paid amounts for the invoice are summed first.
+//     This makes multiple partial payments work correctly: attempt 1 = 3500
+//     on a 5000 invoice → partially_paid; attempt 2 = 1500 → totalPaid = 5000
+//     → paid. Without the sum, attempt 2 would read 1500 < 5000 = partial.
+//   - UPDATE is atomic: WHERE status='proof_submitted' closes TOCTOU race.
 //
-// Transitions (full payment):
+// Transitions (full payment, totalPaid >= invoice.amount_cents):
 //   payment_attempt.status  → verified
 //   student_invoices.status → paid
 //   application.current_stage → ipa_processing | arrival_preparation
 //
-// Transitions (partial payment):
+// Transitions (partial payment, totalPaid < invoice.amount_cents):
 //   payment_attempt.status  → verified
 //   student_invoices.status → partially_paid
 //   application.current_stage → unchanged
@@ -26,7 +26,7 @@
 //   payment_date?:        string   (YYYY-MM-DD, not future)
 //   reconciliation_memo?: string
 //   notes?:               string
-//   accept_partial?:      boolean  (must be true when paid < invoice amount)
+//   accept_partial?:      boolean  (must be true when totalPaid < invoice amount)
 // }
 
 import { NextResponse } from "next/server";
@@ -105,21 +105,36 @@ export async function POST(
     );
   }
 
-  // Amount guard: paid < invoice requires explicit opt-in to partial payment
-  const isPartial = paidAmountCents < ctx.invoice.amount_cents;
+  // Sum previously verified paid amounts for this invoice.
+  // Supports multiple partial payments: e.g. 3500 + 1500 on a 5000 invoice
+  // correctly resolves to paid rather than staying partially_paid.
+  const { data: prevVerified } = await supabase
+    .from("payment_attempts")
+    .select("paid_amount_cents")
+    .eq("invoice_id", ctx.invoice.id)
+    .eq("status", "verified");
+
+  const previouslyPaidCents = (prevVerified ?? []).reduce(
+    (sum, a) => sum + ((a as { paid_amount_cents: number | null }).paid_amount_cents ?? 0),
+    0,
+  );
+  const totalPaidCents = previouslyPaidCents + paidAmountCents;
+  const isPartial      = totalPaidCents < ctx.invoice.amount_cents;
+
+  // Amount guard: total after this payment still < invoice requires explicit partial opt-in
   if (isPartial && !acceptPartial) {
     return NextResponse.json({
-      error: `Amount received (${formatCents(paidAmountCents, paidCurrency)}) is less than invoice amount (${formatCents(ctx.invoice.amount_cents, ctx.invoice.currency as Currency)}). Set accept_partial: true to record as a partial payment.`,
-      invoice_amount_cents: ctx.invoice.amount_cents,
-      paid_amount_cents:    paidAmountCents,
+      error: `Total payments (${formatCents(totalPaidCents, paidCurrency)}) will be less than invoice amount (${formatCents(ctx.invoice.amount_cents, ctx.invoice.currency as Currency)}). Set accept_partial: true to record as a partial payment.`,
+      invoice_amount_cents:    ctx.invoice.amount_cents,
+      paid_amount_cents:       paidAmountCents,
+      previously_paid_cents:   previouslyPaidCents,
+      total_paid_after_this:   totalPaidCents,
     }, { status: 400 });
   }
 
   const now = new Date().toISOString();
 
-  // Atomic UPDATE — WHERE status='proof_submitted' is the idempotency guard.
-  // A concurrent verify that already processed this attempt will have changed
-  // its status to 'verified', so this UPDATE matches 0 rows → PGRST116 → 409.
+  // Atomic UPDATE — WHERE status='proof_submitted' closes the TOCTOU race.
   const { data: updatedAttempt, error: attErr } = await supabase
     .from("payment_attempts")
     .update({
@@ -161,15 +176,15 @@ export async function POST(
   const adminDb = createAdminClient();
 
   if (isPartial) {
-    // Partial: notify student, log audit. No stage advance, no email.
-    const paidStr    = formatCents(paidAmountCents, paidCurrency);
-    const invoiceStr = formatCents(ctx.invoice.amount_cents, ctx.invoice.currency as Currency);
+    const paidStr      = formatCents(paidAmountCents, paidCurrency);
+    const invoiceStr   = formatCents(ctx.invoice.amount_cents, ctx.invoice.currency as Currency);
+    const remainingStr = formatCents(ctx.invoice.amount_cents - totalPaidCents, ctx.invoice.currency as Currency);
     await Promise.all([
       notifyUser(adminDb, {
         userId:        ctx.studentId,
         applicationId: ctx.applicationId,
         title:         "Partial payment received",
-        message:       `Payment of ${paidStr} received on invoice ${ctx.invoice.public_id ?? ""}. Invoice amount: ${invoiceStr}. Please arrange the remaining balance.`,
+        message:       `Payment of ${paidStr} received on invoice ${ctx.invoice.public_id ?? ""}. Total received: ${formatCents(totalPaidCents, paidCurrency)} of ${invoiceStr}. Remaining balance: ${remainingStr}. Please arrange the outstanding amount.`,
         type:          "payment_update",
       }),
       logAudit(adminDb, {
@@ -182,17 +197,23 @@ export async function POST(
           attempt_id:           id,
           paid_amount_cents:    paidAmountCents,
           paid_currency:        paidCurrency,
+          previously_paid:      previouslyPaidCents,
+          total_paid:           totalPaidCents,
           invoice_amount_cents: ctx.invoice.amount_cents,
           invoice_currency:     ctx.invoice.currency,
+          remaining_cents:      ctx.invoice.amount_cents - totalPaidCents,
           notes,
         },
       }),
     ]);
 
     return NextResponse.json({
-      attempt: updatedAttempt,
-      partial: true,
-      message: "Partial payment recorded. No stage advance. Issue receipt only after full payment is verified.",
+      attempt:             updatedAttempt,
+      partial:             true,
+      previously_paid:     previouslyPaidCents,
+      total_paid:          totalPaidCents,
+      remaining:           ctx.invoice.amount_cents - totalPaidCents,
+      message:             "Partial payment recorded. No stage advance. Issue receipt only after full invoice amount is verified.",
     });
   }
 
@@ -217,11 +238,13 @@ export async function POST(
     studentMessage,
     auditAction:    "payment_verified",
     auditMetadata: {
-      invoice_id:   ctx.invoice.id,
-      attempt_id:   id,
-      fee_type:     feeType,
-      amount_cents: ctx.invoice.amount_cents,
-      currency:     ctx.invoice.currency,
+      invoice_id:          ctx.invoice.id,
+      attempt_id:          id,
+      fee_type:            feeType,
+      amount_cents:        ctx.invoice.amount_cents,
+      currency:            ctx.invoice.currency,
+      previously_paid:     previouslyPaidCents,
+      total_paid:          totalPaidCents,
       notes,
     },
   });

@@ -6,10 +6,11 @@ import {
   ArrowLeft, Download, MessageCircle, Mail, Phone, Receipt,
 } from "lucide-react";
 import StudentPaymentFlow from "@/components/payments/StudentPaymentFlow";
+import PaymentSummaryCard from "@/components/payments/PaymentSummaryCard";
 import {
   INVOICE_STATUS_META, INVOICE_LINE_TYPE_LABEL, INVOICE_FEE_TYPE_META,
   type StudentInvoice, type InvoiceLineItem, type PaymentAttempt, type PaymentProof,
-  type OfficialReceipt, type CollegePaymentSettings, type InvoiceFeeType,
+  type OfficialReceipt, type CollegePaymentSettings, type InvoiceFeeType, type InvoiceStatus,
 } from "@/types/payment";
 import { formatCents } from "@/lib/payments/invoice-helpers";
 
@@ -81,6 +82,10 @@ export default async function StudentInvoicePage({
 
   const receiptList = (receipts ?? []) as OfficialReceipt[];
 
+  const amountReceivedCents = ((attempts ?? []) as PaymentAttempt[])
+    .filter(a => a.status === "verified")
+    .reduce((sum, a) => sum + ((a as PaymentAttempt & { paid_amount_cents: number | null }).paid_amount_cents ?? 0), 0);
+
   const meta    = INVOICE_STATUS_META[invoice.status as keyof typeof INVOICE_STATUS_META];
   const feeMeta = invoice.fee_type ? INVOICE_FEE_TYPE_META[invoice.fee_type as InvoiceFeeType] : null;
 
@@ -123,6 +128,14 @@ export default async function StudentInvoicePage({
           <p className="text-white/55 font-body text-sm mt-3 pt-3 border-t border-white/[0.07]">{invoice.description}</p>
         )}
       </section>
+
+      {/* Payment summary (paid / partially paid) */}
+      <PaymentSummaryCard
+        invoiceAmountCents={invoice.amount_cents}
+        invoiceCurrency={invoice.currency}
+        amountReceivedCents={amountReceivedCents}
+        invoiceStatus={invoice.status as InvoiceStatus}
+      />
 
       {/* Line items (generated only) */}
       {invoice.source === "generated" && (lines ?? []).length > 0 && (
