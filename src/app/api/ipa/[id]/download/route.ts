@@ -26,16 +26,17 @@ export async function GET(
     .single();
 
   if (error || !record) return NextResponse.json({ error: "IPA record not found" }, { status: 404 });
+  if (!record.file_path) return NextResponse.json({ error: "No file attached to this IPA record" }, { status: 422 });
 
   // Sign with the service role — the ipa-documents bucket has no student read
   // policy by design; access was already authorised by the table RLS check.
   const adminDb = createAdminClient();
   const { data: signed, error: signErr } = await adminDb.storage
     .from("ipa-documents")
-    .createSignedUrl(record.file_path, 3600, { download: record.file_name });
+    .createSignedUrl(record.file_path, 3600, { download: record.file_name ?? "ipa-document.pdf" });
 
   if (signErr || !signed?.signedUrl) {
-    console.error("[IpaDownload] sign error:", signErr?.message);
+    console.error("[IpaDownload] sign error:", signErr?.message, "path:", record.file_path);
     return NextResponse.json({ error: "Could not generate download link" }, { status: 500 });
   }
 
