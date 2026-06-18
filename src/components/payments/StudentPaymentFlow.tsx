@@ -4,13 +4,13 @@ import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import {
   Landmark, Globe2, Upload, Loader2, AlertCircle, Copy, CheckCircle2,
-  FileText, Download, XCircle, HelpCircle,
+  FileText, Download, XCircle, HelpCircle, AlertTriangle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   PAYMENT_ATTEMPT_STATUS_META, ALLOWED_PROOF_MIME, MAX_FILE_BYTES,
   type StudentInvoice, type PaymentAttempt, type PaymentProof, type PaymentMethod,
-  type CollegePaymentSettings,
+  type CollegePaymentSettings, type Currency,
 } from "@/types/payment";
 import { formatCents } from "@/lib/payments/invoice-helpers";
 
@@ -23,10 +23,10 @@ type PaymentInstructions = Pick<
 >;
 
 interface Props {
-  invoice:        StudentInvoice;
-  attempts:       PaymentAttempt[];
+  invoice:         StudentInvoice;
+  attempts:        PaymentAttempt[];
   proofsByAttempt: Record<string, PaymentProof[]>;
-  instructions:   PaymentInstructions | null;
+  instructions:    PaymentInstructions | null;
 }
 
 function CopyableRow({ label, value }: { label: string; value: string | null | undefined }) {
@@ -49,24 +49,33 @@ function CopyableRow({ label, value }: { label: string; value: string | null | u
 export default function StudentPaymentFlow({ invoice, attempts: initialAttempts, proofsByAttempt: initialProofs, instructions }: Props) {
   const router = useRouter();
   const [attempts, setAttempts] = useState(initialAttempts);
-  const [proofs, setProofs] = useState(initialProofs);
-  const [method, setMethod] = useState<PaymentMethod | null>(null);
-  const [error, setError]   = useState<string | null>(null);
+  const [proofs, setProofs]     = useState(initialProofs);
+  const [method, setMethod]     = useState<PaymentMethod | null>(null);
+  const [error, setError]       = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [uploadingId, setUploadingId] = useState<string | null>(null);
 
   // Most recent active attempt the student can act on.
-  // info_requested and rejected allow re-upload; initiated awaits proof upload.
   const activeAttempt = attempts.find(a =>
     ["initiated", "info_requested", "rejected"].includes(a.status),
   ) ?? null;
 
-  // The most recent verified attempt, if any.
+  // The most recent verified attempt (for reference number display).
   const verifiedAttempt = attempts.find(a => a.status === "verified") ?? null;
 
-  const allowed = invoice.payment_methods_allowed ?? [];
+  // Payment summary — sum all verified paid_amount_cents for this invoice.
+  const amountReceivedCents = attempts
+    .filter(a => a.status === "verified")
+    .reduce((sum, a) => sum + (a.paid_amount_cents ?? 0), 0);
+  const remainingCents = Math.max(0, invoice.amount_cents - amountReceivedCents);
+  const cur = invoice.currency as Currency;
+
+  const allowed      = invoice.payment_methods_allowed ?? [];
   const bankAvailable = allowed.includes("bank_transfer") && (instructions?.bank_transfer_enabled ?? false);
-  const wiseAvailable = allowed.includes("wise") && (instructions?.wise_enabled ?? false);
+  const wiseAvailable = allowed.includes("wise")          && (instructions?.wise_enabled          ?? false);
+
+  // Statuses where payment is no longer accepted.
+  const paymentClosed = ["paid", "void", "refunded"].includes(invoice.status);
 
   const startAttempt = async (m: PaymentMethod) => {
     setMethod(m);
@@ -93,10 +102,10 @@ export default function StudentPaymentFlow({ invoice, attempts: initialAttempts,
   const handleProofUpload = async (attemptId: string, e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
-    const formEl = e.currentTarget;
-    const fileInput  = formEl.elements.namedItem("file") as HTMLInputElement;
-    const refInput   = formEl.elements.namedItem("receipt_reference") as HTMLInputElement;
-    const dateInput  = formEl.elements.namedItem("payment_date") as HTMLInputElement;
+    const formEl    = e.currentTarget;
+    const fileInput = formEl.elements.namedItem("file") as HTMLInputElement;
+    const refInput  = formEl.elements.namedItem("receipt_reference") as HTMLInputElement;
+    const dateInput = formEl.elements.namedItem("payment_date") as HTMLInputElement;
     const file = fileInput.files?.[0];
     if (!file) { setError("Choose a file first"); return; }
 
@@ -111,7 +120,6 @@ export default function StudentPaymentFlow({ invoice, attempts: initialAttempts,
       const data = await res.json() as { proof?: PaymentProof; error?: string };
       if (!res.ok || !data.proof) throw new Error(data.error ?? "Upload failed");
       setProofs(p => ({ ...p, [attemptId]: [data.proof!, ...(p[attemptId] ?? [])] }));
-      // Refresh attempt status from server
       const r = await fetch(`/api/invoices/${invoice.id}`);
       const j = await r.json() as { attempts?: PaymentAttempt[] };
       if (j.attempts) setAttempts(j.attempts);
@@ -126,7 +134,10 @@ export default function StudentPaymentFlow({ invoice, attempts: initialAttempts,
     }
   };
 
-  const total = formatCents(invoice.amount_cents, invoice.currency);
+  // Amount displayed in payment instructions: remaining balance for partial, full for new.
+  const displayAmountStr = invoice.status === "partially_paid" && remainingCents > 0
+    ? formatCents(remainingCents, cur)
+    : formatCents(invoice.amount_cents, cur);
 
   return (
     <div className="space-y-6">
@@ -136,14 +147,14 @@ export default function StudentPaymentFlow({ invoice, attempts: initialAttempts,
         </div>
       )}
 
-      {/* Paid / verified success banner */}
-      {(invoice.status === "paid" || verifiedAttempt) && (
+      {/* ── Full payment confirmed ─────────────────────────────────────────── */}
+      {invoice.status === "paid" && (
         <div className="flex items-start gap-3 p-4 rounded-2xl bg-emerald-500/10 border border-emerald-400/25">
           <CheckCircle2 className="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" />
           <div>
             <p className="font-display text-base text-emerald-400">Payment confirmed</p>
             <p className="font-body text-sm text-emerald-300/70 mt-1">
-              Your payment has been verified by the college finance team. Your IPA application is now being processed.
+              Your payment has been verified by the college finance team.
             </p>
             {verifiedAttempt && (
               <p className="font-mono text-[11px] text-emerald-300/50 mt-1">{verifiedAttempt.payment_reference}</p>
@@ -152,7 +163,37 @@ export default function StudentPaymentFlow({ invoice, attempts: initialAttempts,
         </div>
       )}
 
-      {/* Info requested banner (actionable — student must re-upload) */}
+      {/* ── Partial payment received ───────────────────────────────────────── */}
+      {invoice.status === "partially_paid" && amountReceivedCents > 0 && (
+        <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-400/25 space-y-3">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="font-display text-base text-amber-400">Partial payment received</p>
+              <p className="font-body text-sm text-amber-300/70 mt-1">
+                Your payment has been verified. Please arrange the remaining balance to complete enrolment.
+              </p>
+            </div>
+          </div>
+          {/* Payment summary grid */}
+          <div className="grid grid-cols-3 divide-x divide-amber-400/15 rounded-xl bg-amber-500/[0.05] border border-amber-400/15 overflow-hidden">
+            <div className="p-3 text-center">
+              <p className="text-amber-300/60 font-body text-[10px] uppercase tracking-wider mb-1">Invoice Total</p>
+              <p className="font-mono text-sm text-white/85 font-semibold">{formatCents(invoice.amount_cents, cur)}</p>
+            </div>
+            <div className="p-3 text-center">
+              <p className="text-amber-300/60 font-body text-[10px] uppercase tracking-wider mb-1">Received</p>
+              <p className="font-mono text-sm text-emerald-400 font-semibold">{formatCents(amountReceivedCents, cur)}</p>
+            </div>
+            <div className="p-3 text-center">
+              <p className="text-amber-300/60 font-body text-[10px] uppercase tracking-wider mb-1">Remaining</p>
+              <p className="font-mono text-sm text-amber-400 font-semibold">{formatCents(remainingCents, cur)}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Info requested ────────────────────────────────────────────────── */}
       {activeAttempt?.status === "info_requested" && activeAttempt.info_request_message && (
         <div className="flex items-start gap-3 p-4 rounded-2xl bg-amber-500/10 border border-amber-400/25">
           <HelpCircle className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
@@ -164,7 +205,7 @@ export default function StudentPaymentFlow({ invoice, attempts: initialAttempts,
         </div>
       )}
 
-      {/* Rejected banner (actionable — student must re-upload) */}
+      {/* ── Rejected ──────────────────────────────────────────────────────── */}
       {activeAttempt?.status === "rejected" && activeAttempt.rejection_reason && (
         <div className="flex items-start gap-3 p-4 rounded-2xl bg-red-500/10 border border-red-400/25">
           <XCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
@@ -176,9 +217,21 @@ export default function StudentPaymentFlow({ invoice, attempts: initialAttempts,
         </div>
       )}
 
-      {!activeAttempt && invoice.status !== "paid" && !verifiedAttempt && (
+      {/* ── Payment method selector ───────────────────────────────────────── */}
+      {/* Show when: no active attempt, payment not closed (paid/void/refunded).
+          For partially_paid, this allows the student to pay the remaining balance. */}
+      {!activeAttempt && !paymentClosed && (
         <section className="space-y-3">
-          <p className="font-display text-lg text-white">Choose a Payment Method</p>
+          <div>
+            <p className="font-display text-lg text-white">
+              {invoice.status === "partially_paid" ? "Pay Remaining Balance" : "Choose a Payment Method"}
+            </p>
+            {invoice.status === "partially_paid" && (
+              <p className="font-body text-sm text-amber-300/70 mt-1">
+                Remaining: <span className="font-mono font-semibold text-amber-400">{formatCents(remainingCents, cur)}</span>
+              </p>
+            )}
+          </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <button
               onClick={() => bankAvailable && startAttempt("bank_transfer")}
@@ -219,13 +272,16 @@ export default function StudentPaymentFlow({ invoice, attempts: initialAttempts,
         </section>
       )}
 
+      {/* ── Active attempt: instructions + proof upload ────────────────────── */}
       {activeAttempt && (
         <section className="space-y-4">
           <header className="flex items-start justify-between flex-wrap gap-2">
             <div>
               <p className="font-display text-lg text-white">Complete Your Payment</p>
               <p className="text-white/45 font-body text-sm">
-                Use the reference and bank details below, then upload your transfer proof.
+                {invoice.status === "partially_paid"
+                  ? `Remaining balance: ${formatCents(remainingCents, cur)}. Use the reference and details below, then upload your transfer proof.`
+                  : "Use the reference and bank details below, then upload your transfer proof."}
               </p>
             </div>
             <span className={cn(
@@ -236,7 +292,7 @@ export default function StudentPaymentFlow({ invoice, attempts: initialAttempts,
             </span>
           </header>
 
-          {/* Highlight: payment reference */}
+          {/* Payment reference */}
           <div className="p-5 rounded-2xl bg-gold-400/[0.08] border border-gold-400/30">
             <p className="text-gold-400 font-body text-[10px] uppercase tracking-widest mb-1">Payment Reference</p>
             <div className="flex items-center justify-between gap-3 flex-wrap">
@@ -251,7 +307,7 @@ export default function StudentPaymentFlow({ invoice, attempts: initialAttempts,
             </p>
           </div>
 
-          {/* Method-specific instructions */}
+          {/* Bank transfer details */}
           {activeAttempt.payment_method === "bank_transfer" && instructions?.bank_transfer_enabled && (
             <div className="p-5 rounded-2xl bg-white/[0.04] border border-white/[0.08]">
               <div className="flex items-center gap-2 mb-3">
@@ -265,13 +321,14 @@ export default function StudentPaymentFlow({ invoice, attempts: initialAttempts,
               <CopyableRow label="Branch Code"    value={instructions.bank_branch_code} />
               <CopyableRow label="Country"        value={instructions.bank_country} />
               <CopyableRow label="Currency"       value={instructions.bank_currency} />
-              <CopyableRow label="Amount"         value={total} />
+              <CopyableRow label="Amount"         value={displayAmountStr} />
               {instructions.bank_payment_instructions && (
                 <p className="text-white/55 font-body text-xs mt-3 leading-relaxed">{instructions.bank_payment_instructions}</p>
               )}
             </div>
           )}
 
+          {/* Wise details */}
           {activeAttempt.payment_method === "wise" && instructions?.wise_enabled && (
             <div className="p-5 rounded-2xl bg-white/[0.04] border border-white/[0.08]">
               <div className="flex items-center gap-2 mb-3">
@@ -281,7 +338,7 @@ export default function StudentPaymentFlow({ invoice, attempts: initialAttempts,
               <CopyableRow label="Recipient Name"  value={instructions.wise_recipient_name} />
               <CopyableRow label="Recipient Email" value={instructions.wise_recipient_email} />
               <CopyableRow label="Currency"        value={instructions.wise_currency} />
-              <CopyableRow label="Amount"          value={total} />
+              <CopyableRow label="Amount"          value={displayAmountStr} />
               {instructions.wise_instructions && (
                 <p className="text-white/55 font-body text-xs mt-3 leading-relaxed">{instructions.wise_instructions}</p>
               )}
@@ -319,12 +376,13 @@ export default function StudentPaymentFlow({ invoice, attempts: initialAttempts,
                 <div>
                   <label className="block text-white/55 font-body text-[10px] uppercase tracking-wider mb-1">Payment Date (optional)</label>
                   <input type="date" name="payment_date"
+                    max={new Date().toISOString().slice(0, 10)}
                     className="w-full px-3 py-2 rounded-xl bg-white/[0.06] border border-white/[0.10] font-body text-sm text-white placeholder-white/35 focus:outline-none focus:border-gold-400/50 transition-colors [color-scheme:dark]" />
                 </div>
               </div>
 
               <p className="text-white/40 font-body text-[10px]">
-                Max upload size {Math.round(MAX_FILE_BYTES / 1024 / 1024)} MB. By submitting you confirm the proof shows a transfer of {total}.
+                Max upload size {Math.round(MAX_FILE_BYTES / 1024 / 1024)} MB. By submitting you confirm the proof shows a transfer of {displayAmountStr}.
               </p>
 
               <button type="submit" disabled={uploadingId === activeAttempt.id}
@@ -356,7 +414,7 @@ export default function StudentPaymentFlow({ invoice, attempts: initialAttempts,
         </section>
       )}
 
-      {/* History of past attempts (if any beyond active) */}
+      {/* ── Payment history ────────────────────────────────────────────────── */}
       {attempts.length > (activeAttempt ? 1 : 0) && (
         <section className="space-y-2 pt-4 border-t border-white/[0.06]">
           <p className="text-white/45 font-body text-[11px] uppercase tracking-wider">Payment History</p>
@@ -368,6 +426,9 @@ export default function StudentPaymentFlow({ invoice, attempts: initialAttempts,
                   <p className="font-mono text-xs text-white/70">{att.payment_reference}</p>
                   <p className="font-body text-[10px] text-white/35 mt-0.5">
                     {att.payment_method.replace("_", " ")} · {new Date(att.created_at).toLocaleDateString("en-SG", { dateStyle: "medium" })}
+                    {att.paid_amount_cents && att.status === "verified" && (
+                      <> · {formatCents(att.paid_amount_cents, cur)}</>
+                    )}
                   </p>
                 </div>
                 <span className={cn("px-2 py-0.5 rounded-full border font-body text-[10px] font-semibold", m.color)}>

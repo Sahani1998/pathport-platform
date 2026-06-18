@@ -8,7 +8,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { notFound, redirect } from "next/navigation";
 import InvoicePrintable from "@/components/payments/InvoicePrintable";
-import type { StudentInvoice, InvoiceLineItem } from "@/types/payment";
+import type { StudentInvoice, InvoiceLineItem, PaymentAttempt } from "@/types/payment";
 
 export const dynamic = "force-dynamic";
 
@@ -31,12 +31,16 @@ export default async function InvoicePrintPage({
   ]);
   if (!invoice) notFound();
 
-  const [{ data: college }, { data: course }, { data: studentProfile }, { data: appRow }] = await Promise.all([
+  const [{ data: college }, { data: course }, { data: studentProfile }, { data: appRow }, { data: verifiedAttempts }] = await Promise.all([
     supabase.from("colleges").select("name").eq("id", invoice.college_id).single(),
     supabase.from("courses").select("title").eq("id", invoice.course_id).single(),
     supabase.from("profiles").select("public_id, full_name, email").eq("id", invoice.student_id).single(),
     supabase.from("applications").select("public_id").eq("id", invoice.application_id).single(),
+    supabase.from("payment_attempts").select("paid_amount_cents").eq("invoice_id", id).eq("status", "verified"),
   ]);
+
+  const amountReceivedCents = ((verifiedAttempts ?? []) as Pick<PaymentAttempt, "paid_amount_cents">[])
+    .reduce((sum, a) => sum + (a.paid_amount_cents ?? 0), 0);
 
   return (
     <InvoicePrintable
@@ -48,6 +52,8 @@ export default async function InvoicePrintPage({
       studentEmail={studentProfile?.email ?? ""}
       studentPublicId={studentProfile?.public_id ?? null}
       applicationPublicId={appRow?.public_id ?? null}
+      feeType={invoice.fee_type ?? null}
+      amountReceivedCents={amountReceivedCents}
       autoPrint={auto === "1"}
     />
   );

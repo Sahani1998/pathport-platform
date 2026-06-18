@@ -27,9 +27,10 @@ interface Props {
   receipt:  OfficialReceipt | null;
   invoiceAmountCents: number;
   invoiceCurrency:    string;
+  invoiceStatus:      string;
 }
 
-export default function VerificationPanel({ attempt, proofs, receipt, invoiceAmountCents, invoiceCurrency }: Props) {
+export default function VerificationPanel({ attempt, proofs, receipt, invoiceAmountCents, invoiceCurrency, invoiceStatus }: Props) {
   const router = useRouter();
   const [busy, setBusy]       = useState<"verify" | "reject" | "info" | "receipt" | null>(null);
   const [error, setError]     = useState<string | null>(null);
@@ -397,6 +398,13 @@ export default function VerificationPanel({ attempt, proofs, receipt, invoiceAmo
                   Receipt {receipt.public_id} issued {new Date(receipt.issued_at).toLocaleDateString("en-SG", { dateStyle: "medium" })}.
                   {receipt.notes && <> · {receipt.notes}</>}
                 </p>
+              ) : invoiceStatus === "partially_paid" ? (
+                <div className="flex items-start gap-2 p-3 rounded-xl bg-amber-500/[0.05] border border-amber-400/20">
+                  <AlertTriangle className="w-4 h-4 text-amber-400 mt-0.5 flex-shrink-0" />
+                  <p className="font-body text-xs text-amber-200/80">
+                    Official receipt cannot be issued while the invoice has an outstanding balance. Verify the remaining payment first.
+                  </p>
+                </div>
               ) : (
                 <div className="space-y-3">
                   <p className="font-body text-xs text-white/50">No receipt issued yet. Issue one now:</p>

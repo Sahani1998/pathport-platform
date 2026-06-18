@@ -4,10 +4,11 @@ import Link from "next/link";
 import {
   ArrowLeft, Download, Receipt, FileText, Clock,
 } from "lucide-react";
+import PaymentSummaryCard from "@/components/payments/PaymentSummaryCard";
 import {
   INVOICE_STATUS_META, INVOICE_LINE_TYPE_LABEL, INVOICE_FEE_TYPE_META,
   type StudentInvoice, type InvoiceLineItem, type PaymentAttempt,
-  type PaymentProof, type OfficialReceipt, type InvoiceFeeType,
+  type PaymentProof, type OfficialReceipt, type InvoiceFeeType, type InvoiceStatus,
 } from "@/types/payment";
 import { formatCents } from "@/lib/payments/invoice-helpers";
 import VerificationPanel from "@/components/payments/VerificationPanel";
@@ -69,6 +70,10 @@ export default async function InstitutionInvoiceDetailPage({
   for (const r of ((receipts ?? []) as OfficialReceipt[])) {
     receiptByAttempt[r.payment_attempt_id] = r;
   }
+
+  const amountReceivedCents = ((attempts ?? []) as PaymentAttempt[])
+    .filter(a => a.status === "verified")
+    .reduce((sum, a) => sum + ((a as PaymentAttempt & { paid_amount_cents: number | null }).paid_amount_cents ?? 0), 0);
 
   const meta    = INVOICE_STATUS_META[invoice.status as keyof typeof INVOICE_STATUS_META];
   const feeMeta = invoice.fee_type ? INVOICE_FEE_TYPE_META[invoice.fee_type as InvoiceFeeType] : null;
@@ -132,6 +137,14 @@ export default async function InstitutionInvoiceDetailPage({
         </div>
       </section>
 
+      {/* Payment summary (paid / partially paid) */}
+      <PaymentSummaryCard
+        invoiceAmountCents={invoice.amount_cents}
+        invoiceCurrency={invoice.currency}
+        amountReceivedCents={amountReceivedCents}
+        invoiceStatus={invoice.status as InvoiceStatus}
+      />
+
       {invoice.description && (
         <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/[0.07] text-white/65 font-body text-sm">
           {invoice.description}
@@ -185,6 +198,7 @@ export default async function InstitutionInvoiceDetailPage({
                 receipt={receiptByAttempt[att.id] ?? null}
                 invoiceAmountCents={invoice.amount_cents}
                 invoiceCurrency={invoice.currency}
+                invoiceStatus={invoice.status}
               />
             ))}
           </div>

@@ -54,6 +54,14 @@ export async function POST(
     );
   }
 
+  // Block receipt on partially-paid invoices — the official receipt is the final
+  // acknowledgement of full payment. Institution must verify the remaining balance first.
+  if (ctx.invoice.status === "partially_paid") {
+    return NextResponse.json({
+      error: "Official receipts cannot be issued while the invoice has an outstanding balance. Verify the remaining payment first.",
+    }, { status: 409 });
+  }
+
   // Check for existing receipt
   const { data: existing } = await supabase
     .from("official_receipts").select("id").eq("payment_attempt_id", id).maybeSingle();
