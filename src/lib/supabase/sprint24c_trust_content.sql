@@ -112,7 +112,7 @@ CREATE TABLE IF NOT EXISTS institution_success_stories (
   person_name         TEXT        NOT NULL,
   course_name         TEXT,
   graduation_year     INT,
-  current_role        TEXT,
+  "current_role"      TEXT,
   current_company     TEXT,
   story_text          TEXT        NOT NULL,
   photo_storage_path  TEXT,
