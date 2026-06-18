@@ -88,6 +88,7 @@ export default async function StudentDocumentsPage() {
           .from("offer_letters")
           .select("id, application_id, file_name, version, expiry_date, created_at")
           .in("application_id", appIds)
+          .eq("status", "issued")
           .order("created_at", { ascending: false })
       : Promise.resolve({ data: [], error: null }),
     supabase
