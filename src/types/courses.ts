@@ -12,6 +12,16 @@ export interface College {
   is_active:    boolean;
   is_published: boolean;
   created_at:   string;
+
+  // Sprint 24A — branding
+  cover_image_url:        string | null;
+  tagline:                string | null;
+  brand_colour_primary:   string | null;
+  brand_colour_secondary: string | null;
+  short_description:      string | null;
+  mission:                string | null;
+  vision:                 string | null;
+  introduction:           string | null;
 }
 
 // ─── Courses ──────────────────────────────────────────────────────────────────
