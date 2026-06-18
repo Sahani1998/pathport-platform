@@ -1,5 +1,5 @@
 // Public college detail page — no auth required.
-// Shows college branding header, about section, videos, programmes, leadership, faculty, gallery, and apply CTA.
+// Shows college branding header, about section, videos, programmes, leadership, faculty, facilities, accreditations, testimonials, success stories, gallery, and apply CTA.
 
 import type { Metadata } from "next";
 import { notFound }      from "next/navigation";
@@ -9,11 +9,14 @@ import Image             from "next/image";
 import {
   ArrowLeft, Globe, Building2, BookOpen, Clock,
   ChevronRight, DollarSign, Calendar, CheckCircle2, Play,
+  Award, Star,
 } from "lucide-react";
 import type { InstitutionMedia } from "@/types/institution-media";
 import { MEDIA_CATEGORIES } from "@/types/institution-media";
 import type { InstitutionVideo } from "@/types/institution-videos";
 import type { LeadershipMember, FacultyMember } from "@/types/institution-people";
+import type { Facility, Accreditation, Testimonial, SuccessStory } from "@/types/institution-trust";
+import { FACILITY_CATEGORIES } from "@/types/institution-trust";
 import { toEmbedUrl } from "@/lib/video-embed";
 
 export const revalidate = 300;
@@ -78,6 +81,10 @@ export default async function CollegeDetailPage({ params }: PageProps) {
     { data: videoRows },
     { data: leadershipRows },
     { data: facultyRows },
+    { data: facilityRows },
+    { data: accreditationRows },
+    { data: testimonialRows },
+    { data: successStoryRows },
   ] = await Promise.all([
     adminDb
       .from("courses")
@@ -122,23 +129,65 @@ export default async function CollegeDetailPage({ params }: PageProps) {
       .eq("status",     "published")
       .order("sort_order")
       .order("published_at", { ascending: false }),
+
+    adminDb
+      .from("institution_facilities")
+      .select("id, name, description, category, cover_image_url")
+      .eq("college_id", college.id)
+      .eq("status",     "published")
+      .order("sort_order")
+      .order("published_at", { ascending: false }),
+
+    adminDb
+      .from("institution_accreditations")
+      .select("id, name, issuing_body, description, logo_url, year_awarded, valid_until")
+      .eq("college_id", college.id)
+      .eq("status",     "published")
+      .order("sort_order")
+      .order("published_at", { ascending: false }),
+
+    adminDb
+      .from("institution_testimonials")
+      .select("id, student_name, course_name, graduation_year, testimonial_text, rating, student_photo_url")
+      .eq("college_id", college.id)
+      .eq("status",     "published")
+      .order("sort_order")
+      .order("published_at", { ascending: false })
+      .limit(12),
+
+    adminDb
+      .from("institution_success_stories")
+      .select("id, person_name, course_name, graduation_year, current_role, current_company, story_text, photo_url")
+      .eq("college_id", college.id)
+      .eq("status",     "published")
+      .order("sort_order")
+      .order("published_at", { ascending: false })
+      .limit(9),
   ]);
 
-  const courseList   = filteredCourses ?? [];
-  const gallery      = (galleryRows    ?? []) as Pick<InstitutionMedia,   "id" | "public_url" | "alt_text" | "title" | "caption" | "category">[];
-  const videos       = (videoRows      ?? []) as Pick<InstitutionVideo,   "id" | "title" | "description" | "video_url" | "embed_url">[];
-  const leadership   = (leadershipRows ?? []) as Pick<LeadershipMember,  "id" | "name" | "role" | "bio" | "photo_url">[];
-  const faculty      = (facultyRows    ?? []) as Pick<FacultyMember,     "id" | "name" | "title" | "department" | "qualifications" | "bio" | "photo_url">[];
+  const courseList     = filteredCourses    ?? [];
+  const gallery        = (galleryRows       ?? []) as Pick<InstitutionMedia,  "id" | "public_url" | "alt_text" | "title" | "caption" | "category">[];
+  const videos         = (videoRows         ?? []) as Pick<InstitutionVideo,  "id" | "title" | "description" | "video_url" | "embed_url">[];
+  const leadership     = (leadershipRows    ?? []) as Pick<LeadershipMember,  "id" | "name" | "role" | "bio" | "photo_url">[];
+  const faculty        = (facultyRows       ?? []) as Pick<FacultyMember,     "id" | "name" | "title" | "department" | "qualifications" | "bio" | "photo_url">[];
+  const facilities     = (facilityRows      ?? []) as Pick<Facility,          "id" | "name" | "description" | "category" | "cover_image_url">[];
+  const accreditations = (accreditationRows ?? []) as Pick<Accreditation,     "id" | "name" | "issuing_body" | "description" | "logo_url" | "year_awarded" | "valid_until">[];
+  const testimonials   = (testimonialRows   ?? []) as Pick<Testimonial,       "id" | "student_name" | "course_name" | "graduation_year" | "testimonial_text" | "rating" | "student_photo_url">[];
+  const successStories = (successStoryRows  ?? []) as Pick<SuccessStory,      "id" | "person_name" | "course_name" | "graduation_year" | "current_role" | "current_company" | "story_text" | "photo_url">[];
 
   // Group gallery by category
   const galleryByCategory = MEDIA_CATEGORIES.reduce<Record<string, typeof gallery>>((acc, cat) => {
     acc[cat.value] = gallery.filter(g => g.category === cat.value);
     return acc;
   }, { other: gallery.filter(g => !g.category) });
-  const hasGallery    = gallery.length    > 0;
-  const hasVideos     = videos.length     > 0;
-  const hasLeadership = leadership.length > 0;
-  const hasFaculty    = faculty.length    > 0;
+  const hasGallery        = gallery.length        > 0;
+  const hasVideos         = videos.length         > 0;
+  const hasLeadership     = leadership.length     > 0;
+  const hasFaculty        = faculty.length        > 0;
+  const hasFacilities     = facilities.length     > 0;
+  const hasAccreditations = accreditations.length > 0;
+  const hasTestimonials   = testimonials.length   > 0;
+  const hasSuccessStories = successStories.length > 0;
 
   // Group faculty by department for display
   const facultyByDept = faculty.reduce<Record<string, typeof faculty>>((acc, f) => {
@@ -470,6 +519,154 @@ export default async function CollegeDetailPage({ params }: PageProps) {
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+
+          {/* Facilities */}
+          {hasFacilities && (
+            <div className="mb-8">
+              <h2 className="font-display text-2xl text-white mb-5">Facilities</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                {facilities.map(f => {
+                  const catLabel = FACILITY_CATEGORIES.find(c => c.value === f.category)?.label;
+                  return (
+                    <div key={f.id} className="bg-white/[0.04] border border-white/[0.08] rounded-2xl overflow-hidden">
+                      {f.cover_image_url ? (
+                        <div className="relative w-full h-32">
+                          <Image src={f.cover_image_url} alt={f.name} fill className="object-cover" unoptimized />
+                        </div>
+                      ) : (
+                        <div className="w-full h-32 flex items-center justify-center bg-white/[0.03]">
+                          <Building2 className="w-8 h-8 text-white/15" />
+                        </div>
+                      )}
+                      <div className="p-3">
+                        <div className="flex items-center gap-2 flex-wrap mb-0.5">
+                          <p className="font-body font-semibold text-sm text-white/85">{f.name}</p>
+                          {catLabel && (
+                            <span className="px-1.5 py-0.5 rounded-md border border-pathBlue-500/25 bg-pathBlue-500/10 text-pathBlue-400 font-body text-[9px]">
+                              {catLabel}
+                            </span>
+                          )}
+                        </div>
+                        {f.description && (
+                          <p className="text-white/40 font-body text-xs mt-0.5 line-clamp-2">{f.description}</p>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Accreditations */}
+          {hasAccreditations && (
+            <div className="mb-8">
+              <h2 className="font-display text-2xl text-white mb-5">Accreditations &amp; Certifications</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {accreditations.map(a => (
+                  <div key={a.id} className="flex items-start gap-4 p-4 bg-white/[0.04] border border-white/[0.08] rounded-2xl">
+                    <div className="w-12 h-12 rounded-xl overflow-hidden border border-white/[0.10] flex-shrink-0 flex items-center justify-center bg-white/[0.06]">
+                      {a.logo_url ? (
+                        <Image src={a.logo_url} alt={a.name} width={48} height={48} className="object-contain w-full h-full p-1" unoptimized />
+                      ) : (
+                        <Award className="w-5 h-5 text-white/20" />
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-body font-semibold text-sm text-white/85 leading-snug">{a.name}</p>
+                      <p className="text-white/40 font-body text-xs">{a.issuing_body}</p>
+                      {(a.year_awarded || a.valid_until) && (
+                        <p className="text-white/25 font-body text-[10px] mt-0.5">
+                          {a.year_awarded && `Awarded ${a.year_awarded}`}
+                          {a.year_awarded && a.valid_until && " · "}
+                          {a.valid_until && `Valid until ${a.valid_until}`}
+                        </p>
+                      )}
+                      {a.description && (
+                        <p className="text-white/30 font-body text-xs mt-1 line-clamp-2">{a.description}</p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Testimonials */}
+          {hasTestimonials && (
+            <div className="mb-8">
+              <h2 className="font-display text-2xl text-white mb-5">What Our Students Say</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {testimonials.map(t => (
+                  <div key={t.id} className="bg-white/[0.04] border border-white/[0.08] rounded-2xl p-5">
+                    <div className="flex items-start gap-3 mb-3">
+                      <div className="w-10 h-10 rounded-full overflow-hidden border border-white/[0.10] flex-shrink-0 flex items-center justify-center bg-white/[0.06]">
+                        {t.student_photo_url ? (
+                          <Image src={t.student_photo_url} alt={t.student_name} width={40} height={40} className="object-cover w-full h-full" unoptimized />
+                        ) : (
+                          <span className="font-display font-bold text-white/30 text-sm leading-none">
+                            {t.student_name.slice(0, 1).toUpperCase()}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-body font-semibold text-sm text-white/85">{t.student_name}</p>
+                        {t.course_name && (
+                          <p className="text-white/40 font-body text-xs">{t.course_name}{t.graduation_year && ` · ${t.graduation_year}`}</p>
+                        )}
+                        {t.rating !== null && t.rating !== undefined && (
+                          <div className="flex items-center gap-0.5 mt-0.5">
+                            {Array.from({ length: 5 }).map((_, i) => (
+                              <Star key={i} className={`w-3 h-3 ${i < (t.rating ?? 0) ? "text-gold-400 fill-current" : "text-white/15"}`} />
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <p className="text-white/55 font-body text-sm leading-relaxed italic">&ldquo;{t.testimonial_text}&rdquo;</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Success Stories */}
+          {hasSuccessStories && (
+            <div className="mb-8">
+              <h2 className="font-display text-2xl text-white mb-5">Alumni Success Stories</h2>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {successStories.map(s => (
+                  <div key={s.id} className="bg-white/[0.04] border border-white/[0.08] rounded-2xl p-5">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-white/[0.10] flex-shrink-0 flex items-center justify-center bg-white/[0.06]">
+                        {s.photo_url ? (
+                          <Image src={s.photo_url} alt={s.person_name} width={48} height={48} className="object-cover w-full h-full" unoptimized />
+                        ) : (
+                          <span className="font-display font-bold text-white/30 text-lg leading-none">
+                            {s.person_name.slice(0, 1).toUpperCase()}
+                          </span>
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-body font-semibold text-sm text-white/85 leading-snug">{s.person_name}</p>
+                        {(s.current_role || s.current_company) && (
+                          <p className="text-white/45 font-body text-xs truncate">
+                            {s.current_role}
+                            {s.current_role && s.current_company && " at "}
+                            {s.current_company}
+                          </p>
+                        )}
+                        {s.course_name && (
+                          <p className="text-white/25 font-body text-[10px]">{s.course_name}{s.graduation_year && ` · ${s.graduation_year}`}</p>
+                        )}
+                      </div>
+                    </div>
+                    <p className="text-white/45 font-body text-sm leading-relaxed line-clamp-4">{s.story_text}</p>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 

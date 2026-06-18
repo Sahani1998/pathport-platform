@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { CreditCard, ChevronRight, Palette, Image as ImageIcon, Play, Users, GraduationCap } from "lucide-react";
+import { CreditCard, ChevronRight, Palette, Image as ImageIcon, Play, Users, GraduationCap, Building2, Award, MessageSquare, Trophy } from "lucide-react";
 
 export const metadata = { title: "Settings — Institution" };
 
@@ -49,6 +49,34 @@ export default async function InstitutionSettingsIndexPage() {
       iconBg:   "bg-violet-500/10 border-violet-400/20",
       title:    "Faculty",
       subtitle: "Lecturers and department heads with qualifications",
+    },
+    {
+      href:     "/dashboard/institution/settings/facilities",
+      icon:     <Building2 className="w-5 h-5 text-cyan-400" />,
+      iconBg:   "bg-cyan-500/10 border-cyan-400/20",
+      title:    "Facilities",
+      subtitle: "Labs, libraries, sports facilities, and other campus amenities",
+    },
+    {
+      href:     "/dashboard/institution/settings/accreditations",
+      icon:     <Award className="w-5 h-5 text-amber-400" />,
+      iconBg:   "bg-amber-500/10 border-amber-400/20",
+      title:    "Accreditations",
+      subtitle: "CPE registration, ISO certifications, and industry accreditations",
+    },
+    {
+      href:     "/dashboard/institution/settings/testimonials",
+      icon:     <MessageSquare className="w-5 h-5 text-emerald-400" />,
+      iconBg:   "bg-emerald-500/10 border-emerald-400/20",
+      title:    "Testimonials",
+      subtitle: "Student reviews and ratings from graduates",
+    },
+    {
+      href:     "/dashboard/institution/settings/success-stories",
+      icon:     <Trophy className="w-5 h-5 text-gold-400" />,
+      iconBg:   "bg-gold-400/10 border-gold-400/20",
+      title:    "Success Stories",
+      subtitle: "Alumni achievements — careers at top companies and organisations",
     },
     {
       href:     "/dashboard/institution/settings/payments",

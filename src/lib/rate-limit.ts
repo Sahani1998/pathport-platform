@@ -190,4 +190,11 @@ export const LIMITS = {
   videoWrite:        { limit: 20, windowMs: 60_000  },
   peopleWrite:       { limit: 30, windowMs: 60_000  },
   photoUpload:       { limit: 20, windowMs: 60_000  },
+
+  // Sprint 24C — facilities, accreditations, testimonials, success stories
+  facilityWrite:       { limit: 20, windowMs: 60_000  },
+  accreditationWrite:  { limit: 20, windowMs: 60_000  },
+  testimonialWrite:    { limit: 20, windowMs: 60_000  },
+  storyWrite:          { limit: 20, windowMs: 60_000  },
+  trustPhotoUpload:    { limit: 20, windowMs: 60_000  },
 } as const;
