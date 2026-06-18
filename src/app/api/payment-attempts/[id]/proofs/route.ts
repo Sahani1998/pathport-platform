@@ -135,7 +135,7 @@ export async function POST(
   // Advance invoice → under_verification if currently pending or payment_action_required.
   const { data: inv } = await adminDb
     .from("student_invoices").select("status, public_id, currency, amount_cents").eq("id", attempt.invoice_id).single();
-  if (inv && (inv.status === "pending" || inv.status === "payment_action_required")) {
+  if (inv && (inv.status === "pending" || inv.status === "payment_action_required" || inv.status === "partially_paid")) {
     const { error: invStatusErr } = await adminDb
       .from("student_invoices")
       .update({ status: "under_verification" })
