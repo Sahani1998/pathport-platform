@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin-client";
 import { checkRateLimit, getClientIp, rateLimitResponse, LIMITS } from "@/lib/rate-limit";
 import { sendTemplatedEmail } from "@/lib/email/send";
-import { DOCUMENT_TYPES } from "@/types/documents";
+import { DOCUMENT_TYPES, REQUIRED_DOC_TYPES } from "@/types/documents";
 import type { DocumentStatus } from "@/types/documents";
-import { recordTimelineEvent, notifyUser, logAudit } from "@/lib/application-timeline";
+import { recordTimelineEvent, notifyUser, logAudit, advanceApplicationStage } from "@/lib/application-timeline";
+import type { ApplicationStage } from "@/types/timeline";
 
 // "pending" = undo a previous decision (resets the document for re-review)
 const VALID_ACTIONS: DocumentStatus[] = ["verified", "rejected", "reupload_required", "pending"];
@@ -173,6 +175,54 @@ export async function POST(
           file_name:     doc.file_name,
         },
       });
+    }
+
+    // ── 5. Auto-advance to documents_verified ──────────────────────────────
+    // When a document is verified, check if all required docs for this
+    // application are now verified. If so and the stage is still in the
+    // document review band, advance to documents_verified automatically.
+    if (action === "verified" && doc.application_id) {
+      const adminDb = createAdminClient();
+
+      const { data: appRow } = await adminDb
+        .from("applications")
+        .select("id, student_id, current_stage")
+        .eq("id", doc.application_id)
+        .single();
+
+      const stage = appRow?.current_stage as ApplicationStage | null;
+      const AUTO_ADVANCE_FROM: ApplicationStage[] = [
+        "documents_uploaded", "documents_under_review",
+      ];
+
+      if (appRow && stage && AUTO_ADVANCE_FROM.includes(stage)) {
+        const { data: allDocs } = await adminDb
+          .from("student_documents")
+          .select("document_type, status")
+          .eq("application_id", doc.application_id)
+          .eq("is_active", true);
+
+        const verifiedTypes = new Set(
+          (allDocs ?? [])
+            .filter(d => d.status === "verified")
+            .map(d => d.document_type),
+        );
+        const allRequiredVerified = REQUIRED_DOC_TYPES.every(t => verifiedTypes.has(t));
+
+        if (allRequiredVerified) {
+          await advanceApplicationStage(adminDb, {
+            applicationId: appRow.id,
+            studentId:     appRow.student_id,
+            fromStage:     stage,
+            toStage:       "documents_verified",
+            actorId:       user.id,
+            actorRole:     profile.role,
+            studentMessage: "All required documents have been verified. Your offer letter is being prepared.",
+            auditAction:   "auto_advance_documents_verified",
+            auditMetadata: { triggered_by_document_id: id },
+          });
+        }
+      }
     }
 
     // ── 6. Email (non-fatal) ─────────────────────────────────────────────────
