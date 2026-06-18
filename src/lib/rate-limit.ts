@@ -175,4 +175,9 @@ export const LIMITS = {
   verificationQueue:   { limit: 60, windowMs: 60_000  },
   paymentSettings:     { limit: 20, windowMs: 60_000  },
   feeSchedule:         { limit: 20, windowMs: 60_000  },
+
+  // Sprint 23 — document lifecycle + archival
+  offerLifecycle:    { limit: 20, windowMs: 60_000  },
+  ipaLifecycle:      { limit: 20, windowMs: 60_000  },
+  appArchive:        { limit: 10, windowMs: 60_000  },
 } as const;
