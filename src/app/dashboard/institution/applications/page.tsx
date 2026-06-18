@@ -7,7 +7,7 @@ import { APPLICATION_STATUSES } from "@/types/courses";
 import { resolveStage } from "@/lib/application-stage-mapping";
 import {
   FileText, Search, Users,
-  CheckCircle2, Clock, TrendingUp, ChevronLeft, ChevronRight,
+  CheckCircle2, Clock, TrendingUp, ChevronLeft, ChevronRight, Archive,
 } from "lucide-react";
 
 const PER_PAGE = 20;
@@ -81,11 +81,20 @@ export default async function InstitutionApplicationsPage({
     }
   }
 
+  // archived=true → show only archived leads; else → hide archived
+  const showArchived = params.archived === "1";
+
   // ── Build the filtered query (shared between count + page fetch) ───────────
   const buildQuery = (selectArg: string, opts?: { count?: "exact"; head?: boolean }) => {
     let query = supabase.from("applications").select(selectArg, opts);
     if (!isAdmin && courseIds.length > 0) query = query.in("course_id", courseIds);
     if (params.status) query = query.eq("status", params.status);
+    // Sprint 23 — archive filter
+    if (showArchived) {
+      query = query.not("archived_at", "is", null);
+    } else {
+      query = query.is("archived_at", null);
+    }
     if (searchAppId) {
       query = query.eq("id", searchAppId);
     } else if (searchStudentIds !== null || searchCourseIds !== null) {
@@ -93,7 +102,6 @@ export default async function InstitutionApplicationsPage({
       if (searchStudentIds?.length) parts.push(`student_id.in.(${searchStudentIds.join(",")})`);
       if (searchCourseIds?.length)  parts.push(`course_id.in.(${searchCourseIds.join(",")})`);
       if (parts.length === 0) {
-        // No matches — force an empty result set
         query = query.eq("id", "00000000-0000-0000-0000-000000000000");
       } else {
         query = query.or(parts.join(","));
@@ -114,9 +122,10 @@ export default async function InstitutionApplicationsPage({
       .order("submitted_at", { ascending: false })
       .range(from, from + PER_PAGE - 1),
 
-    // Stats — scoped to college for institution, all for admin (unfiltered)
+    // Stats — scoped to college for institution, all for admin (unfiltered,
+    // always over ALL applications regardless of archived filter)
     (() => {
-      let sq = supabase.from("applications").select("status");
+      let sq = supabase.from("applications").select("status, archived_at");
       if (!isAdmin && courseIds.length > 0) sq = sq.in("course_id", courseIds);
       return sq;
     })(),
@@ -137,21 +146,24 @@ export default async function InstitutionApplicationsPage({
     for (const s of students ?? []) studentNames.set(s.id, { full_name: s.full_name, email: s.email });
   }
 
-  const allData  = statsRes.data ?? [];
-  const statsMap = allData.reduce<Record<string, number>>((acc, a) => {
+  const allData      = statsRes.data ?? [];
+  const archivedCount = allData.filter(a => a.archived_at).length;
+  const statsMap = allData.filter(a => !a.archived_at).reduce<Record<string, number>>((acc, a) => {
     acc[a.status] = (acc[a.status] ?? 0) + 1;
     return acc;
   }, {});
 
   // Preserve filters across links
-  const buildHref = (overrides: { status?: string; page?: number; q?: string }) => {
+  const buildHref = (overrides: { status?: string; page?: number; q?: string; archived?: string }) => {
     const sp = new URLSearchParams();
-    const status = overrides.status ?? params.status ?? "";
-    const query  = overrides.q ?? q;
-    const p      = overrides.page ?? 1;
-    if (status) sp.set("status", status);
-    if (query)  sp.set("q", query);
-    if (p > 1)  sp.set("page", String(p));
+    const status   = overrides.status ?? params.status ?? "";
+    const query    = overrides.q ?? q;
+    const p        = overrides.page ?? 1;
+    const archived = overrides.archived ?? (showArchived ? "1" : "");
+    if (status)   sp.set("status",   status);
+    if (query)    sp.set("q",        query);
+    if (p > 1)    sp.set("page",     String(p));
+    if (archived) sp.set("archived", archived);
     const s = sp.toString();
     return s ? `?${s}` : "?";
   };
@@ -214,7 +226,8 @@ export default async function InstitutionApplicationsPage({
 
       {/* Status filter tabs */}
       <div className="flex gap-2 flex-wrap">
-        {[{ value: "", label: "All" }, ...APPLICATION_STATUSES].map(s => {
+        {/* Active pipeline tabs — hidden when viewing archived */}
+        {!showArchived && [{ value: "", label: "All" }, ...APPLICATION_STATUSES].map(s => {
           const isActive = (params.status ?? "") === s.value;
           return (
             <Link
@@ -234,6 +247,21 @@ export default async function InstitutionApplicationsPage({
             </Link>
           );
         })}
+        {/* Archived leads tab */}
+        <Link
+          href={buildHref({ status: "", archived: showArchived ? "" : "1" })}
+          className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-body text-xs font-medium border transition-all ${
+            showArchived
+              ? "bg-amber-400/20 border-amber-400/40 text-amber-300"
+              : "bg-white/[0.04] border-white/[0.08] text-white/35 hover:border-amber-400/25 hover:text-amber-400/80"
+          }`}
+        >
+          <Archive className="w-3 h-3" />
+          Archived Leads
+          {archivedCount > 0 && (
+            <span className="ml-0.5 opacity-60">{archivedCount}</span>
+          )}
+        </Link>
       </div>
 
       {/* Applications list */}

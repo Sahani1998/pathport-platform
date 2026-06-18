@@ -9,6 +9,7 @@ import IssueOfferLetterForm from "@/components/offer-letters/IssueOfferLetterFor
 import DocumentRequestPanel from "@/components/applications/DocumentRequestPanel";
 import ApplicationNotesPanel from "@/components/applications/ApplicationNotesPanel";
 import IpaPanel from "@/components/applications/IpaPanel";
+import ApplicationArchivePanel from "@/components/applications/ApplicationArchivePanel";
 import { APPLICATION_STATUSES } from "@/types/courses";
 import { resolveStage } from "@/lib/application-stage-mapping";
 import type { ApplicationStage } from "@/types/timeline";
@@ -41,6 +42,7 @@ export default async function InstitutionApplicationDetailPage({
     .from("applications")
     .select(`
       id, status, current_stage, notes, submitted_at, updated_at,
+      outcome, archived_at, archived_by, archive_reason, restored_at,
       courses (id, title, slug, category, college_id,
         colleges (id, name)),
       student_id
@@ -81,18 +83,24 @@ export default async function InstitutionApplicationDetailPage({
   ] = await Promise.all([
     supabase.from("profiles").select("full_name, email, country").eq("id", app.student_id).single(),
     supabase.from("student_documents").select("*").eq("application_id", id).eq("is_active", true).order("uploaded_at", { ascending: false }),
+    // Sprint 23 — include lifecycle columns so IssueOfferLetterForm can render
+    // the correct status badge and lifecycle actions for each version.
     supabase
       .from("offer_letters")
       .select(`
         id, application_id, uploaded_by, file_path, file_name,
         file_size, version, notes, expiry_date, created_at, updated_at,
         student_decision, decision_at, decision_comment,
+        status, issued_at, issued_by, superseded_by_id, superseded_at,
+        void_reason, voided_at, archived_at, archive_reason,
         profiles!offer_letters_uploaded_by_fkey (full_name)
       `)
       .eq("application_id", id)
       .order("version", { ascending: false }),
     supabase.from("document_requests").select("*").eq("application_id", id).order("created_at", { ascending: false }),
     supabase.from("application_notes").select("*").eq("application_id", id).order("created_at", { ascending: false }),
+    // Sprint 23 — fetch all IPA records regardless of lifecycle_status; IpaPanel
+    // sorts and renders each with lifecycle badge + action controls.
     supabase.from("ipa_records").select("*").eq("application_id", id).order("created_at", { ascending: false }),
   ]);
 
@@ -255,6 +263,14 @@ export default async function InstitutionApplicationDetailPage({
 
           {/* IPA management */}
           <IpaPanel applicationId={id} records={ipaRecords} />
+
+          {/* Archive / restore */}
+          <ApplicationArchivePanel
+            applicationId={id}
+            archived={!!((app as { archived_at?: string | null }).archived_at)}
+            outcome={(app as { outcome?: string | null }).outcome ?? null}
+            archiveReason={(app as { archive_reason?: string | null }).archive_reason ?? null}
+          />
         </div>
 
         {/* Right — Documents */}
