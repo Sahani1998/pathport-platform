@@ -71,14 +71,20 @@ export default async function StudentApplicationsPage() {
       .eq("visible_to_student", true)
       .order("created_at", { ascending: false }),
 
+    // Sprint 23 — students see ONLY issued offer letters. Drafts, superseded,
+    // archived and void rows are invisible (RLS also enforces this server-side).
     supabase
       .from("offer_letters")
-      .select("id, application_id, version, file_name, file_size, expiry_date, created_at, updated_at, notes, file_path, uploaded_by, student_decision, decision_at, decision_comment")
+      .select("id, application_id, version, file_name, file_size, expiry_date, created_at, updated_at, notes, file_path, uploaded_by, student_decision, decision_at, decision_comment, status, issued_at")
+      .eq("status", "issued")
       .order("version", { ascending: false }),
 
+    // Sprint 23 — students see ONLY issued IPAs (lifecycle_status='issued').
+    // The `status` column still tracks the ICA decision dimension.
     supabase
       .from("ipa_records")
       .select("*")
+      .eq("lifecycle_status", "issued")
       .order("created_at", { ascending: false }),
 
     supabase

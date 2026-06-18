@@ -101,15 +101,32 @@ export const APPLICATION_STATUSES: {
   { value: "rejected",       label: "Rejected",        color: "text-red-400      bg-red-500/10       border-red-400/25",           step: -1 },
 ];
 
+// Outcome captures *why* an application is closed beyond the stage value.
+// `current_stage` answers "where in the funnel"; `outcome` answers "what
+// happened" — used for lead/CRM reporting and the institution archive flow.
+export type ApplicationOutcome =
+  | "not_interested"
+  | "withdrawn"
+  | "archived_lead"
+  | "converted"
+  | "rejected_by_institution";
+
 export interface Application {
-  id:            string;
-  student_id:    string;
-  course_id:     string;
-  status:        ApplicationStatus;
-  current_stage: string;
-  notes:         string | null;
-  submitted_at:  string;
-  updated_at:    string;
+  id:             string;
+  student_id:     string;
+  course_id:      string;
+  status:         ApplicationStatus;
+  current_stage:  string;
+  notes:          string | null;
+  submitted_at:   string;
+  updated_at:     string;
+  // Archival / lead lifecycle
+  outcome?:       ApplicationOutcome | null;
+  archived_at?:   string | null;
+  archived_by?:   string | null;
+  archive_reason?: string | null;
+  restored_at?:   string | null;
+  restored_by?:   string | null;
 }
 
 // Application joined with course + college

@@ -104,6 +104,29 @@ export async function POST(request: Request) {
 
   // Insert offer_letter row
   const now = new Date().toISOString();
+  // Sprint 23 — only ONE 'issued' offer letter per application is allowed.
+  // Mark any prior issued row as 'superseded' BEFORE inserting the new one;
+  // the unique partial index would otherwise reject the insert. We link the
+  // chain (superseded_by_id) once the new row exists.
+  const { data: priorIssued } = await supabase
+    .from("offer_letters")
+    .select("id")
+    .eq("application_id", applicationId)
+    .eq("status", "issued")
+    .maybeSingle();
+  const priorIssuedId = (priorIssued as { id: string } | null)?.id ?? null;
+
+  if (priorIssuedId) {
+    const { error: supErr } = await supabase
+      .from("offer_letters")
+      .update({ status: "superseded", superseded_at: now })
+      .eq("id", priorIssuedId);
+    if (supErr) {
+      await supabase.storage.from("offer-letters").remove([storagePath]);
+      return NextResponse.json({ error: `Could not supersede prior letter: ${supErr.message}` }, { status: 500 });
+    }
+  }
+
   const { data: letter, error: insertErr } = await supabase
     .from("offer_letters")
     .insert({
@@ -115,11 +138,21 @@ export async function POST(request: Request) {
       version:        nextVersion,
       notes,
       expiry_date:    expiryDate || null,
+      status:         "issued",
+      issued_at:      now,
+      issued_by:      user.id,
       created_at:     now,
       updated_at:     now,
     })
     .select()
     .single();
+
+  if (!insertErr && priorIssuedId) {
+    await supabase
+      .from("offer_letters")
+      .update({ superseded_by_id: (letter as { id: string }).id })
+      .eq("id", priorIssuedId);
+  }
 
   if (insertErr) {
     // Roll back storage upload on DB failure

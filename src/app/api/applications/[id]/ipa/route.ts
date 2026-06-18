@@ -82,20 +82,55 @@ export async function POST(
       return NextResponse.json({ error: `Storage upload failed: ${storageErr.message}` }, { status: 500 });
     }
 
+    // Sprint 23 — only ONE active (draft|issued) IPA per application is allowed.
+    // Mark any prior issued row as 'superseded' BEFORE inserting the new one.
+    const now = new Date().toISOString();
+    const { data: priorActive } = await supabase
+      .from("ipa_records")
+      .select("id")
+      .eq("application_id", id)
+      .in("lifecycle_status", ["draft", "issued"])
+      .maybeSingle();
+    const priorActiveId = (priorActive as { id: string } | null)?.id ?? null;
+
+    if (priorActiveId) {
+      const { error: supErr } = await supabase
+        .from("ipa_records")
+        .update({ lifecycle_status: "superseded", superseded_at: now })
+        .eq("id", priorActiveId);
+      if (supErr) {
+        await supabase.storage.from("ipa-documents").remove([storagePath]);
+        return NextResponse.json({ error: `Could not supersede prior IPA: ${supErr.message}` }, { status: 500 });
+      }
+    }
+
     // ── Insert record ─────────────────────────────────────────────────────────
+    // Sprint 23 — until the draft → issue UI ships in PR B, the existing flow
+    // keeps creating IPAs in lifecycle_status='issued' so students keep
+    // seeing them. PR B will let institutions create as 'draft' and Issue.
     const { data: record, error: insertErr } = await supabase
       .from("ipa_records")
       .insert({
-        application_id: id,
-        uploaded_by:    user.id,
-        file_path:      storagePath,
-        file_name:      file.name,
-        file_size:      file.size,
-        status:         "submitted",
+        application_id:   id,
+        uploaded_by:      user.id,
+        file_path:        storagePath,
+        file_name:        file.name,
+        file_size:        file.size,
+        status:           "submitted",
+        lifecycle_status: "issued",
+        issued_at:        now,
+        issued_by:        user.id,
         notes,
       })
       .select()
       .single();
+
+    if (!insertErr && priorActiveId) {
+      await supabase
+        .from("ipa_records")
+        .update({ superseded_by_id: (record as { id: string }).id })
+        .eq("id", priorActiveId);
+    }
 
     if (insertErr) {
       await supabase.storage.from("ipa-documents").remove([storagePath]);
