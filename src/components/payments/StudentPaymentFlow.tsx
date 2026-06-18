@@ -4,7 +4,7 @@ import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import {
   Landmark, Globe2, Upload, Loader2, AlertCircle, Copy, CheckCircle2,
-  FileText, Download, XCircle, HelpCircle, AlertTriangle,
+  FileText, Download, XCircle, HelpCircle, AlertTriangle, Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -54,10 +54,35 @@ export default function StudentPaymentFlow({ invoice, attempts: initialAttempts,
   const [error, setError]       = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [uploadingId, setUploadingId] = useState<string | null>(null);
+  const [deletingProofId, setDeletingProofId] = useState<string | null>(null);
 
-  // Most recent active attempt the student can act on.
+  const handleDeleteProof = async (proofId: string, attemptId: string) => {
+    if (!confirm("Delete this uploaded proof? You can upload a corrected file afterwards.")) return;
+    setDeletingProofId(proofId);
+    setError(null);
+    try {
+      const res = await fetch(`/api/payment-proofs/${proofId}`, { method: "DELETE" });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({})) as { error?: string };
+        throw new Error(data.error ?? "Failed to delete proof");
+      }
+      setProofs(p => ({
+        ...p,
+        [attemptId]: (p[attemptId] ?? []).filter(x => x.id !== proofId),
+      }));
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete proof");
+    } finally {
+      setDeletingProofId(null);
+    }
+  };
+
+  // Most recent active attempt the student can act on. Includes
+  // 'proof_submitted' so the student can see (and delete) a wrongly-uploaded
+  // proof while it's still awaiting institution review.
   const activeAttempt = attempts.find(a =>
-    ["initiated", "info_requested", "rejected"].includes(a.status),
+    ["initiated", "info_requested", "rejected", "proof_submitted"].includes(a.status),
   ) ?? null;
 
   // The most recent verified attempt (for reference number display).
@@ -345,8 +370,9 @@ export default function StudentPaymentFlow({ invoice, attempts: initialAttempts,
             </div>
           )}
 
-          {/* Proof upload */}
-          {activeAttempt.status !== "verified" && (
+          {/* Proof upload — hidden once a proof is submitted to avoid stacking.
+              Student can Delete a wrong proof below to revert and re-upload. */}
+          {activeAttempt.status !== "verified" && activeAttempt.status !== "proof_submitted" && (
             <form onSubmit={e => handleProofUpload(activeAttempt.id, e)}
               className="p-5 rounded-2xl bg-white/[0.04] border border-white/[0.08] space-y-3">
               <div className="flex items-center gap-2">
@@ -398,17 +424,35 @@ export default function StudentPaymentFlow({ invoice, attempts: initialAttempts,
           {(proofs[activeAttempt.id]?.length ?? 0) > 0 && (
             <div className="space-y-1">
               <p className="text-white/45 font-body text-[11px] uppercase tracking-wider">Uploaded proofs</p>
-              {proofs[activeAttempt.id].map(p => (
-                <a key={p.id} href={`/api/payment-proofs/${p.id}/download`} target="_blank" rel="noopener noreferrer"
-                  className="flex items-center justify-between gap-3 px-3 py-2 rounded-xl bg-white/[0.03] border border-white/[0.07] hover:border-gold-400/30 transition-colors group">
-                  <span className="flex items-center gap-2 min-w-0">
-                    <FileText className="w-3.5 h-3.5 text-white/40 flex-shrink-0" />
-                    <span className="font-body text-xs text-white/70 truncate">{p.file_name}</span>
-                    <span className="font-body text-[10px] text-white/30 flex-shrink-0">{(p.file_size_bytes / 1024).toFixed(0)} KB</span>
-                  </span>
-                  <Download className="w-3 h-3 text-white/30 group-hover:text-gold-400 transition-colors" />
-                </a>
-              ))}
+              {proofs[activeAttempt.id].map(p => {
+                const canDelete = ["initiated", "proof_submitted"].includes(activeAttempt.status);
+                return (
+                  <div key={p.id} className="flex items-center justify-between gap-3 px-3 py-2 rounded-xl bg-white/[0.03] border border-white/[0.07] hover:border-gold-400/30 transition-colors">
+                    <a href={`/api/payment-proofs/${p.id}/download`} target="_blank" rel="noopener noreferrer"
+                      className="flex items-center gap-2 min-w-0 flex-1 group">
+                      <FileText className="w-3.5 h-3.5 text-white/40 flex-shrink-0" />
+                      <span className="font-body text-xs text-white/70 truncate">{p.file_name}</span>
+                      <span className="font-body text-[10px] text-white/30 flex-shrink-0">{(p.file_size_bytes / 1024).toFixed(0)} KB</span>
+                      <Download className="w-3 h-3 text-white/30 group-hover:text-gold-400 transition-colors ml-auto" />
+                    </a>
+                    {canDelete && (
+                      <button onClick={() => handleDeleteProof(p.id, activeAttempt.id)}
+                        disabled={deletingProofId === p.id}
+                        className="p-1.5 rounded-lg text-white/30 hover:text-red-400 hover:bg-red-500/10 border border-transparent hover:border-red-500/25 transition-all disabled:opacity-50"
+                        title="Delete this proof">
+                        {deletingProofId === p.id
+                          ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          : <Trash2 className="w-3.5 h-3.5" />}
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+              {activeAttempt.status === "proof_submitted" && (
+                <p className="text-white/35 font-body text-[10px] mt-1">
+                  Proof is awaiting institution review. Delete the file above if you uploaded the wrong one — the slot will reopen for a new upload.
+                </p>
+              )}
             </div>
           )}
         </section>

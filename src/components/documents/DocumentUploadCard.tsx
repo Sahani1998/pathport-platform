@@ -4,7 +4,7 @@ import { useState, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import DocumentStatusBadge from "@/components/documents/DocumentStatusBadge";
 import {
-  Upload, FileText, Eye, Loader2, AlertCircle, RefreshCw,
+  Upload, FileText, Eye, Loader2, AlertCircle, RefreshCw, Trash2,
 } from "lucide-react";
 import type { DocumentTypeMeta, StudentDocument } from "@/types/documents";
 import { ALLOWED_MIME_TYPES, MAX_FILE_SIZE_BYTES, fmtFileSize } from "@/types/documents";
@@ -32,8 +32,30 @@ export default function DocumentUploadCard({
   const [error,        setError]    = useState<string | null>(null);
   const [progress,     setProgress] = useState(0);
   const [loadingUrl,   setLoadingUrl] = useState(false);
+  const [deleting,     setDeleting]  = useState(false);
 
   const canReupload = !doc || doc.status === "rejected";
+  // Student can delete the upload only while it's pending (no review yet).
+  const canDelete   = doc?.status === "pending";
+
+  const handleDelete = async () => {
+    if (!doc) return;
+    if (!confirm("Delete this uploaded file? You can re-upload after deleting.")) return;
+    setDeleting(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/documents/${doc.id}`, { method: "DELETE" });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({})) as { error?: string };
+        throw new Error(data.error ?? "Failed to delete");
+      }
+      setDoc(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete");
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   // ── Generate signed URL for preview/download ──────────────────────────────
   const getSignedUrl = async () => {
@@ -194,6 +216,19 @@ export default function DocumentUploadCard({
               title="Preview / Download"
             >
               {loadingUrl ? <Loader2 className="w-4 h-4 animate-spin" /> : <Eye className="w-4 h-4" />}
+            </button>
+          )}
+
+          {/* Delete (pending uploads only — before review) */}
+          {canDelete && (
+            <button
+              type="button"
+              onClick={handleDelete}
+              disabled={deleting || uploading}
+              className="p-2 rounded-xl text-white/35 hover:text-red-400 hover:bg-red-500/10 border border-transparent hover:border-red-500/25 transition-all disabled:opacity-50"
+              title="Delete this upload"
+            >
+              {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
             </button>
           )}
 

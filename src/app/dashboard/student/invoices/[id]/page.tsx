@@ -33,6 +33,10 @@ export default async function StudentInvoicePage({
     // Don't 404 — bounce to student apps list.
     redirect("/dashboard/student/applications");
   }
+  // Drafts are not visible to students; voided invoices are not payable.
+  if (invoice.status === "draft" || invoice.status === "void") {
+    redirect("/dashboard/student/applications");
+  }
 
   const [
     { data: lines },

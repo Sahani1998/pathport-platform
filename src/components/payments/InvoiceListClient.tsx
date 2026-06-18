@@ -58,9 +58,32 @@ export default function InvoiceListClient({
 
   const handleVoid = async (inv: StudentInvoice) => {
     const isDraft = inv.status === "draft";
-    const reason = isDraft ? "" : prompt("Reason for voiding this invoice (required):") ?? "";
-    if (!isDraft && !reason.trim()) return;
-    if (!confirm(isDraft ? `Delete draft invoice?` : `Void invoice ${inv.public_id ?? ""}?`)) return;
+
+    // Drafts are hard-deleted (nothing was ever shown to the student).
+    // Issued invoices are voided with a reason so the audit chain survives.
+    if (isDraft) {
+      if (!confirm("Delete draft invoice permanently?")) return;
+      setBusyId(inv.id);
+      setError(null);
+      try {
+        const res = await fetch(`/api/invoices/${inv.id}`, { method: "DELETE" });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({})) as { error?: string };
+          throw new Error(data.error ?? "Failed to delete draft");
+        }
+        setInvoices(prev => prev.filter(i => i.id !== inv.id));
+        router.refresh();
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to delete draft");
+      } finally {
+        setBusyId(null);
+      }
+      return;
+    }
+
+    const reason = prompt("Reason for voiding this invoice (required):") ?? "";
+    if (!reason.trim()) return;
+    if (!confirm(`Void invoice ${inv.public_id ?? ""}?`)) return;
     setBusyId(inv.id);
     setError(null);
     try {
@@ -166,7 +189,7 @@ export default function InvoiceListClient({
                     <button onClick={() => handleVoid(inv)} disabled={busyId === inv.id}
                       className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-white/[0.08] text-white/30 font-body text-xs hover:text-red-400 hover:border-red-400/25 transition-all disabled:opacity-50">
                       {busyId === inv.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <FileX2 className="w-3 h-3" />}
-                      {isDraft ? "Discard" : "Void"}
+                      {isDraft ? "Delete" : "Void"}
                     </button>
                   )}
                   {isPaid && (

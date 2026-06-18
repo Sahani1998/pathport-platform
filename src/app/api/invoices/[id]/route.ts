@@ -1,11 +1,17 @@
-// GET + PATCH /api/invoices/[id]
+// GET + PATCH + DELETE /api/invoices/[id]
 //
 // PATCH only allowed while invoice is 'draft' — DB trigger
 // guard_invoice_mutation enforces this server-side too.
+//
+// DELETE only allowed while invoice is 'draft' (institution/admin). Cleans up
+// line items and any uploaded PDF file in storage. Issued invoices must go
+// through /void (or /refund for paid invoices) so the audit chain survives.
 
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin-client";
 import { checkRateLimit, getClientIp, rateLimitResponse, LIMITS } from "@/lib/rate-limit";
+import { logAudit } from "@/lib/application-timeline";
 import {
   validateInvoiceLines, validatePaymentMethods, readInvoiceWithRelations,
 } from "@/lib/payments/invoice-helpers";
@@ -113,4 +119,80 @@ export async function PATCH(
 
   const { data: fresh } = await supabase.from("student_invoices").select("*").eq("id", id).single();
   return NextResponse.json({ invoice: fresh as StudentInvoice });
+}
+
+export async function DELETE(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const { id } = await params;
+  const ip = getClientIp(request);
+  const rl = checkRateLimit(`invoice-delete:${ip}`, LIMITS.invoiceWrite.limit, LIMITS.invoiceWrite.windowMs);
+  if (!rl.success) return rateLimitResponse(rl.resetAt);
+
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const { data: profile } = await supabase
+    .from("profiles").select("role, college_id").eq("id", user.id).single();
+  if (profile?.role !== "institution" && profile?.role !== "admin") {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const { data: invoice } = await supabase
+    .from("student_invoices")
+    .select("id, status, college_id, application_id, file_path, source, public_id")
+    .eq("id", id)
+    .maybeSingle();
+  if (!invoice) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  // Institution ownership check (admin bypasses).
+  if (profile.role === "institution" && invoice.college_id !== profile.college_id) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  // Only drafts can be hard-deleted. Issued / paid / partial invoices must use
+  // /void or /refund so the audit chain and student-facing history survive.
+  if (invoice.status !== "draft") {
+    return NextResponse.json(
+      { error: `Cannot delete invoice in status ${invoice.status}. Use void/refund instead.` },
+      { status: 409 },
+    );
+  }
+
+  // Delete line items first (no ON DELETE CASCADE assumed).
+  const { error: liErr } = await supabase
+    .from("invoice_line_items").delete().eq("invoice_id", id);
+  if (liErr) return NextResponse.json({ error: liErr.message }, { status: 500 });
+
+  const { error: delErr } = await supabase
+    .from("student_invoices").delete().eq("id", id);
+  if (delErr) return NextResponse.json({ error: delErr.message }, { status: 500 });
+
+  // Storage cleanup for uploaded-source drafts.
+  if (invoice.source === "uploaded" && invoice.file_path) {
+    const adminDb = createAdminClient();
+    await adminDb.storage.from("invoices").remove([invoice.file_path]).catch(err =>
+      console.error("[Invoice] storage cleanup failed (non-fatal):", err),
+    );
+  }
+
+  // Audit — non-fatal. Draft drops do not write to the user-visible timeline.
+  const adminDb = createAdminClient();
+  await logAudit(adminDb, {
+    applicationId: invoice.application_id,
+    actorId:       user.id,
+    actorRole:     profile.role,
+    action:        "invoice_draft_deleted",
+    fromValue:     "draft",
+    toValue:       null,
+    metadata: {
+      invoice_id:  invoice.id,
+      public_id:   invoice.public_id,
+      source:      invoice.source,
+    },
+  }).catch(err => console.error("[Invoice] audit failed (non-fatal):", err));
+
+  return NextResponse.json({ ok: true });
 }
