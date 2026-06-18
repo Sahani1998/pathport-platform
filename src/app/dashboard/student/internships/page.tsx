@@ -10,19 +10,15 @@ function stageStep(stage: ApplicationStage): number {
   return getStageMeta(stage).step;
 }
 
-const INTERNSHIP_BENEFITS = [
-  { label: "Monthly allowance",  value: "S$800 – S$1,500"                  },
-  { label: "Duration",           value: "6 months"                          },
-  { label: "Industries",         value: "IT, Business, Hospitality & more"  },
-  { label: "Placement support",  value: "Fully managed by PathPort"         },
-];
-
-const INTERNSHIP_STEPS = [
-  { title: "Enroll in your programme",          desc: "Complete the first 6 months of your diploma.",              stage: "enrolled"            as ApplicationStage },
-  { title: "Internship eligibility confirmed",   desc: "PathPort confirms your eligibility for placement.",          stage: "internship_eligible" as ApplicationStage },
-  { title: "Employer matching",                  desc: "Your advisor matches you with a suitable host company.",    stage: "internship_eligible" as ApplicationStage },
-  { title: "Internship in progress",             desc: "Begin your paid internship — S$800 to S$1,500/month.",     stage: "internship_eligible" as ApplicationStage },
-  { title: "Programme completed",                desc: "Graduate with a diploma and real-world work experience.",   stage: "completed"           as ApplicationStage },
+const INTERNSHIP_STEPS: {
+  title:  string;
+  desc:   string;
+  doneAt: ApplicationStage;
+}[] = [
+  { title: "Enrolled",               desc: "Complete enrollment in your programme.",                    doneAt: "enrolled"            },
+  { title: "Internship Eligible",    desc: "PathPort confirms your eligibility for internship placement.", doneAt: "internship_eligible" },
+  { title: "Internship Preparation", desc: "Your advisor coordinates your internship placement.",        doneAt: "completed"           },
+  { title: "Internship Completed",   desc: "Graduate with a diploma and real-world work experience.",    doneAt: "completed"           },
 ];
 
 export default async function StudentInternshipsPage() {
@@ -155,12 +151,15 @@ export default async function StudentInternshipsPage() {
       <div>
         <p className="font-body text-xs text-white/35 uppercase tracking-wider mb-3">Your Pathway</p>
         <div className="space-y-3">
-          {INTERNSHIP_STEPS.map((step, i) => {
-            const doneStep = stageStep(step.stage);
-            const isDone   = currentStep >= doneStep;
-            const isNow    = !isDone && (i === 0 ? currentStep >= stageStep("arrived_singapore") : currentStep >= stageStep(INTERNSHIP_STEPS[i - 1]?.stage ?? "application_submitted"));
+          {(() => {
+            const stepDone     = INTERNSHIP_STEPS.map(s => currentStep >= stageStep(s.doneAt));
+            const firstNotDone = stepDone.findIndex(d => !d);
 
-            return (
+            return INTERNSHIP_STEPS.map((step, i) => {
+              const isDone = stepDone[i];
+              const isNow  = !isDone && i === firstNotDone;
+
+              return (
               <div
                 key={i}
                 className={`flex items-start gap-4 p-4 rounded-xl border transition-all ${
@@ -194,7 +193,8 @@ export default async function StudentInternshipsPage() {
                 </div>
               </div>
             );
-          })}
+          });
+          })()}
         </div>
       </div>
 

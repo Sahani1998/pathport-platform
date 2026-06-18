@@ -144,7 +144,6 @@ export default async function StudentArrivalPage() {
           const doneStep   = stageStep(step.doneFrom);
           const isDone     = currentStep >= doneStep;
           const isActive   = !isDone && currentStep >= activeStep;
-          const isPending  = !isDone && !isActive;
 
           return (
             <div
