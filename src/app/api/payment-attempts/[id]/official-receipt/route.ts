@@ -131,10 +131,14 @@ export async function POST(
     .select()
     .single();
   if (rcpErr) {
-    // Roll back uploaded storage if DB insert fails
     if (isUpload) {
       const adminDb = createAdminClient();
       await adminDb.storage.from("official-receipts").remove([filePath]);
+    }
+    // 23505 = unique_violation: concurrent receipt insert hit the DB-level
+    // unique index on official_receipts(payment_attempt_id)
+    if (rcpErr.code === "23505") {
+      return NextResponse.json({ error: "A receipt has already been issued for this attempt" }, { status: 409 });
     }
     return NextResponse.json({ error: rcpErr.message }, { status: 500 });
   }

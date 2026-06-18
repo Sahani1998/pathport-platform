@@ -47,6 +47,7 @@ export type InvoiceStatus =
   | "pending"
   | "under_verification"
   | "paid"
+  | "partially_paid"
   | "payment_action_required"
   | "void"
   | "refunded";
@@ -94,6 +95,7 @@ export const INVOICE_STATUS_META: Record<
   pending:                 { label: "Awaiting Payment",   color: "text-orange-400 bg-orange-500/10 border-orange-400/25" },
   under_verification:      { label: "Under Verification", color: "text-pathBlue-400 bg-pathBlue-500/10 border-pathBlue-500/25" },
   paid:                    { label: "Paid",               color: "text-emerald-400 bg-emerald-500/10 border-emerald-400/25" },
+  partially_paid:          { label: "Partially Paid",     color: "text-amber-400 bg-amber-500/10 border-amber-400/25" },
   payment_action_required: { label: "Action Required",    color: "text-red-400 bg-red-500/10 border-red-400/25" },
   void:                    { label: "Voided",             color: "text-white/40 bg-white/[0.05] border-white/[0.09]" },
   refunded:                { label: "Refunded",           color: "text-white/40 bg-white/[0.05] border-white/[0.09]" },
@@ -203,6 +205,12 @@ export interface StudentInvoice {
   voided_at:                string | null;
   voided_by:                string | null;
   void_reason:              string | null;
+
+  // Sprint 22 — refund columns
+  refunded_at:              string | null;
+  refunded_by:              string | null;
+  refund_reason:            string | null;
+  refunded_amount_cents:    number | null;
 
   // Schema slots for future re-issue chain + installments.
   supersedes_invoice_id:    string | null;
