@@ -1,5 +1,5 @@
 // Public college detail page — no auth required.
-// Shows college branding header, about section, programmes list, gallery, and apply CTA.
+// Shows college branding header, about section, videos, programmes, leadership, faculty, gallery, and apply CTA.
 
 import type { Metadata } from "next";
 import { notFound }      from "next/navigation";
@@ -8,10 +8,13 @@ import { createAdminClient } from "@/lib/supabase/admin-client";
 import Image             from "next/image";
 import {
   ArrowLeft, Globe, Building2, BookOpen, Clock,
-  ChevronRight, DollarSign, Calendar, CheckCircle2,
+  ChevronRight, DollarSign, Calendar, CheckCircle2, Play,
 } from "lucide-react";
 import type { InstitutionMedia } from "@/types/institution-media";
 import { MEDIA_CATEGORIES } from "@/types/institution-media";
+import type { InstitutionVideo } from "@/types/institution-videos";
+import type { LeadershipMember, FacultyMember } from "@/types/institution-people";
+import { toEmbedUrl } from "@/lib/video-embed";
 
 export const revalidate = 300;
 
@@ -69,7 +72,13 @@ export default async function CollegeDetailPage({ params }: PageProps) {
 
   if (!college) notFound();
 
-  const [{ data: filteredCourses }, { data: galleryRows }] = await Promise.all([
+  const [
+    { data: filteredCourses },
+    { data: galleryRows },
+    { data: videoRows },
+    { data: leadershipRows },
+    { data: facultyRows },
+  ] = await Promise.all([
     adminDb
       .from("courses")
       .select("id, title, slug, category, level, duration_months, tuition_fee, status, intake_date, seats_total, seats_filled, internship_available")
@@ -88,17 +97,56 @@ export default async function CollegeDetailPage({ params }: PageProps) {
       .order("sort_order")
       .order("published_at", { ascending: false })
       .limit(24),
+
+    adminDb
+      .from("institution_videos")
+      .select("id, title, description, video_url, embed_url")
+      .eq("college_id", college.id)
+      .eq("status",     "published")
+      .order("sort_order")
+      .order("published_at", { ascending: false })
+      .limit(6),
+
+    adminDb
+      .from("institution_leadership")
+      .select("id, name, role, bio, photo_url")
+      .eq("college_id", college.id)
+      .eq("status",     "published")
+      .order("sort_order")
+      .order("published_at", { ascending: false }),
+
+    adminDb
+      .from("institution_faculty")
+      .select("id, name, title, department, qualifications, bio, photo_url")
+      .eq("college_id", college.id)
+      .eq("status",     "published")
+      .order("sort_order")
+      .order("published_at", { ascending: false }),
   ]);
 
-  const courseList = filteredCourses ?? [];
-  const gallery    = (galleryRows ?? []) as Pick<InstitutionMedia, "id" | "public_url" | "alt_text" | "title" | "caption" | "category">[];
+  const courseList   = filteredCourses ?? [];
+  const gallery      = (galleryRows    ?? []) as Pick<InstitutionMedia,   "id" | "public_url" | "alt_text" | "title" | "caption" | "category">[];
+  const videos       = (videoRows      ?? []) as Pick<InstitutionVideo,   "id" | "title" | "description" | "video_url" | "embed_url">[];
+  const leadership   = (leadershipRows ?? []) as Pick<LeadershipMember,  "id" | "name" | "role" | "bio" | "photo_url">[];
+  const faculty      = (facultyRows    ?? []) as Pick<FacultyMember,     "id" | "name" | "title" | "department" | "qualifications" | "bio" | "photo_url">[];
 
   // Group gallery by category
   const galleryByCategory = MEDIA_CATEGORIES.reduce<Record<string, typeof gallery>>((acc, cat) => {
     acc[cat.value] = gallery.filter(g => g.category === cat.value);
     return acc;
   }, { other: gallery.filter(g => !g.category) });
-  const hasGallery = gallery.length > 0;
+  const hasGallery    = gallery.length    > 0;
+  const hasVideos     = videos.length     > 0;
+  const hasLeadership = leadership.length > 0;
+  const hasFaculty    = faculty.length    > 0;
+
+  // Group faculty by department for display
+  const facultyByDept = faculty.reduce<Record<string, typeof faculty>>((acc, f) => {
+    const key = f.department ?? "General";
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(f);
+    return acc;
+  }, {});
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -249,6 +297,43 @@ export default async function CollegeDetailPage({ params }: PageProps) {
             </div>
           )}
 
+          {/* Videos */}
+          {hasVideos && (
+            <div className="mb-8">
+              <h2 className="font-display text-2xl text-white mb-5">Videos</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {videos.map(video => {
+                  const embed = video.embed_url ?? toEmbedUrl(video.video_url);
+                  return (
+                    <div key={video.id} className="rounded-2xl overflow-hidden border border-white/[0.08] bg-white/[0.04]">
+                      {embed ? (
+                        <iframe
+                          src={embed}
+                          title={video.title}
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                          allowFullScreen
+                          className="w-full aspect-video"
+                        />
+                      ) : (
+                        <a href={video.video_url} target="_blank" rel="noopener noreferrer"
+                          className="flex items-center gap-3 p-4 hover:bg-white/[0.04] transition-colors">
+                          <Play className="w-5 h-5 text-white/40" />
+                          <span className="font-body text-sm text-pathBlue-400">{video.title}</span>
+                        </a>
+                      )}
+                      <div className="p-3">
+                        <p className="font-body font-semibold text-sm text-white/80">{video.title}</p>
+                        {video.description && (
+                          <p className="text-white/40 font-body text-xs mt-0.5">{video.description}</p>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Courses */}
           <div className="mb-8">
             <h2 className="font-display text-2xl text-white mb-5">
@@ -324,6 +409,69 @@ export default async function CollegeDetailPage({ params }: PageProps) {
               </div>
             )}
           </div>
+
+          {/* Leadership Team */}
+          {hasLeadership && (
+            <div className="mb-8">
+              <h2 className="font-display text-2xl text-white mb-5">Leadership Team</h2>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                {leadership.map(person => (
+                  <div key={person.id} className="bg-white/[0.04] border border-white/[0.08] rounded-2xl p-4 text-center">
+                    <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-white/[0.10] mx-auto mb-3 flex items-center justify-center bg-white/[0.06]">
+                      {person.photo_url ? (
+                        <Image src={person.photo_url} alt={person.name} width={64} height={64} className="object-cover w-full h-full" unoptimized />
+                      ) : (
+                        <span className="font-display font-bold text-white/30 text-xl leading-none">
+                          {person.name.slice(0, 1).toUpperCase()}
+                        </span>
+                      )}
+                    </div>
+                    <p className="font-body font-semibold text-sm text-white/85 leading-snug">{person.name}</p>
+                    <p className="text-white/40 font-body text-xs mt-0.5">{person.role}</p>
+                    {person.bio && (
+                      <p className="text-white/25 font-body text-[11px] mt-2 line-clamp-3 leading-relaxed">{person.bio}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Faculty */}
+          {hasFaculty && (
+            <div className="mb-8">
+              <h2 className="font-display text-2xl text-white mb-5">Our Faculty</h2>
+              {Object.entries(facultyByDept).map(([dept, members]) => (
+                <div key={dept} className="mb-6">
+                  {Object.keys(facultyByDept).length > 1 && (
+                    <p className="text-white/30 font-body text-[10px] uppercase tracking-widest mb-3">{dept}</p>
+                  )}
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                    {members.map(person => (
+                      <div key={person.id} className="bg-white/[0.04] border border-white/[0.08] rounded-2xl p-3 flex items-start gap-3">
+                        <div className="w-10 h-10 rounded-xl overflow-hidden border border-white/[0.10] flex-shrink-0 flex items-center justify-center bg-white/[0.06]">
+                          {person.photo_url ? (
+                            <Image src={person.photo_url} alt={person.name} width={40} height={40} className="object-cover w-full h-full" unoptimized />
+                          ) : (
+                            <span className="font-display font-bold text-white/30 text-sm leading-none">
+                              {person.name.slice(0, 1).toUpperCase()}
+                            </span>
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-body font-semibold text-xs text-white/85 leading-snug truncate">{person.name}</p>
+                          <p className="text-white/40 font-body text-[10px] mt-0.5 truncate">{person.title}</p>
+                          {person.qualifications && (
+                            <p className="text-white/25 font-body text-[10px] mt-0.5 truncate">{person.qualifications}</p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
 
           {/* Campus Gallery */}
           {hasGallery && (

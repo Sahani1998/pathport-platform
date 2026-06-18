@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { CreditCard, ChevronRight, Palette, Image as ImageIcon } from "lucide-react";
+import { CreditCard, ChevronRight, Palette, Image as ImageIcon, Play, Users, GraduationCap } from "lucide-react";
 
 export const metadata = { title: "Settings — Institution" };
 
@@ -28,6 +28,27 @@ export default async function InstitutionSettingsIndexPage() {
       iconBg:   "bg-emerald-500/10 border-emerald-400/20",
       title:    "Campus Gallery",
       subtitle: "Upload and manage campus photos shown on your public page",
+    },
+    {
+      href:     "/dashboard/institution/settings/videos",
+      icon:     <Play className="w-5 h-5 text-red-400" />,
+      iconBg:   "bg-red-500/10 border-red-400/20",
+      title:    "Videos",
+      subtitle: "YouTube / Vimeo campus tour and programme videos",
+    },
+    {
+      href:     "/dashboard/institution/settings/leadership",
+      icon:     <Users className="w-5 h-5 text-pathBlue-300" />,
+      iconBg:   "bg-pathBlue-400/10 border-pathBlue-300/20",
+      title:    "Leadership Team",
+      subtitle: "Principal, Directors, Deans — with headshots and bios",
+    },
+    {
+      href:     "/dashboard/institution/settings/faculty",
+      icon:     <GraduationCap className="w-5 h-5 text-violet-400" />,
+      iconBg:   "bg-violet-500/10 border-violet-400/20",
+      title:    "Faculty",
+      subtitle: "Lecturers and department heads with qualifications",
     },
     {
       href:     "/dashboard/institution/settings/payments",
