@@ -185,4 +185,9 @@ export const LIMITS = {
   brandingWrite:     { limit: 20, windowMs: 60_000  },
   mediaUpload:       { limit: 20, windowMs: 60_000  },
   mediaWrite:        { limit: 30, windowMs: 60_000  },
+
+  // Sprint 24B — videos, leadership, faculty
+  videoWrite:        { limit: 20, windowMs: 60_000  },
+  peopleWrite:       { limit: 30, windowMs: 60_000  },
+  photoUpload:       { limit: 20, windowMs: 60_000  },
 } as const;
