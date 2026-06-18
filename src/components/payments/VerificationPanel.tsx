@@ -4,10 +4,10 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   CheckCircle2, XCircle, HelpCircle, Loader2, AlertCircle, Receipt,
-  ChevronDown, ChevronUp,
+  ChevronDown, ChevronUp, AlertTriangle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { PAYMENT_ATTEMPT_STATUS_META, type PaymentAttempt, type PaymentProof, type OfficialReceipt } from "@/types/payment";
+import { PAYMENT_ATTEMPT_STATUS_META, type PaymentAttempt, type PaymentProof, type OfficialReceipt, type Currency } from "@/types/payment";
 import { formatCents } from "@/lib/payments/invoice-helpers";
 
 const INPUT  = cn(
@@ -18,6 +18,8 @@ const INPUT  = cn(
 );
 const LABEL  = "block text-white/55 font-body text-[10px] uppercase tracking-wider mb-1.5";
 const OPTION_STYLE = { backgroundColor: "#0a1024", color: "#fff" } as const;
+
+const CURRENCIES = ["SGD", "USD", "INR", "GBP", "EUR", "AUD"] as const;
 
 interface Props {
   attempt:  PaymentAttempt;
@@ -32,14 +34,14 @@ export default function VerificationPanel({ attempt, proofs, receipt, invoiceAmo
   const [busy, setBusy]       = useState<"verify" | "reject" | "info" | "receipt" | null>(null);
   const [error, setError]     = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  // Auto-expand when action is required so buttons are immediately visible
   const [expanded, setExpanded] = useState(attempt.status === "proof_submitted");
 
   // Verify form state
-  const [paidAmountCents, setPaidAmountCents] = useState<string>("");
-  const [paidCurrency, setPaidCurrency]       = useState<string>("");
-  const [paymentDate, setPaymentDate]         = useState<string>("");
-  const [reconcMemo, setReconcMemo]           = useState<string>("");
+  const [paidAmountStr, setPaidAmountStr]   = useState<string>("");
+  const [paidCurrency, setPaidCurrency]     = useState<string>(invoiceCurrency);
+  const [paymentDate, setPaymentDate]       = useState<string>("");
+  const [reconcMemo, setReconcMemo]         = useState<string>("");
+  const [acceptPartial, setAcceptPartial]   = useState(false);
 
   // Reject form state
   const [rejectReason, setRejectReason] = useState<string>("");
@@ -53,29 +55,45 @@ export default function VerificationPanel({ attempt, proofs, receipt, invoiceAmo
   const [receiptMode, setReceiptMode]   = useState<"generated" | "uploaded">("generated");
 
   const isActionable = attempt.status === "proof_submitted";
-  const amStr = `${invoiceCurrency} ${(invoiceAmountCents / 100).toFixed(2)}`;
+
+  // Derived verify state
+  const paidAmountNum  = parseFloat(paidAmountStr);
+  const paidCents      = !isNaN(paidAmountNum) && paidAmountNum > 0
+    ? Math.round(paidAmountNum * 100)
+    : null;
+  const isPartial      = paidCents !== null && paidCents < invoiceAmountCents;
+  const approveEnabled = paidCents !== null && paidCents > 0 && (!isPartial || acceptPartial);
 
   const doVerify = async () => {
+    if (!approveEnabled || !paidCents) return;
     setBusy("verify"); setError(null); setSuccess(null);
     try {
       const res = await fetch(`/api/payment-attempts/${attempt.id}/verify`, {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
         body:    JSON.stringify({
-          notes:              reconcMemo || undefined,
-          paid_amount_cents:  paidAmountCents ? Math.round(parseFloat(paidAmountCents) * 100) : undefined,
-          paid_currency:      paidCurrency    || undefined,
-          payment_date:       paymentDate     || undefined,
-          reconciliation_memo: reconcMemo     || undefined,
+          paid_amount_cents:   paidCents,
+          paid_currency:       paidCurrency,
+          payment_date:        paymentDate     || undefined,
+          reconciliation_memo: reconcMemo      || undefined,
+          accept_partial:      isPartial ? true : undefined,
         }),
       });
-      const data = await res.json() as { error?: string; advanced_to_label?: string };
+      const data = await res.json() as {
+        error?: string;
+        advanced_to_label?: string;
+        partial?: boolean;
+      };
       if (!res.ok) throw new Error(data.error ?? "Failed to verify");
-      setSuccess(
-        data.advanced_to_label
-          ? `Payment verified. Application advanced to ${data.advanced_to_label}.`
-          : "Payment verified.",
-      );
+      if (data.partial) {
+        setSuccess("Partial payment recorded. Student notified. Issue a receipt only after the full invoice amount is verified.");
+      } else {
+        setSuccess(
+          data.advanced_to_label
+            ? `Payment verified. Application advanced to ${data.advanced_to_label}.`
+            : "Payment verified.",
+        );
+      }
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Verification failed");
@@ -174,7 +192,9 @@ export default function VerificationPanel({ attempt, proofs, receipt, invoiceAmo
           </p>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
-          <span className="text-white/45 font-body text-sm font-mono">{amStr}</span>
+          <span className="text-white/45 font-body text-sm font-mono">
+            {formatCents(invoiceAmountCents, invoiceCurrency as Currency)}
+          </span>
           {expanded ? <ChevronUp className="w-4 h-4 text-white/30" /> : <ChevronDown className="w-4 h-4 text-white/30" />}
         </div>
       </div>
@@ -232,37 +252,96 @@ export default function VerificationPanel({ attempt, proofs, receipt, invoiceAmo
             <>
               {/* ── VERIFY ── */}
               <div className="p-4 rounded-xl bg-emerald-500/[0.05] border border-emerald-400/20 space-y-3">
-                <p className="font-display text-base text-emerald-400">Approve Payment</p>
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <p className="font-display text-base text-emerald-400">Approve Payment</p>
+                  <span className="font-body text-xs text-white/50">
+                    Invoice: <span className="text-gold-400 font-mono font-semibold">{formatCents(invoiceAmountCents, invoiceCurrency as Currency)}</span>
+                  </span>
+                </div>
+
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>
-                    <label className={LABEL}>Paid Amount (optional)</label>
-                    <input type="number" step="0.01" min="0" placeholder={`e.g. ${(invoiceAmountCents / 100).toFixed(2)}`}
-                      value={paidAmountCents} onChange={e => setPaidAmountCents(e.target.value)}
-                      className={INPUT} />
+                    <label className={LABEL}>
+                      Paid Amount <span className="text-red-400">*</span>
+                    </label>
+                    <input
+                      type="number" step="0.01" min="0.01"
+                      placeholder={`e.g. ${(invoiceAmountCents / 100).toFixed(2)}`}
+                      value={paidAmountStr}
+                      onChange={e => { setPaidAmountStr(e.target.value); setAcceptPartial(false); }}
+                      className={INPUT}
+                    />
                   </div>
                   <div>
-                    <label className={LABEL}>Paid Currency</label>
-                    <select value={paidCurrency} onChange={e => setPaidCurrency(e.target.value)} className={INPUT}>
-                      <option value="" style={OPTION_STYLE}>Same as invoice</option>
-                      {["SGD","USD","INR","GBP","EUR","AUD"].map(c => <option key={c} value={c} style={OPTION_STYLE}>{c}</option>)}
+                    <label className={LABEL}>
+                      Paid Currency <span className="text-red-400">*</span>
+                    </label>
+                    <select
+                      value={paidCurrency}
+                      onChange={e => setPaidCurrency(e.target.value)}
+                      className={INPUT}
+                    >
+                      {CURRENCIES.map(c => (
+                        <option key={c} value={c} style={OPTION_STYLE}>{c}</option>
+                      ))}
                     </select>
                   </div>
                   <div>
-                    <label className={LABEL}>Payment Date (optional)</label>
-                    <input type="date" value={paymentDate} onChange={e => setPaymentDate(e.target.value)}
-                      className={INPUT + " [color-scheme:dark]"} />
+                    <label className={LABEL}>Payment Date</label>
+                    <input
+                      type="date"
+                      value={paymentDate}
+                      max={new Date().toISOString().slice(0, 10)}
+                      onChange={e => setPaymentDate(e.target.value)}
+                      className={INPUT + " [color-scheme:dark]"}
+                    />
                   </div>
                 </div>
+
                 <div>
-                  <label className={LABEL}>Reconciliation Notes (optional)</label>
+                  <label className={LABEL}>Reconciliation Notes</label>
                   <input type="text" placeholder="Internal notes for your records"
                     value={reconcMemo} onChange={e => setReconcMemo(e.target.value)}
                     className={INPUT} />
                 </div>
-                <button onClick={doVerify} disabled={busy !== null}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500/15 border border-emerald-400/35 text-emerald-400 font-body text-sm font-semibold hover:bg-emerald-500/25 transition-all disabled:opacity-60 disabled:cursor-wait">
-                  {busy === "verify" ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-                  {busy === "verify" ? "Approving…" : "Approve Payment"}
+
+                {/* Partial payment warning */}
+                {isPartial && (
+                  <div className="p-3 rounded-xl bg-amber-500/[0.08] border border-amber-400/25 space-y-2">
+                    <div className="flex items-start gap-2">
+                      <AlertTriangle className="w-4 h-4 text-amber-400 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p className="font-body text-xs text-amber-300 font-semibold">
+                          Amount received ({paidCurrency} {paidAmountNum.toFixed(2)}) is less than the invoice amount ({invoiceCurrency} {(invoiceAmountCents / 100).toFixed(2)}).
+                        </p>
+                        <p className="font-body text-[11px] text-amber-200/65 mt-1">
+                          Partial payments do not advance the application stage and cannot receive an official receipt until the full invoice amount is verified.
+                        </p>
+                      </div>
+                    </div>
+                    <label className="flex items-center gap-2 cursor-pointer mt-1">
+                      <input
+                        type="checkbox"
+                        checked={acceptPartial}
+                        onChange={e => setAcceptPartial(e.target.checked)}
+                        className="w-3.5 h-3.5 rounded accent-amber-400"
+                      />
+                      <span className="font-body text-xs text-amber-300">Accept as partial payment</span>
+                    </label>
+                  </div>
+                )}
+
+                <button
+                  onClick={doVerify}
+                  disabled={busy !== null || !approveEnabled}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500/15 border border-emerald-400/35 text-emerald-400 font-body text-sm font-semibold hover:bg-emerald-500/25 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {busy === "verify"
+                    ? <Loader2 className="w-4 h-4 animate-spin" />
+                    : <CheckCircle2 className="w-4 h-4" />}
+                  {busy === "verify"
+                    ? "Approving…"
+                    : isPartial ? "Accept Partial Payment" : "Approve Payment"}
                 </button>
               </div>
 
