@@ -51,7 +51,11 @@ export async function POST(
     }
   }
 
-  if (invoice.status !== "pending" && invoice.status !== "payment_action_required") {
+  if (
+    invoice.status !== "pending" &&
+    invoice.status !== "payment_action_required" &&
+    invoice.status !== "partially_paid"
+  ) {
     return NextResponse.json(
       { error: `Cannot start payment for invoice in status ${invoice.status}` },
       { status: 409 },
