@@ -5,6 +5,7 @@ import { ClipboardList, FileCheck, Plane, GraduationCap, ArrowRight } from "luci
 /**
  * JourneySummary — concise 4-step "how it works" row for the homepage.
  * The full 8-step timeline lives on /students. This is the teaser version.
+ * Light public theme (white section, navy text, Path Blue link accent).
  */
 const STEPS = [
   {
@@ -35,23 +36,21 @@ const STEPS = [
 
 export default function JourneySummary() {
   return (
-    <section id="how-it-works" className="relative py-20 overflow-hidden">
-      <div aria-hidden className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/[0.07] to-transparent" />
-
+    <section id="how-it-works" className="relative py-20 public-section-white">
       <div className="max-w-7xl mx-auto px-5 md:px-10">
         <Reveal className="text-center mb-12">
-          <p className="inline-flex items-center gap-3 text-gold-400 font-body text-xs font-semibold tracking-[0.22em] uppercase mb-4">
-            <span className="w-8 h-px bg-gold-400/50 rounded-full" />
+          <p className="inline-flex items-center gap-3 text-gold-700 font-body text-xs font-semibold tracking-[0.22em] uppercase mb-4">
+            <span className="w-8 h-px bg-gold-600/40 rounded-full" />
             How It Works
-            <span className="w-8 h-px bg-gold-400/50 rounded-full" />
+            <span className="w-8 h-px bg-gold-600/40 rounded-full" />
           </p>
-          <h2 className="font-display text-4xl md:text-5xl text-white mb-4 leading-[1.08]">
+          <h2 className="font-display text-4xl md:text-5xl text-navy-900 mb-4 leading-[1.08]">
             India to Singapore in{" "}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-gold-400 to-gold-300">
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-gold-600 to-gold-500">
               4 simple steps
             </span>
           </h2>
-          <p className="text-white/50 font-body text-lg max-w-2xl mx-auto leading-relaxed">
+          <p className="text-navy-800/60 font-body text-lg max-w-2xl mx-auto leading-relaxed">
             PathPort guides every step — from your first enquiry to your first day of class.
           </p>
         </Reveal>
@@ -59,18 +58,18 @@ export default function JourneySummary() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
           {STEPS.map(({ Icon, step, title, desc }, i) => (
             <Reveal key={step} delay={i * 80} className="h-full">
-              <div className="relative h-full p-6 rounded-2.5xl bg-white/[0.04] border border-white/[0.08] hover:border-gold-400/30 hover:bg-white/[0.05] transition-colors duration-300">
+              <div className="relative h-full p-6 rounded-2.5xl public-card public-card-hover">
                 {i < STEPS.length - 1 && (
-                  <div aria-hidden className="hidden lg:block absolute top-9 -right-2 w-4 h-px bg-gold-400/30 z-10" />
+                  <div aria-hidden className="hidden lg:block absolute top-9 -right-2 w-4 h-px bg-gold-500/30 z-10" />
                 )}
                 <div className="flex items-center justify-between mb-4">
-                  <div className="w-11 h-11 rounded-xl bg-gold-400/10 border border-gold-400/25 flex items-center justify-center text-gold-400">
+                  <div className="w-11 h-11 rounded-xl bg-gold-400/15 border border-gold-400/30 flex items-center justify-center text-gold-600">
                     <Icon className="w-5 h-5" strokeWidth={1.75} />
                   </div>
-                  <span className="font-display font-bold text-2xl text-gold-400/30 leading-none">{step}</span>
+                  <span className="font-display font-bold text-2xl text-gold-500/30 leading-none">{step}</span>
                 </div>
-                <h3 className="font-body font-semibold text-white text-base mb-2 leading-snug">{title}</h3>
-                <p className="text-white/48 font-body text-sm leading-relaxed">{desc}</p>
+                <h3 className="font-body font-semibold text-navy-900 text-base mb-2 leading-snug">{title}</h3>
+                <p className="text-navy-800/55 font-body text-sm leading-relaxed">{desc}</p>
               </div>
             </Reveal>
           ))}
@@ -79,7 +78,7 @@ export default function JourneySummary() {
         <div className="text-center">
           <Link
             href="/students"
-            className="inline-flex items-center gap-2 text-gold-400 hover:text-gold-300 font-body text-sm font-semibold transition-colors"
+            className="inline-flex items-center gap-2 text-pathBlue-700 hover:text-pathBlue-600 font-body text-sm font-semibold transition-colors"
           >
             See the full 8-step journey
             <ArrowRight className="w-4 h-4" />

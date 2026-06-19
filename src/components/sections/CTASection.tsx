@@ -3,7 +3,7 @@ import { ArrowRight, MessageCircle } from "lucide-react";
 
 export default function CTASection() {
   return (
-    <section id="cta" className="relative py-36 overflow-hidden">
+    <section id="cta" className="relative py-36 overflow-hidden bg-[#06142E]">
       <div aria-hidden className="absolute inset-0 bg-gradient-to-br from-navy-800/40 via-transparent to-navy-950 pointer-events-none" />
       <div aria-hidden className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] rounded-full bg-gold-400/[0.06] blur-[150px] pointer-events-none" />
       <div aria-hidden className="absolute top-0 left-1/2 -translate-x-1/2 w-[500px] max-w-full h-px bg-gradient-to-r from-transparent via-gold-500/40 to-transparent" />
