@@ -3,19 +3,15 @@ export const dynamic = "force-dynamic";
 import Navbar                from "@/components/layout/Navbar";
 import Footer                from "@/components/layout/Footer";
 import HeroSection           from "@/components/sections/HeroSection";
-import StudentInterestForm   from "@/components/sections/StudentInterestForm";
 import PlatformStats         from "@/components/sections/PlatformStats";
-import WhySingapore          from "@/components/sections/WhySingapore";
-import SingaporeGallery      from "@/components/sections/SingaporeGallery";
-import LifeInSingapore       from "@/components/sections/LifeInSingapore";
+import JourneySummary        from "@/components/sections/JourneySummary";
+import InstitutionLogoWall   from "@/components/sections/InstitutionLogoWall";
 import DiplomaCategories     from "@/components/sections/DiplomaCategories";
 import StudyEarnGraduate     from "@/components/sections/StudyEarnGraduate";
-import JourneyTimeline       from "@/components/sections/JourneyTimeline";
-import PrivateColleges       from "@/components/sections/PrivateColleges";
-import InstitutionLogoWall   from "@/components/sections/InstitutionLogoWall";
 import WhyTrustPathPort      from "@/components/sections/WhyTrustPathPort";
-import OfferLetterSupport    from "@/components/sections/OfferLetterSupport";
-import ArrivalServices       from "@/components/sections/ArrivalServices";
+import SingaporeTeaser       from "@/components/sections/SingaporeTeaser";
+import SuccessTeaser         from "@/components/sections/SuccessTeaser";
+import ResourceTeaser        from "@/components/sections/ResourceTeaser";
 import CTASection            from "@/components/sections/CTASection";
 
 const organizationJsonLd = {
@@ -47,20 +43,27 @@ export default function HomePage() {
       />
       <Navbar />
       <main id="main-content">
+        {/* 1 · Hero with interest form (dark) */}
         <HeroSection />
-        <StudentInterestForm />
+        {/* 2 · Trust proof row — live DB counters */}
         <PlatformStats />
-        <WhySingapore />
-        <SingaporeGallery />
-        <LifeInSingapore />
-        <DiplomaCategories />
-        <StudyEarnGraduate />
-        <JourneyTimeline />
-        <PrivateColleges />
+        {/* 3 · Student journey summary — 4 steps, full timeline on /students */}
+        <JourneySummary />
+        {/* 4 · Verified institutions logo wall */}
         <InstitutionLogoWall />
+        {/* 5 · Popular pathways / courses */}
+        <DiplomaCategories />
+        {/* 6 · Study + Internship summary */}
+        <StudyEarnGraduate />
+        {/* 7 · Parent trust summary (cream) */}
         <WhyTrustPathPort />
-        <OfferLetterSupport />
-        <ArrivalServices />
+        {/* 8 · Singapore life teaser — full guides on /resources */}
+        <SingaporeTeaser />
+        {/* 9 · Success stories teaser — real DB stories only */}
+        <SuccessTeaser />
+        {/* 10 · Resource / blog teaser */}
+        <ResourceTeaser />
+        {/* 11 · Final CTA (dark) */}
         <CTASection />
       </main>
       <Footer />
