@@ -4,6 +4,7 @@ import Navbar                from "@/components/layout/Navbar";
 import Footer                from "@/components/layout/Footer";
 import HeroSection           from "@/components/sections/HeroSection";
 import StudentInterestForm   from "@/components/sections/StudentInterestForm";
+import PlatformStats         from "@/components/sections/PlatformStats";
 import WhySingapore          from "@/components/sections/WhySingapore";
 import SingaporeGallery      from "@/components/sections/SingaporeGallery";
 import LifeInSingapore       from "@/components/sections/LifeInSingapore";
@@ -47,6 +48,7 @@ export default function HomePage() {
       <main id="main-content">
         <HeroSection />
         <StudentInterestForm />
+        <PlatformStats />
         <WhySingapore />
         <SingaporeGallery />
         <LifeInSingapore />

@@ -122,4 +122,54 @@
       rgba(218, 234, 255, 0.96) 100%);
     color: #0A1122;
   }
+
+  /* ── Sprint 29 ── Scroll-reveal primitives (used by <Reveal>) ──────────────
+     Elements start hidden + slightly offset; the IntersectionObserver adds
+     .is-visible when they enter the viewport, triggering a gentle fade+rise.
+     Stagger is driven by an inline --reveal-delay custom property. */
+  .reveal {
+    opacity: 0;
+    transform: translateY(18px);
+    transition:
+      opacity 0.6s cubic-bezier(0.22, 1, 0.36, 1),
+      transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+    transition-delay: var(--reveal-delay, 0ms);
+    will-change: opacity, transform;
+  }
+  .reveal.is-visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* ── Sprint 29 ── Infinite logo marquee (used by InstitutionLogoWall) ──────
+     The track is rendered twice back-to-back; translating -50% loops seamlessly. */
+  .marquee-track {
+    animation: marquee var(--marquee-duration, 40s) linear infinite;
+  }
+  .marquee-group:hover .marquee-track {
+    animation-play-state: paused;
+  }
+}
+
+/* ── Sprint 29 ── Global reduced-motion kill-switch ──────────────────────────
+   Honours the OS-level "reduce motion" preference everywhere. Animations and
+   transitions collapse to near-instant; reveals show immediately; the marquee
+   and smooth-scroll are disabled. This is a hard accessibility requirement. */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  .reveal {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  .marquee-track {
+    animation: none !important;
+  }
 }

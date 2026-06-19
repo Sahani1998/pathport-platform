@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ShieldCheck, MessageCircle, BadgeCheck, Wallet, ArrowRight } from "lucide-react";
+import Reveal from "@/components/ui/Reveal";
 
 /**
  * WhyTrustPathPort — warm/cream "rest" section that breaks up the dark scroll
@@ -59,26 +60,27 @@ export default function WhyTrustPathPort() {
 
         {/* Trust cards — light cards with subtle gold accent */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5">
-          {POINTS.map(p => (
-            <Link
-              key={p.title}
-              href={p.href}
-              target={p.href.startsWith("http") ? "_blank" : undefined}
-              rel={p.href.startsWith("http") ? "noopener noreferrer" : undefined}
-              className="group flex items-start gap-4 p-6 md:p-7 rounded-2.5xl warm-panel-card hover:shadow-warm-lg hover:-translate-y-0.5 transition-all duration-300"
-            >
-              <div className="w-11 h-11 rounded-2xl bg-gold-100 border border-gold-300/50 text-gold-700 flex items-center justify-center flex-shrink-0">
-                {p.icon}
-              </div>
-              <div className="flex-1">
-                <h3 className="font-display text-xl text-navy-900 mb-1.5 leading-snug">{p.title}</h3>
-                <p className="font-body text-navy-800/65 text-sm leading-relaxed mb-3">{p.body}</p>
-                <span className="inline-flex items-center gap-1.5 text-gold-700 font-body text-xs font-semibold group-hover:text-gold-800 transition-colors">
-                  {p.cta}
-                  <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
-                </span>
-              </div>
-            </Link>
+          {POINTS.map((p, i) => (
+            <Reveal key={p.title} delay={(i % 2) * 100} className="h-full">
+              <Link
+                href={p.href}
+                target={p.href.startsWith("http") ? "_blank" : undefined}
+                rel={p.href.startsWith("http") ? "noopener noreferrer" : undefined}
+                className="group flex items-start gap-4 p-6 md:p-7 rounded-2.5xl warm-panel-card hover:shadow-warm-lg hover:-translate-y-0.5 transition-all duration-300 h-full"
+              >
+                <div className="w-11 h-11 rounded-2xl bg-gold-100 border border-gold-300/50 text-gold-700 flex items-center justify-center flex-shrink-0">
+                  {p.icon}
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-display text-xl text-navy-900 mb-1.5 leading-snug">{p.title}</h3>
+                  <p className="font-body text-navy-800/65 text-sm leading-relaxed mb-3">{p.body}</p>
+                  <span className="inline-flex items-center gap-1.5 text-gold-700 font-body text-xs font-semibold group-hover:text-gold-800 transition-colors">
+                    {p.cta}
+                    <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+                  </span>
+                </div>
+              </Link>
+            </Reveal>
           ))}
         </div>
 
