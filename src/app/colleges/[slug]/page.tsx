@@ -250,7 +250,6 @@ export default async function CollegeDetailPage({ params }: PageProps) {
                 alt={`${college.name} campus`}
                 fill
                 className="object-cover"
-                unoptimized
                 priority
               />
               {/* Gradient overlay for text legibility */}
@@ -274,7 +273,6 @@ export default async function CollegeDetailPage({ params }: PageProps) {
                     alt={`${college.name} logo`}
                     width={64} height={64}
                     className="object-contain w-full h-full"
-                    unoptimized
                   />
                 ) : (
                   <span
@@ -468,7 +466,7 @@ export default async function CollegeDetailPage({ params }: PageProps) {
                   <div key={person.id} className="bg-white/[0.04] border border-white/[0.08] rounded-2xl p-4 text-center">
                     <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-white/[0.10] mx-auto mb-3 flex items-center justify-center bg-white/[0.06]">
                       {person.photo_url ? (
-                        <Image src={person.photo_url} alt={person.name} width={64} height={64} className="object-cover w-full h-full" unoptimized />
+                        <Image src={person.photo_url} alt={person.name} width={64} height={64} className="object-cover w-full h-full" />
                       ) : (
                         <span className="font-display font-bold text-white/30 text-xl leading-none">
                           {person.name.slice(0, 1).toUpperCase()}
@@ -500,7 +498,7 @@ export default async function CollegeDetailPage({ params }: PageProps) {
                       <div key={person.id} className="bg-white/[0.04] border border-white/[0.08] rounded-2xl p-3 flex items-start gap-3">
                         <div className="w-10 h-10 rounded-xl overflow-hidden border border-white/[0.10] flex-shrink-0 flex items-center justify-center bg-white/[0.06]">
                           {person.photo_url ? (
-                            <Image src={person.photo_url} alt={person.name} width={40} height={40} className="object-cover w-full h-full" unoptimized />
+                            <Image src={person.photo_url} alt={person.name} width={40} height={40} className="object-cover w-full h-full" />
                           ) : (
                             <span className="font-display font-bold text-white/30 text-sm leading-none">
                               {person.name.slice(0, 1).toUpperCase()}
@@ -533,7 +531,7 @@ export default async function CollegeDetailPage({ params }: PageProps) {
                     <div key={f.id} className="bg-white/[0.04] border border-white/[0.08] rounded-2xl overflow-hidden">
                       {f.cover_image_url ? (
                         <div className="relative w-full h-32">
-                          <Image src={f.cover_image_url} alt={f.name} fill className="object-cover" unoptimized />
+                          <Image src={f.cover_image_url} alt={f.name} fill className="object-cover" />
                         </div>
                       ) : (
                         <div className="w-full h-32 flex items-center justify-center bg-white/[0.03]">
@@ -569,7 +567,7 @@ export default async function CollegeDetailPage({ params }: PageProps) {
                   <div key={a.id} className="flex items-start gap-4 p-4 bg-white/[0.04] border border-white/[0.08] rounded-2xl">
                     <div className="w-12 h-12 rounded-xl overflow-hidden border border-white/[0.10] flex-shrink-0 flex items-center justify-center bg-white/[0.06]">
                       {a.logo_url ? (
-                        <Image src={a.logo_url} alt={a.name} width={48} height={48} className="object-contain w-full h-full p-1" unoptimized />
+                        <Image src={a.logo_url} alt={a.name} width={48} height={48} className="object-contain w-full h-full p-1" />
                       ) : (
                         <Award className="w-5 h-5 text-white/20" />
                       )}
@@ -604,7 +602,7 @@ export default async function CollegeDetailPage({ params }: PageProps) {
                     <div className="flex items-start gap-3 mb-3">
                       <div className="w-10 h-10 rounded-full overflow-hidden border border-white/[0.10] flex-shrink-0 flex items-center justify-center bg-white/[0.06]">
                         {t.student_photo_url ? (
-                          <Image src={t.student_photo_url} alt={t.student_name} width={40} height={40} className="object-cover w-full h-full" unoptimized />
+                          <Image src={t.student_photo_url} alt={t.student_name} width={40} height={40} className="object-cover w-full h-full" />
                         ) : (
                           <span className="font-display font-bold text-white/30 text-sm leading-none">
                             {t.student_name.slice(0, 1).toUpperCase()}
@@ -642,7 +640,7 @@ export default async function CollegeDetailPage({ params }: PageProps) {
                     <div className="flex items-center gap-3 mb-3">
                       <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-white/[0.10] flex-shrink-0 flex items-center justify-center bg-white/[0.06]">
                         {s.photo_url ? (
-                          <Image src={s.photo_url} alt={s.person_name} width={48} height={48} className="object-cover w-full h-full" unoptimized />
+                          <Image src={s.photo_url} alt={s.person_name} width={48} height={48} className="object-cover w-full h-full" />
                         ) : (
                           <span className="font-display font-bold text-white/30 text-lg leading-none">
                             {s.person_name.slice(0, 1).toUpperCase()}
@@ -682,7 +680,7 @@ export default async function CollegeDetailPage({ params }: PageProps) {
                       alt={img.alt_text ?? img.title ?? `${college.name} campus photo`}
                       fill
                       className="object-cover group-hover:scale-105 transition-transform duration-300"
-                      unoptimized
+                     
                     />
                     {(img.title || img.caption) && (
                       <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-2">

@@ -9,6 +9,7 @@
 
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin-client";
 import { checkRateLimit, getClientIp, rateLimitResponse, LIMITS } from "@/lib/rate-limit";
 
 export async function GET(
@@ -35,10 +36,12 @@ export async function GET(
   if (invoice.source === "uploaded") {
     if (!invoice.file_path) return NextResponse.json({ error: "No file attached" }, { status: 404 });
     const downloadName = `${invoice.public_id ?? "invoice"}.pdf`;
-    const { data: signed, error: signErr } = await supabase.storage
+    const adminDb = createAdminClient();
+    const { data: signed, error: signErr } = await adminDb.storage
       .from("invoices")
       .createSignedUrl(invoice.file_path, 3600, { download: downloadName });
     if (signErr || !signed?.signedUrl) {
+      console.error("[InvoiceDownload] sign error:", signErr?.message, "path:", invoice.file_path);
       return NextResponse.json({ error: "Could not generate download link" }, { status: 500 });
     }
     return NextResponse.redirect(signed.signedUrl);

@@ -197,4 +197,7 @@ export const LIMITS = {
   testimonialWrite:    { limit: 20, windowMs: 60_000  },
   storyWrite:          { limit: 20, windowMs: 60_000  },
   trustPhotoUpload:    { limit: 20, windowMs: 60_000  },
+
+  // Sprint 25 — notification endpoints
+  notificationRead:    { limit: 60, windowMs: 60_000  },
 } as const;

@@ -121,6 +121,16 @@ export async function POST(
   const totalPaidCents = previouslyPaidCents + paidAmountCents;
   const isPartial      = totalPaidCents < ctx.invoice.amount_cents;
 
+  if (totalPaidCents > ctx.invoice.amount_cents) {
+    return NextResponse.json({
+      error:                 `Total payments (${formatCents(totalPaidCents, paidCurrency)}) would exceed invoice amount (${formatCents(ctx.invoice.amount_cents, ctx.invoice.currency as Currency)})`,
+      invoice_amount_cents:  ctx.invoice.amount_cents,
+      paid_amount_cents:     paidAmountCents,
+      previously_paid_cents: previouslyPaidCents,
+      total_paid_after_this: totalPaidCents,
+    }, { status: 400 });
+  }
+
   // Amount guard: total after this payment still < invoice requires explicit partial opt-in
   if (isPartial && !acceptPartial) {
     return NextResponse.json({
@@ -161,19 +171,25 @@ export async function POST(
     return NextResponse.json({ error: attErr.message }, { status: 500 });
   }
 
-  // Update invoice status
+  // Update invoice status — admin client required; fatal if it fails
   const invoiceStatus = isPartial ? "partially_paid" : "paid";
-  const { error: invErr } = await supabase
+  const adminDb = createAdminClient();
+  const { error: invErr } = await adminDb
     .from("student_invoices")
     .update({
       status:  invoiceStatus,
       paid_at: isPartial ? null : now,
     })
     .eq("id", ctx.invoice.id);
-  if (invErr) console.error("[Verify] invoice update failed:", invErr.message);
+  if (invErr) {
+    console.error("[Verify] invoice update failed:", invErr.message);
+    return NextResponse.json(
+      { error: "Payment attempt recorded but invoice status update failed — please contact support." },
+      { status: 500 },
+    );
+  }
 
   // ─── Side effects (non-fatal, admin client) ────────────────────────────────
-  const adminDb = createAdminClient();
 
   if (isPartial) {
     const paidStr      = formatCents(paidAmountCents, paidCurrency);

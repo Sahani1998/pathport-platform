@@ -164,7 +164,7 @@ export default async function PublicCourseDetailPage({ params }: PageProps) {
               {/* Thumbnail */}
               {hasThumbnail && (
                 <div className="relative w-full h-48 rounded-2xl overflow-hidden border border-white/[0.08]">
-                  <Image src={course.thumbnail_url as string} alt={course.title as string} fill className="object-cover" unoptimized />
+                  <Image src={course.thumbnail_url as string} alt={course.title as string} fill className="object-cover" />
                   <div className="absolute inset-0 bg-gradient-to-t from-navy-950/80 via-transparent to-transparent" />
                 </div>
               )}
@@ -308,7 +308,7 @@ export default async function PublicCourseDetailPage({ params }: PageProps) {
                     {(course.gallery_images as string[]).map((src, i) => (
                       <a key={i} href={src} target="_blank" rel="noopener noreferrer">
                         <div className="relative aspect-video rounded-xl overflow-hidden bg-navy-950 border border-white/[0.06] hover:border-gold-400/30 transition-colors">
-                          <Image src={src} alt={`Gallery ${i + 1}`} fill className="object-cover" unoptimized />
+                          <Image src={src} alt={`Gallery ${i + 1}`} fill className="object-cover" />
                         </div>
                       </a>
                     ))}

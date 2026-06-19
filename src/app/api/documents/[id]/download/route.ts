@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin-client";
 import { checkRateLimit, getClientIp, rateLimitResponse, LIMITS } from "@/lib/rate-limit";
 
 export async function GET(
@@ -26,12 +27,15 @@ export async function GET(
 
   if (error || !doc) return NextResponse.json({ error: "Document not found" }, { status: 404 });
 
-  // Generate 60-minute signed URL
-  const { data: signed, error: signErr } = await supabase.storage
+  if (!doc.file_path) return NextResponse.json({ error: "No file attached to this document" }, { status: 422 });
+
+  const adminDb = createAdminClient();
+  const { data: signed, error: signErr } = await adminDb.storage
     .from("student-documents")
-    .createSignedUrl(doc.file_path, 3600);
+    .createSignedUrl(doc.file_path, 3600, { download: doc.file_name ?? "document.pdf" });
 
   if (signErr || !signed?.signedUrl) {
+    console.error("[DocDownload] sign error:", signErr?.message, "path:", doc.file_path);
     return NextResponse.json({ error: "Could not generate download link" }, { status: 500 });
   }
 

@@ -53,6 +53,15 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // Validate file extension (defense in depth against MIME spoofing)
+  const fileExt = file.name.split(".").pop()?.toLowerCase() ?? "";
+  if (!["pdf", "jpg", "jpeg", "png"].includes(fileExt)) {
+    return NextResponse.json(
+      { error: "Only .pdf, .jpg, .jpeg, and .png file extensions are allowed." },
+      { status: 400 },
+    );
+  }
+
   // Validate file size
   if (file.size > MAX_FILE_SIZE_BYTES) {
     return NextResponse.json(
