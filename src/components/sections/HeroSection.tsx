@@ -81,7 +81,7 @@ export default function HeroSection() {
   };
 
   return (
-    <section className="relative min-h-screen flex items-center overflow-hidden pt-[68px]">
+    <section className="relative min-h-screen flex items-center overflow-hidden pt-[68px] bg-[#06142E]">
       {/* Singapore skyline — kept very subtle for depth without distraction */}
       <div aria-hidden className="absolute inset-0 pointer-events-none">
         <img

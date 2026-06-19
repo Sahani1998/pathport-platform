@@ -42,7 +42,10 @@ export default function HomePage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
       />
       <Navbar />
-      <main id="main-content">
+      {/* Public marketing pages use a light base; dashboards keep their own
+          dark navy wrappers and are unaffected. Hero + final CTA opt back into
+          dark via explicit section backgrounds. */}
+      <main id="main-content" className="bg-white">
         {/* 1 · Hero with interest form (dark) */}
         <HeroSection />
         {/* 2 · Trust proof row — live DB counters */}

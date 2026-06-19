@@ -9,8 +9,6 @@ interface Phase {
   desc: string;
   outcomes: readonly string[];
   Icon: LucideIcon;
-  accent: string;
-  border: string;
   iconBg: string;
   numberColor: string;
   highlight?: boolean;
@@ -25,10 +23,8 @@ const PHASES: Phase[] = [
     desc: "Attend class at your chosen private college. Build academic credits, English fluency, and a Singapore professional network from day one.",
     outcomes: ["Diploma credits", "Singapore Student Pass", "Campus facilities", "Indian student network"],
     Icon: BookOpen,
-    accent: "from-pathBlue-500/20 to-pathBlue-700/10",
-    border: "border-pathBlue-500/30",
-    iconBg: "bg-pathBlue-500/15 border-pathBlue-500/30 text-pathBlue-300",
-    numberColor: "text-pathBlue-400",
+    iconBg: "bg-pathBlue-500/10 border-pathBlue-500/25 text-pathBlue-700",
+    numberColor: "text-pathBlue-600",
   },
   {
     number: "02",
@@ -38,10 +34,8 @@ const PHASES: Phase[] = [
     desc: "PathPort's 6+6 pathway places you with Singapore employers for 6 months of real work experience — with a paid stipend and professional reference.",
     outcomes: ["S$800–S$1,500/month stipend", "Industry mentorship", "Professional reference", "Singapore work experience"],
     Icon: Briefcase,
-    accent: "from-gold-500/20 to-gold-700/10",
-    border: "border-gold-400/40",
-    iconBg: "bg-gradient-to-br from-gold-500 to-gold-600 border-gold-400 text-navy-900",
-    numberColor: "text-gold-400",
+    iconBg: "bg-gradient-to-br from-gold-500 to-gold-600 border-gold-400 text-white",
+    numberColor: "text-gold-600",
     highlight: true,
   },
   {
@@ -52,10 +46,8 @@ const PHASES: Phase[] = [
     desc: "Graduate with a Singapore diploma recognised across Asia and ASEAN. Your CPE-registered college issues your certificate.",
     outcomes: ["CPE-registered diploma", "Singapore transcript", "Alumni network", "Advanced entry eligibility"],
     Icon: GraduationCap,
-    accent: "from-emerald-500/15 to-emerald-700/8",
-    border: "border-emerald-500/25",
-    iconBg: "bg-emerald-500/15 border-emerald-500/30 text-emerald-400",
-    numberColor: "text-emerald-400",
+    iconBg: "bg-emerald-500/10 border-emerald-500/25 text-emerald-700",
+    numberColor: "text-emerald-600",
   },
   {
     number: "04",
@@ -65,49 +57,43 @@ const PHASES: Phase[] = [
     desc: "With a Singapore qualification and international work experience, you can pursue employment, further study, or pathway to Singapore PR — or return to India with a significant advantage.",
     outcomes: ["Singapore employment", "Advanced/Higher Diploma", "Degree advanced standing", "Singapore PR pathway"],
     Icon: TrendingUp,
-    accent: "from-white/[0.04] to-transparent",
-    border: "border-white/[0.10]",
-    iconBg: "bg-white/[0.08] border-white/[0.12] text-white/70",
-    numberColor: "text-white/50",
+    iconBg: "bg-navy-900/5 border-navy-900/10 text-navy-700",
+    numberColor: "text-navy-900/60",
   },
 ];
 
 export default function StudyEarnGraduate() {
   return (
-    <section id="pathway" className="relative py-24 overflow-hidden">
-      <div aria-hidden className="absolute inset-0 bg-gradient-to-b from-transparent via-navy-800/25 to-transparent pointer-events-none" />
-      <div aria-hidden className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/[0.07] to-transparent" />
-      <div aria-hidden className="absolute top-1/2 left-0 w-[400px] h-[400px] rounded-full bg-gold-400/[0.04] blur-[120px] pointer-events-none -translate-y-1/2" />
-
+    <section id="pathway" className="relative py-24 public-section-blue">
       <div className="max-w-7xl mx-auto px-5 md:px-10">
 
         {/* Header */}
         <div className="text-center mb-16">
-          <p className="inline-flex items-center gap-3 text-gold-400 font-body text-xs font-semibold tracking-[0.22em] uppercase mb-5">
-            <span className="w-8 h-px bg-gold-400/50 rounded-full" />
+          <p className="inline-flex items-center gap-3 text-gold-700 font-body text-xs font-semibold tracking-[0.22em] uppercase mb-5">
+            <span className="w-8 h-px bg-gold-600/40 rounded-full" />
             6+6 Pathway
-            <span className="w-8 h-px bg-gold-400/50 rounded-full" />
+            <span className="w-8 h-px bg-gold-600/40 rounded-full" />
           </p>
-          <h2 className="font-display text-4xl md:text-5xl text-white mb-5 leading-[1.08]">
+          <h2 className="font-display text-4xl md:text-5xl text-navy-900 mb-5 leading-[1.08]">
             Study. Earn.{" "}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-gold-400 via-gold-300 to-gold-400">
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-gold-600 to-gold-500">
               Graduate. Career.
             </span>
           </h2>
-          <p className="text-white/50 font-body text-lg max-w-2xl mx-auto leading-relaxed">
+          <p className="text-navy-800/60 font-body text-lg max-w-2xl mx-auto leading-relaxed">
             PathPort&apos;s signature 6+6 pathway gives Indian students both a Singapore qualification and 6 months of real paid work experience — in one year.
           </p>
         </div>
 
         {/* 4-phase grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-12">
-          {PHASES.map(({ number, label, duration, title, desc, outcomes, Icon, accent, border, iconBg, numberColor, highlight }) => (
+          {PHASES.map(({ number, label, duration, title, desc, outcomes, Icon, iconBg, numberColor, highlight }) => (
             <div
               key={number}
-              className={`relative rounded-2.5xl border bg-gradient-to-br ${accent} ${border} p-6 flex flex-col ${highlight ? "shadow-gold-sm" : ""}`}
+              className={`relative rounded-2.5xl p-6 flex flex-col public-card public-card-hover ${highlight ? "ring-1 ring-gold-400/45 shadow-gold-sm" : ""}`}
             >
               {highlight && (
-                <div aria-hidden className="absolute -top-px left-6 right-6 h-px bg-gradient-to-r from-transparent via-gold-400/60 to-transparent" />
+                <div aria-hidden className="absolute -top-px left-6 right-6 h-px bg-gradient-to-r from-transparent via-gold-500/60 to-transparent" />
               )}
 
               {/* Phase number + icon */}
@@ -115,25 +101,25 @@ export default function StudyEarnGraduate() {
                 <div className={`w-11 h-11 rounded-xl border flex items-center justify-center flex-shrink-0 ${iconBg}`}>
                   <Icon className="w-5 h-5" strokeWidth={1.75} />
                 </div>
-                <span className={`font-display font-bold text-3xl leading-none ${numberColor} opacity-40`}>{number}</span>
+                <span className={`font-display font-bold text-3xl leading-none ${numberColor} opacity-30`}>{number}</span>
               </div>
 
               {/* Label + duration */}
               <div className="flex items-center gap-2 mb-2 flex-wrap">
                 <span className={`font-body font-bold text-xs uppercase tracking-wider ${numberColor}`}>{label}</span>
-                <span className="text-white/28 font-body text-[10px]">· {duration}</span>
+                <span className="text-navy-800/40 font-body text-[10px]">· {duration}</span>
               </div>
 
               {/* Title */}
-              <h3 className="font-display text-lg text-white mb-2 leading-snug">{title}</h3>
+              <h3 className="font-display text-lg text-navy-900 mb-2 leading-snug">{title}</h3>
 
               {/* Description */}
-              <p className="text-white/50 font-body text-sm leading-relaxed mb-5 flex-1">{desc}</p>
+              <p className="text-navy-800/60 font-body text-sm leading-relaxed mb-5 flex-1">{desc}</p>
 
               {/* Outcomes */}
               <ul className="space-y-1.5">
                 {outcomes.map(o => (
-                  <li key={o} className="flex items-center gap-2 text-white/45 font-body text-xs">
+                  <li key={o} className="flex items-center gap-2 text-navy-800/55 font-body text-xs">
                     <span className={`w-1 h-1 rounded-full flex-shrink-0 ${numberColor.replace("text-", "bg-")}`} />
                     {o}
                   </li>
@@ -141,8 +127,8 @@ export default function StudyEarnGraduate() {
               </ul>
 
               {highlight && (
-                <div className="mt-4 pt-4 border-t border-gold-400/20">
-                  <span className="inline-flex items-center gap-1.5 text-gold-400 font-body text-[10px] font-semibold tracking-[0.15em] uppercase">
+                <div className="mt-4 pt-4 border-t border-gold-400/25">
+                  <span className="inline-flex items-center gap-1.5 text-gold-700 font-body text-[10px] font-semibold tracking-[0.15em] uppercase">
                     ⭐ Signature Feature
                   </span>
                 </div>
@@ -153,9 +139,9 @@ export default function StudyEarnGraduate() {
 
         {/* Bottom note + CTA */}
         <div className="text-center p-6 rounded-2xl bg-pathBlue-500/[0.06] border border-pathBlue-500/20">
-          <p className="text-white/60 font-body text-base mb-4">
+          <p className="text-navy-800/65 font-body text-base mb-4">
             All diploma types are compatible with the 6+6 Study + Paid Internship Pathway.
-            <span className="text-gold-400 font-semibold"> One year. Two outcomes.</span>
+            <span className="text-gold-700 font-semibold"> One year. Two outcomes.</span>
           </p>
           <Link
             href="/students"

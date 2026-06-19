@@ -56,27 +56,23 @@ export default async function PlatformStats() {
   ];
 
   return (
-    <section className="relative py-16 overflow-hidden">
-      <div aria-hidden className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/[0.07] to-transparent" />
-      <div aria-hidden className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/[0.07] to-transparent" />
-      <div aria-hidden className="absolute inset-0 bg-gradient-to-b from-transparent via-navy-800/20 to-transparent pointer-events-none" />
-
+    <section className="relative py-16 public-section-blue">
       <div className="max-w-7xl mx-auto px-5 md:px-10">
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
           {stats.map(({ Icon, value, suffix, label, sub }, i) => (
             <Reveal
               key={label}
               delay={i * 90}
-              className="group text-center p-5 md:p-6 rounded-2.5xl bg-white/[0.04] border border-white/[0.08] hover:border-gold-400/30 hover:bg-white/[0.05] transition-colors duration-300"
+              className="group text-center p-5 md:p-6 rounded-2.5xl public-card public-card-hover"
             >
-              <div className="w-10 h-10 rounded-xl bg-gold-400/10 border border-gold-400/25 flex items-center justify-center text-gold-400 mx-auto mb-3 group-hover:scale-105 transition-transform duration-300">
+              <div className="w-10 h-10 rounded-xl bg-gold-400/15 border border-gold-400/30 flex items-center justify-center text-gold-600 mx-auto mb-3 group-hover:scale-105 transition-transform duration-300">
                 <Icon className="w-5 h-5" strokeWidth={1.75} />
               </div>
-              <p className="font-display text-3xl md:text-4xl text-gold-400 font-bold leading-none mb-2">
+              <p className="font-display text-3xl md:text-4xl text-pathBlue-700 font-bold leading-none mb-2">
                 <CountUp value={value} suffix={suffix} />
               </p>
-              <p className="font-body font-semibold text-white/85 text-sm leading-snug">{label}</p>
-              <p className="font-body text-white/40 text-xs mt-1 leading-snug">{sub}</p>
+              <p className="font-body font-semibold text-navy-900 text-sm leading-snug">{label}</p>
+              <p className="font-body text-navy-800/55 text-xs mt-1 leading-snug">{sub}</p>
             </Reveal>
           ))}
         </div>
