@@ -82,13 +82,21 @@ export default function WhyTrustPathPort() {
           ))}
         </div>
 
-        {/* Footer link — Trust Center */}
-        <div className="text-center mt-10">
+        {/* Footer links */}
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-5 mt-10">
           <Link
             href="/trust"
             className="inline-flex items-center gap-2 text-navy-900/70 hover:text-navy-900 font-body text-sm font-semibold transition-colors"
           >
             See PathPort&apos;s full Trust Center
+            <ArrowRight className="w-4 h-4" />
+          </Link>
+          <span className="hidden sm:block w-px h-4 bg-navy-900/20" aria-hidden />
+          <Link
+            href="/for-parents"
+            className="inline-flex items-center gap-2 text-gold-700 hover:text-gold-800 font-body text-sm font-semibold transition-colors"
+          >
+            Parent guide — everything families need to know
             <ArrowRight className="w-4 h-4" />
           </Link>
         </div>

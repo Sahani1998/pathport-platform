@@ -13,6 +13,7 @@ const FOOTER_COLS: Record<string, { label: string; href: string }[]> = {
   Students: [
     { label: "Browse Courses", href: "/courses" },
     { label: "Colleges", href: "/colleges" },
+    { label: "For Parents", href: "/for-parents" },
     { label: "Resource Center", href: "/resources" },
     { label: "Success Stories", href: "/success-stories" },
     { label: "Student Pass & IPA", href: "/resources/student-pass-ipa" },
