@@ -26,6 +26,6 @@ export default function robots(): MetadataRoute.Robots {
         ],
       },
     ],
-    sitemap: "https://pathport.in/sitemap.xml",
+    sitemap: "https://pathport.sg/sitemap.xml",
   };
 }

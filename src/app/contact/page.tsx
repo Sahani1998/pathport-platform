@@ -3,6 +3,8 @@ import { Mail, Phone, MessageCircle, MapPin } from "lucide-react";
 import MarketingShell from "@/components/marketing/MarketingShell";
 import PageHero from "@/components/marketing/PageHero";
 import Breadcrumbs from "@/components/marketing/Breadcrumbs";
+import JsonLd from "@/components/marketing/JsonLd";
+import { breadcrumbJsonLd } from "@/lib/jsonld";
 
 export const metadata: Metadata = {
   title: "Contact PathPort",
@@ -24,6 +26,7 @@ const CHANNELS = [
 export default function ContactPage() {
   return (
     <MarketingShell>
+      <JsonLd data={breadcrumbJsonLd([{ name: "Contact", url: "/contact" }])} />
       <Breadcrumbs trail={[{ name: "Contact", url: "/contact" }]} />
 
       <PageHero

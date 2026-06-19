@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Instagram, Linkedin, Twitter, Youtube, Mail, Phone } from "lucide-react";
+import { Mail, Phone } from "lucide-react";
 
 const FOOTER_COLS: Record<string, { label: string; href: string }[]> = {
   About: [
@@ -49,13 +49,6 @@ const FOOTER_COLS: Record<string, { label: string; href: string }[]> = {
   ],
 };
 
-const SOCIALS = [
-  { Icon: Instagram, href: "#", label: "Instagram" },
-  { Icon: Linkedin,  href: "#", label: "LinkedIn"  },
-  { Icon: Twitter,   href: "#", label: "Twitter/X" },
-  { Icon: Youtube,   href: "#", label: "YouTube"   },
-];
-
 export default function Footer() {
   return (
     <footer className="relative border-t border-white/[0.07] bg-navy-950/90 backdrop-blur-sm">
@@ -80,14 +73,6 @@ export default function Footer() {
             <div className="inline-flex items-center gap-2 bg-pathBlue-500/10 border border-pathBlue-500/20 rounded-full px-3 py-1.5 mb-5">
               <span className="text-sm">🇮🇳</span>
               <span className="text-pathBlue-300 font-body text-xs font-medium">Primary Market: India</span>
-            </div>
-            <div className="flex gap-2.5 flex-wrap">
-              {SOCIALS.map(({ Icon, href, label }) => (
-                <a key={label} href={href} aria-label={label}
-                  className="w-8 h-8 rounded-lg bg-white/[0.05] border border-white/[0.08] flex items-center justify-center text-white/45 hover:text-gold-400 hover:border-gold-400/35 transition-all duration-200">
-                  <Icon className="w-3.5 h-3.5" />
-                </a>
-              ))}
             </div>
           </div>
 
