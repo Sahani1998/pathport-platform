@@ -154,8 +154,8 @@ export async function POST(
     await recordTimelineEvent(supabase, {
       applicationId: id,
       stage:         "ipa_processing",
-      title:         "IPA Submitted",
-      description:   `IPA application submitted to ICA Singapore.${notes ? ` ${notes}` : ""}`,
+      title:         "IPA Submitted to ICA by College",
+      description:   `Your college has submitted your IPA application to ICA Singapore.${notes ? ` ${notes}` : ""}`,
       createdBy:     user.id,
       createdByRole: profile.role,
     });
@@ -164,7 +164,7 @@ export async function POST(
       userId:        app.student_id,
       applicationId: id,
       title:         "IPA Processing Started 🪪",
-      message:       "Your In-Principle Approval is being processed by ICA Singapore. This takes 2–4 weeks.",
+      message:       "Your college has submitted your In-Principle Approval to ICA Singapore. Processing typically takes 2–4 weeks. PathPort will keep you updated.",
       type:          "application_update",
     });
 

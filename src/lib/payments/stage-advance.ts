@@ -33,7 +33,7 @@ export interface StageAdvanceResult {
 
 const APPLICATION_FEE_RESULT: StageAdvanceResult = {
   toStage:        "ipa_processing",
-  studentMessage: "Your payment has been verified. Your IPA application is now being processed.",
+  studentMessage: "Your payment has been verified. Your college can now begin the IPA (In-Principle Approval) submission to ICA Singapore.",
 };
 
 const TUITION_FEE_RESULT: StageAdvanceResult = {

@@ -28,8 +28,8 @@ export const journeySteps: JourneyStep[] = [
   },
   {
     step: 5,
-    title: "Student Pass Application",
-    description: "We guide you through the ICA Student Pass application — document checklist, form preparation, and step-by-step process guidance.",
+    title: "Student Pass / IPA",
+    description: "Your enrolled college submits the Student Pass / IPA application to ICA Singapore from their official systems. PathPort tracks status and walks you through the document checklist.",
     icon: "🪪",
   },
   {

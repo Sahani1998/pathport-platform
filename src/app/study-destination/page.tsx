@@ -73,7 +73,8 @@ const DIPLOMA_LEVELS = [
 // ─── Student Pass / IPA key points ────────────────────────────────────────────
 const PASS_POINTS = [
   "Apply through enrolled college after offer letter",
-  "PathPort submits and tracks your ICA application",
+  "Your college submits the Student Pass / IPA application to ICA",
+  "PathPort tracks status and updates you at every stage",
   "IPA (In-Principle Approval) letter issued by ICA",
   "Use IPA letter to enter Singapore as a student",
   "Collect official Student Pass from ICA on arrival",

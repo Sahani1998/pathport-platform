@@ -349,6 +349,9 @@ export default async function StudentApplicationsPage() {
                       {IPA_STATUS_META[latestIpa.status].label}
                     </span>
                   </div>
+                  <p className="text-white/40 font-body text-[11px] leading-relaxed">
+                    Your IPA application is submitted to ICA Singapore by your college from their official systems. PathPort provides tracking and updates only.
+                  </p>
                   {latestIpa.status === "approved" && (
                     <a
                       href={`/api/ipa/${latestIpa.id}/download`}

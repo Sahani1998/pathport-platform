@@ -3,10 +3,10 @@ import type { ArrivalService } from "@/types";
 export const arrivalServices: ArrivalService[] = [
   {
     id: "student-pass",
-    title: "Student Pass (ICA)",
-    description: "End-to-end Student Pass application support — document preparation, submission guidance, and ICA process walkthrough — so your application is complete and correct from the start.",
+    title: "Student Pass / IPA Tracking",
+    description: "Your enrolled college submits your Student Pass / IPA application to ICA Singapore from their official systems. PathPort tracks status, organises your supporting documents, and keeps you informed at every stage.",
     icon: "🪪",
-    features: ["Document checklist", "Form filling support", "ICA direct liaison", "Renewal reminders"],
+    features: ["Document checklist", "Status tracking", "Stage-by-stage updates", "Pre-departure reminders"],
     featured: true,
   },
   {

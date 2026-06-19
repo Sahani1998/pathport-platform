@@ -13,8 +13,8 @@ const ARRIVAL_STEPS: {
   doneFrom:   ApplicationStage;
 }[] = [
   {
-    title:      "Flight & Visa Assistance",
-    desc:       "PathPort handles your student pass documentation and coordinates with ICA.",
+    title:      "Flight & Student Pass Preparation",
+    desc:       "PathPort helps you organise required documents and tracks your Student Pass / IPA status. Your college submits the application to ICA from their official systems.",
     activeFrom: "approved",
     doneFrom:   "arrived_singapore",
   },
@@ -91,6 +91,13 @@ export default async function StudentArrivalPage() {
       <div>
         <h2 className="font-display text-3xl text-white mb-1">Arrival Services</h2>
         <p className="text-white/40 font-body text-sm">Your white-glove support when you land in Singapore</p>
+      </div>
+
+      <div className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.07] flex items-start gap-3">
+        <AlertCircle className="w-4 h-4 text-white/35 flex-shrink-0 mt-0.5" />
+        <p className="text-white/55 font-body text-xs leading-relaxed">
+          Student Pass / IPA applications are submitted to ICA Singapore by your enrolled college from their official systems. PathPort provides tracking, document organisation, and student support tools only. SG Arrival Card submission remains the student&apos;s responsibility unless separately assisted on request.
+        </p>
       </div>
 
       {/* Current stage banner */}
