@@ -24,7 +24,7 @@ export const metadata: Metadata = {
 const QUICK_STEPS = [
   { step: "01", icon: "📋", title: "Register Free",    desc: "Fill your interest form. Advisor calls within 24 hours." },
   { step: "02", icon: "📩", title: "Get Offer Letter", desc: "We submit your application. Offer letter in 24 hours."    },
-  { step: "03", icon: "🪪", title: "Get Student Pass", desc: "PathPort guides your ICA Student Pass (IPA) process."     },
+  { step: "03", icon: "🪪", title: "Track Student Pass", desc: "Your college submits the Student Pass / IPA to ICA. PathPort tracks status." },
   { step: "04", icon: "🇸🇬", title: "Arrive & Study",  desc: "Airport pickup, accommodation, orientation — sorted."    },
 ];
 
@@ -45,7 +45,7 @@ const STUDENT_SERVICES = [
   {
     icon: Shield,
     title: "IPA Tracking",
-    desc: "In-Principle Approval (IPA) for your Student Pass tracked in real time. We notify you at every stage.",
+    desc: "Your college submits the In-Principle Approval (IPA) for your Student Pass to ICA. PathPort tracks status in real time and notifies you at every stage.",
     badge: "Tracked",
   },
   {
@@ -71,7 +71,7 @@ const STUDENT_SERVICES = [
 // ─── IPA process steps ────────────────────────────────────────────────────────
 const IPA_STEPS = [
   { title: "Offer Letter Issued",        desc: "College issues conditional offer letter within 24 hours of application."                   },
-  { title: "ICA Application Submitted",  desc: "PathPort submits your Student Pass application to ICA Singapore on your behalf."            },
+  { title: "IPA Submitted by College",   desc: "Your enrolled college submits your Student Pass / IPA application to ICA Singapore. PathPort tracks the status and keeps you updated." },
   { title: "IPA Letter Received",        desc: "ICA issues the In-Principle Approval (IPA) letter — your entry permit to Singapore."        },
   { title: "Fly to Singapore",           desc: "Use your IPA letter to enter Singapore. Valid for a single entry within a specified period." },
   { title: "Student Pass Collected",     desc: "Collect your official Student Pass from ICA upon arrival in Singapore."                     },

@@ -14,7 +14,7 @@ export default function ArrivalServices() {
         <SectionHeader
           eyebrow="Arrival Services"
           title="From India to Singapore — We've Got You Covered"
-          subtitle="PathPort's arrival concierge service takes care of everything from Student Pass to airport pickup — so your first week in Singapore is smooth and stress-free."
+          subtitle="PathPort's arrival concierge supports you from Student Pass tracking through airport pickup — so your first week in Singapore is smooth and stress-free."
         />
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">

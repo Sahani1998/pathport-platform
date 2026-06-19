@@ -55,6 +55,6 @@ export const whySingaporeReasons: WhySingaporeReason[] = [
     icon: "🪪",
     title: "Straightforward Student Pass",
     description:
-      "Singapore's ICA Student Pass process is transparent and well-documented. PathPort helps Indian students prepare complete, correct applications — reducing the chance of delays or rejections.",
+      "Singapore's ICA Student Pass process is transparent and well-documented. Your enrolled college submits the application to ICA; PathPort helps Indian students organise a complete, correct document set — reducing delays from incomplete paperwork.",
   },
 ];

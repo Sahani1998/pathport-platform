@@ -97,7 +97,7 @@ export async function PATCH(
       });
     } else {
       const statusCopy: Record<Exclude<IpaStatus, "approved">, { title: string; message: string }> = {
-        submitted: { title: "IPA Submitted to ICA",  message: "Your IPA application has been submitted to ICA Singapore." },
+        submitted: { title: "IPA Submitted to ICA",  message: "Your college has submitted your IPA application to ICA Singapore. PathPort will track status and update you." },
         pending:   { title: "IPA Update",            message: "Your IPA application is pending with ICA Singapore." },
         rejected:  { title: "IPA Update — Action Needed", message: `Your IPA application was not approved.${notes ? ` Reason: ${notes}` : ""} Your institution will contact you about next steps.` },
       };

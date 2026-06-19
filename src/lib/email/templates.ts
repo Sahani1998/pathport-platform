@@ -210,7 +210,7 @@ export const TEMPLATES: Record<EmailTemplate, (ctx: TemplateContext) => Rendered
       h1("You've accepted your offer! 🎊") +
       p(`Hi ${ctx.name ?? "there"}, this confirms you have accepted your offer for <strong style="color:#fff">${ctx.courseName ?? "your course"}</strong>${ctx.collegeName ? ` at ${ctx.collegeName}` : ""}.`) +
       highlight("Next Step", "Complete your fee payment") +
-      p("Once your fee payment is confirmed, your IPA (In-Principle Approval) application will be submitted to Singapore's ICA.") +
+      p("Once your fee payment is confirmed, your college will begin the IPA (In-Principle Approval) submission process with Singapore's ICA. PathPort will track and update you at every stage.") +
       cta(dashboardUrl, "View My Application →")
     ),
   }),
@@ -232,7 +232,7 @@ export const TEMPLATES: Record<EmailTemplate, (ctx: TemplateContext) => Rendered
       p(`Hi ${ctx.name ?? "there"}, this is a friendly reminder that your fee payment is still pending.`) +
       (ctx.amount ? highlight("Amount Due", ctx.amount) : "") +
       (ctx.dueDate ? p(`<strong style="color:rgba(255,255,255,.85)">Due by:</strong> ${ctx.dueDate}`) : "") +
-      p("Complete payment to confirm your seat and move to the IPA (In-Principle Approval) stage of your Singapore student pass.") +
+      p("Complete payment to confirm your seat. Your college can then begin the IPA (In-Principle Approval) submission to ICA Singapore.") +
       cta(dashboardUrl, "Pay Now →")
     ),
   }),
@@ -251,12 +251,12 @@ export const TEMPLATES: Record<EmailTemplate, (ctx: TemplateContext) => Rendered
   }),
 
   ipa_processing: ctx => ({
-    subject: "Your IPA application is being processed",
+    subject: "Your IPA application is being processed by ICA",
     html: shell(
-      h1("IPA submission in progress") +
-      p(`Hi ${ctx.name ?? "there"}, your In-Principle Approval (IPA) application has been submitted to Singapore's ICA.`) +
+      h1("IPA processing in progress") +
+      p(`Hi ${ctx.name ?? "there"}, your college has submitted your In-Principle Approval (IPA) application to Singapore's ICA. PathPort will track status and notify you of any updates.`) +
       highlight("Typical Timeline", "2 – 4 weeks") +
-      p("We'll let you know as soon as we hear back. This is the final step before you can start preparing to travel.") +
+      p("We'll notify you as soon as your college receives an update from ICA. This is the final step before you can prepare to travel.") +
       cta(dashboardUrl, "Track Status →")
     ),
   }),
@@ -371,7 +371,7 @@ export const TEMPLATES: Record<EmailTemplate, (ctx: TemplateContext) => Rendered
       p(`Hi ${ctx.name ?? "there"}, great news! Your payment for <strong style="color:#fff">${ctx.courseName ?? "your course"}</strong> has been verified by ${ctx.collegeName ?? "the institution"}.`) +
       (ctx.invoiceNumber ? highlight("Invoice", ctx.invoiceNumber) : "") +
       (ctx.amount ? highlight("Amount Confirmed", ctx.amount) : "") +
-      p("Your application will now advance to the IPA processing stage. We'll notify you as soon as your In-Principle Approval is submitted to ICA.") +
+      p("Your application will now advance to the IPA processing stage. We'll notify you once your college submits your In-Principle Approval to ICA.") +
       cta(dashboardUrl, "Track My Application →")
     ),
   }),

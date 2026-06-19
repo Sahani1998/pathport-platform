@@ -54,7 +54,7 @@ export default function IpaPanel({ applicationId, records }: Props) {
       setShowForm(false);
       setNotes("");
       if (fileRef.current) fileRef.current.value = "";
-      setSuccess("IPA submitted — student notified.");
+      setSuccess("IPA uploaded — student notified.");
       router.refresh();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Network error");
@@ -168,7 +168,7 @@ export default function IpaPanel({ applicationId, records }: Props) {
             type="submit" disabled={uploading}
             className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-purple-500/15 border border-purple-400/30 text-purple-400 font-body text-xs font-semibold hover:bg-purple-500/25 transition-all disabled:opacity-50"
           >
-            {uploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <><Upload className="w-3.5 h-3.5" /> Submit IPA</>}
+            {uploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <><Upload className="w-3.5 h-3.5" /> Upload IPA</>}
           </button>
         </form>
       )}

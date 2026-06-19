@@ -42,10 +42,12 @@ export default function TermsPage() {
                 <li>An application management portal for diploma programmes at Singapore private colleges</li>
                 <li>Document submission and review workflows</li>
                 <li>Offer letter facilitation (typically within 24 hours of a complete application)</li>
-                <li>In-Principle Approval (IPA) / Student Pass processing support</li>
+                <li>Status tracking for In-Principle Approval (IPA) / Student Pass applications</li>
                 <li>Invoice generation and payment tracking for college tuition fees</li>
                 <li>Arrival services information and coordination</li>
+                <li>Optional SG Arrival Card preparation guidance on request</li>
               </ul>
+              <p className="mt-3"><strong className="text-white/80">Important — IPA / Student Pass submission:</strong> Student Pass and IPA applications are submitted to the Immigration &amp; Checkpoints Authority (ICA) of Singapore <em>by the enrolled college / institution</em> through their official ICA systems. PathPort does not submit applications to ICA on behalf of students. PathPort&apos;s role is limited to application tracking, document organisation, status updates, and student support. SG Arrival Card submission remains the student&apos;s responsibility unless PathPort has separately agreed in writing to assist on request.</p>
               <p className="mt-3">PathPort acts as an intermediary between students and partner colleges. We do not guarantee admission, visa approval, or employment. All admissions decisions rest with the colleges, and all visa decisions rest with the Immigration &amp; Checkpoints Authority (ICA) of Singapore.</p>
             </Section>
 
