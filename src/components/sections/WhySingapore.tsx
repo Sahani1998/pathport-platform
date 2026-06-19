@@ -1,5 +1,6 @@
 import GlassCard from "@/components/ui/GlassCard";
 import SectionHeader from "@/components/ui/SectionHeader";
+import Reveal from "@/components/ui/Reveal";
 import { whySingaporeReasons } from "@/data/why-singapore";
 
 export default function WhySingapore() {
@@ -40,20 +41,22 @@ export default function WhySingapore() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {whySingaporeReasons.map((reason, i) => (
-            <GlassCard key={reason.id} className="p-6 group" gold={i === 3}>
-              <div
-                className="text-3xl mb-4 group-hover:scale-110 transition-transform duration-300 w-fit"
-                role="img" aria-label={reason.title}
-              >
-                {reason.icon}
-              </div>
-              <h3 className="font-body font-semibold text-white text-base mb-2 leading-snug">
-                {reason.title}
-              </h3>
-              <p className="text-white/48 font-body text-sm leading-relaxed">
-                {reason.description}
-              </p>
-            </GlassCard>
+            <Reveal key={reason.id} delay={(i % 4) * 80} className="h-full">
+              <GlassCard className="p-6 group h-full" gold={i === 3}>
+                <div
+                  className="text-3xl mb-4 group-hover:scale-110 transition-transform duration-300 w-fit"
+                  role="img" aria-label={reason.title}
+                >
+                  {reason.icon}
+                </div>
+                <h3 className="font-body font-semibold text-white text-base mb-2 leading-snug">
+                  {reason.title}
+                </h3>
+                <p className="text-white/48 font-body text-sm leading-relaxed">
+                  {reason.description}
+                </p>
+              </GlassCard>
+            </Reveal>
           ))}
         </div>
 

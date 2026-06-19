@@ -60,6 +60,7 @@ const config: Config = {
         "slide-up":   "slideUp 0.4s ease-out",
         "fade-in":    "fadeIn 0.6s ease-out",
         "ping-slow":  "ping 2s cubic-bezier(0,0,0.2,1) infinite",
+        "marquee":    "marquee 40s linear infinite",
       },
       keyframes: {
         float: {
@@ -77,6 +78,10 @@ const config: Config = {
         fadeIn: {
           from: { opacity: "0" },
           to:   { opacity: "1" },
+        },
+        marquee: {
+          from: { transform: "translateX(0)"     },
+          to:   { transform: "translateX(-50%)"  },
         },
       },
       boxShadow: {
