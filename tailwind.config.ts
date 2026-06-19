@@ -87,6 +87,15 @@ const config: Config = {
         "glass":        "0 8px 32px rgba(0,0,0,0.50), inset 0 1px 0 rgba(255,255,255,0.07)",
         "glass-hover":  "0 16px 48px rgba(0,0,0,0.60), inset 0 1px 0 rgba(255,255,255,0.10)",
         "card":         "0 4px 24px rgba(0,0,0,0.40)",
+        /* Sprint 28 — softer, warmer ambient shadows for light/warm sections */
+        "soft":         "0 2px 10px rgba(6,12,26,0.20), 0 8px 24px -8px rgba(6,12,26,0.30)",
+        "soft-lg":      "0 4px 14px rgba(6,12,26,0.22), 0 18px 40px -12px rgba(6,12,26,0.32)",
+        "warm":         "0 6px 24px -8px rgba(240,165,0,0.18), 0 2px 8px rgba(6,12,26,0.15)",
+        "warm-lg":      "0 12px 36px -10px rgba(240,165,0,0.22), 0 4px 14px rgba(6,12,26,0.18)",
+      },
+      borderRadius: {
+        "2.5xl": "1.25rem",
+        "4xl":   "2rem",
       },
     },
   },

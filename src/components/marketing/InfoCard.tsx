@@ -13,7 +13,7 @@ interface InfoCardProps {
 
 export default function InfoCard({ title, description, href, icon, eyebrow, children }: InfoCardProps) {
   const body = (
-    <div className="bg-white/[0.04] border border-white/[0.08] rounded-2xl p-6 h-full flex flex-col group hover:border-gold-400/30 hover:bg-gold-400/[0.03] transition-all">
+    <div className="bg-white/[0.04] border border-white/[0.08] rounded-2.5xl p-7 h-full flex flex-col group hover:border-gold-400/35 hover:bg-gold-400/[0.04] hover:-translate-y-0.5 hover:shadow-warm transition-all duration-300">
       <div className="flex items-start justify-between gap-3 mb-3">
         {icon && (
           <div className="w-10 h-10 rounded-xl bg-gold-400/10 border border-gold-400/25 flex items-center justify-center text-gold-400 flex-shrink-0">
