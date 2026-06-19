@@ -1,5 +1,6 @@
 import { ShieldCheck, Train, Users, BookOpen, MessageCircle, Coffee } from "lucide-react";
 import type { FC } from "react";
+import Reveal from "@/components/ui/Reveal";
 
 const ASPECTS = [
   {
@@ -67,7 +68,7 @@ const LifeInSingapore: FC = () => (
     <div className="max-w-7xl mx-auto px-5 md:px-10">
 
       {/* Header */}
-      <div className="text-center mb-14">
+      <Reveal className="text-center mb-14">
         <p className="inline-flex items-center gap-3 text-gold-400 font-body text-xs font-semibold tracking-[0.22em] uppercase mb-5">
           <span className="w-8 h-px bg-gold-400/50 rounded-full" />
           Life in Singapore
@@ -82,13 +83,13 @@ const LifeInSingapore: FC = () => (
         <p className="text-white/50 font-body text-lg max-w-2xl mx-auto leading-relaxed">
           Students choose education. But they buy a lifestyle. Here is what your daily life in Singapore actually looks like — before you apply.
         </p>
-      </div>
+      </Reveal>
 
       {/* Photo grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-10">
-        {ASPECTS.map(({ title, desc, photo, alt, stat, Icon }) => (
+        {ASPECTS.map(({ title, desc, photo, alt, stat, Icon }, i) => (
+          <Reveal key={title} delay={i * 70}>
           <div
-            key={title}
             className="group relative rounded-2.5xl overflow-hidden border border-white/[0.08] hover:border-gold-400/30 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_12px_32px_-8px_rgba(0,0,0,0.5)]"
             style={{ aspectRatio: "4/3" }}
           >
@@ -119,6 +120,7 @@ const LifeInSingapore: FC = () => (
               </span>
             </div>
           </div>
+          </Reveal>
         ))}
       </div>
 

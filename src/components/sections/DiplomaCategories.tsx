@@ -2,6 +2,7 @@ import GlassCard from "@/components/ui/GlassCard";
 import SectionHeader from "@/components/ui/SectionHeader";
 import Badge from "@/components/ui/Badge";
 import GoldButton from "@/components/ui/GoldButton";
+import Reveal from "@/components/ui/Reveal";
 import { diplomaTypes } from "@/data/diploma-types";
 import { Clock, GraduationCap, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -18,10 +19,10 @@ export default function DiplomaCategories() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-12">
           {diplomaTypes.map((type, i) => (
+            <Reveal key={type.id} delay={i * 80} className="h-full">
             <GlassCard
-              key={type.id}
               gold={i === 2}
-              className={cn("p-8 group relative overflow-hidden", i === 2 && "shadow-gold-sm")}
+              className={cn("p-8 group relative overflow-hidden h-full", i === 2 && "shadow-gold-sm")}
             >
               {i === 2 && (
                 <div aria-hidden className="absolute top-0 right-0 w-40 h-40 rounded-full bg-gold-400/[0.06] blur-[50px] pointer-events-none" />
@@ -86,6 +87,7 @@ export default function DiplomaCategories() {
                 <ChevronRight className="w-4 h-4" />
               </div>
             </GlassCard>
+            </Reveal>
           ))}
         </div>
 
