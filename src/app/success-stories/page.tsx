@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import { Users, Quote, Briefcase, GraduationCap, Building2 } from "lucide-react";
+import Reveal from "@/components/ui/Reveal";
 import MarketingShell from "@/components/marketing/MarketingShell";
 import PageHero from "@/components/marketing/PageHero";
 import Breadcrumbs from "@/components/marketing/Breadcrumbs";
@@ -47,10 +48,11 @@ export default async function SuccessStoriesPage() {
       {stories.length > 0 ? (
         <section className="mb-12">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {stories.map(s => {
+            {stories.map((s, i) => {
               const college = Array.isArray(s.colleges) ? s.colleges[0] : s.colleges;
               return (
-                <div key={s.id} className="flex flex-col p-6 rounded-2xl bg-white/[0.04] border border-white/[0.08]">
+                <Reveal key={s.id} delay={i * 80} className="flex flex-col">
+                <div className="flex flex-col p-6 rounded-2xl bg-white/[0.04] border border-white/[0.08] h-full">
                   {/* Person header */}
                   <div className="flex items-center gap-3 mb-4">
                     {s.photo_url ? (
@@ -105,6 +107,7 @@ export default async function SuccessStoriesPage() {
                     )}
                   </div>
                 </div>
+                </Reveal>
               );
             })}
           </div>

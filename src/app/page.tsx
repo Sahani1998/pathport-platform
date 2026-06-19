@@ -10,6 +10,7 @@ import SingaporeGallery      from "@/components/sections/SingaporeGallery";
 import LifeInSingapore       from "@/components/sections/LifeInSingapore";
 import DiplomaCategories     from "@/components/sections/DiplomaCategories";
 import StudyEarnGraduate     from "@/components/sections/StudyEarnGraduate";
+import JourneyTimeline       from "@/components/sections/JourneyTimeline";
 import PrivateColleges       from "@/components/sections/PrivateColleges";
 import InstitutionLogoWall   from "@/components/sections/InstitutionLogoWall";
 import WhyTrustPathPort      from "@/components/sections/WhyTrustPathPort";
@@ -54,6 +55,7 @@ export default function HomePage() {
         <LifeInSingapore />
         <DiplomaCategories />
         <StudyEarnGraduate />
+        <JourneyTimeline />
         <PrivateColleges />
         <InstitutionLogoWall />
         <WhyTrustPathPort />
