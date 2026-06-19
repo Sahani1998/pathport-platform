@@ -159,7 +159,7 @@ export default async function PublicCourseDetailPage({ params }: PageProps) {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
             {/* ── Main column ─────────────────────────────────────────────────── */}
-            <div className="lg:col-span-2 space-y-5">
+            <div className="lg:col-span-2 space-y-5 order-last lg:order-first">
 
               {/* Thumbnail */}
               {hasThumbnail && (
@@ -418,7 +418,7 @@ export default async function PublicCourseDetailPage({ params }: PageProps) {
             </div>
 
             {/* ── Sidebar ──────────────────────────────────────────────────────── */}
-            <div className="space-y-4">
+            <div className="space-y-4 order-first lg:order-last">
 
               {/* Apply card */}
               <div className="bg-gradient-to-br from-gold-500/[0.07] to-transparent border border-gold-400/20 rounded-2xl p-5">

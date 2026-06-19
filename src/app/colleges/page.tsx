@@ -130,6 +130,21 @@ export default async function CollegesPage({ searchParams }: PageProps) {
             }
           </p>
 
+          {/* Advisor prompt — shown when browsing (not searching) */}
+          {total > 0 && !search && (
+            <div className="max-w-xl mx-auto mb-8 flex flex-col sm:flex-row items-center justify-between gap-3 p-4 rounded-2xl bg-white/[0.04] border border-white/[0.08]">
+              <p className="text-white/55 font-body text-sm text-center sm:text-left">Not sure which college suits you?</p>
+              <a
+                href="https://wa.me/6583776492"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-shrink-0 inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500/10 border border-emerald-400/25 text-emerald-400 font-body text-sm font-semibold hover:bg-emerald-500/20 transition-all"
+              >
+                Ask a PathPort advisor →
+              </a>
+            </div>
+          )}
+
           {/* Grid */}
           {(colleges ?? []).length === 0 ? (
             <div className="flex flex-col items-center py-20 text-white/25">
