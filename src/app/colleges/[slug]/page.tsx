@@ -18,6 +18,7 @@ import type { LeadershipMember, FacultyMember } from "@/types/institution-people
 import type { Facility, Accreditation, Testimonial, SuccessStory } from "@/types/institution-trust";
 import { FACILITY_CATEGORIES } from "@/types/institution-trust";
 import { toEmbedUrl } from "@/lib/video-embed";
+import VerifiedBadge from "@/components/ui/VerifiedBadge";
 
 export const revalidate = 300;
 
@@ -296,6 +297,7 @@ export default async function CollegeDetailPage({ params }: PageProps) {
                   <span className="flex items-center gap-1.5 text-emerald-400/80 font-body text-xs font-semibold">
                     <CheckCircle2 className="w-3.5 h-3.5" /> EduTrust Certified
                   </span>
+                  <VerifiedBadge size="md" />
                 </div>
                 {(college.short_description ?? college.description) && (
                   <p className="text-white/55 font-body text-sm leading-relaxed">
