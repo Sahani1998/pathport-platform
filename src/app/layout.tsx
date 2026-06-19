@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Cormorant_Garamond, Outfit } from "next/font/google";
 import { AuthProvider } from "@/context/AuthContext";
+import CookieBanner from "@/components/marketing/CookieBanner";
 import "./globals.css";
 
 const cormorant = Cormorant_Garamond({
@@ -62,6 +63,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="bg-navy-900 text-white antialiased overflow-x-hidden">
         <AuthProvider>
           {children}
+          <CookieBanner />
         </AuthProvider>
       </body>
     </html>
