@@ -20,7 +20,7 @@ export default async function InstitutionLogoWall() {
   return (
     <section className="py-12 border-t border-white/[0.05]">
       <div className="max-w-7xl mx-auto px-5 md:px-10">
-        <p className="text-center text-white/25 font-body text-[10px] uppercase tracking-[0.18em] mb-8">
+        <p className="text-center text-white/35 font-body text-[10px] uppercase tracking-[0.18em] mb-8">
           Verified institutions on PathPort
         </p>
         <div className="flex flex-wrap items-center justify-center gap-8 md:gap-12">
@@ -29,7 +29,7 @@ export default async function InstitutionLogoWall() {
               key={c.id}
               href={`/colleges/${c.slug}`}
               title={c.name}
-              className="opacity-40 grayscale hover:opacity-80 hover:grayscale-0 transition-all duration-300"
+              className="opacity-70 hover:opacity-100 transition-all duration-300"
             >
               <Image
                 src={c.logo_url!}

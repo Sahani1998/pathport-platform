@@ -1,20 +1,20 @@
 export const dynamic = "force-dynamic";
 
-import Navbar              from "@/components/layout/Navbar";
-import Footer              from "@/components/layout/Footer";
-import HeroSection         from "@/components/sections/HeroSection";
-import StudentInterestForm from "@/components/sections/StudentInterestForm";
-import WhySingapore        from "@/components/sections/WhySingapore";
-import SingaporeGallery    from "@/components/sections/SingaporeGallery";
-import DiplomaCategories   from "@/components/sections/DiplomaCategories";
-import InternshipPathway   from "@/components/sections/InternshipPathway";
-import PrivateColleges        from "@/components/sections/PrivateColleges";
-import InstitutionLogoWall    from "@/components/sections/InstitutionLogoWall";
-import WhyTrustPathPort       from "@/components/sections/WhyTrustPathPort";
-import OfferLetterSupport     from "@/components/sections/OfferLetterSupport";
-import ArrivalServices     from "@/components/sections/ArrivalServices";
-import StudentJourney      from "@/components/sections/StudentJourney";
-import CTASection          from "@/components/sections/CTASection";
+import Navbar                from "@/components/layout/Navbar";
+import Footer                from "@/components/layout/Footer";
+import HeroSection           from "@/components/sections/HeroSection";
+import StudentInterestForm   from "@/components/sections/StudentInterestForm";
+import WhySingapore          from "@/components/sections/WhySingapore";
+import SingaporeGallery      from "@/components/sections/SingaporeGallery";
+import LifeInSingapore       from "@/components/sections/LifeInSingapore";
+import DiplomaCategories     from "@/components/sections/DiplomaCategories";
+import StudyEarnGraduate     from "@/components/sections/StudyEarnGraduate";
+import PrivateColleges       from "@/components/sections/PrivateColleges";
+import InstitutionLogoWall   from "@/components/sections/InstitutionLogoWall";
+import WhyTrustPathPort      from "@/components/sections/WhyTrustPathPort";
+import OfferLetterSupport    from "@/components/sections/OfferLetterSupport";
+import ArrivalServices       from "@/components/sections/ArrivalServices";
+import CTASection            from "@/components/sections/CTASection";
 
 const organizationJsonLd = {
   "@context": "https://schema.org",
@@ -49,14 +49,14 @@ export default function HomePage() {
         <StudentInterestForm />
         <WhySingapore />
         <SingaporeGallery />
+        <LifeInSingapore />
         <DiplomaCategories />
-        <InternshipPathway />
+        <StudyEarnGraduate />
         <PrivateColleges />
         <InstitutionLogoWall />
         <WhyTrustPathPort />
         <OfferLetterSupport />
         <ArrivalServices />
-        <StudentJourney />
         <CTASection />
       </main>
       <Footer />

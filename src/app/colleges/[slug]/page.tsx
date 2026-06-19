@@ -318,6 +318,30 @@ export default async function CollegeDetailPage({ params }: PageProps) {
             </div>
           </div>
 
+          {/* Quick apply shortcut — visible before the long content sections */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-gradient-to-r from-gold-500/[0.07] to-transparent border border-gold-400/20 rounded-2xl p-5 mb-6">
+            <div>
+              <p className="font-body font-semibold text-white/85 text-sm">Ready to apply to {college.name}?</p>
+              <p className="text-white/45 font-body text-xs mt-0.5">PathPort handles your application and offer letter — usually within 24 hours.</p>
+            </div>
+            <div className="flex gap-2 flex-shrink-0">
+              <Link
+                href={`/signup?role=student&redirect=/colleges/${slug}`}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-gold-500 to-gold-400 text-navy-900 font-body font-bold text-sm hover:shadow-gold-sm transition-all whitespace-nowrap"
+              >
+                Apply Now
+              </Link>
+              <a
+                href="https://wa.me/6583776492"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-emerald-400/30 text-emerald-400 font-body text-sm hover:bg-emerald-400/10 transition-all whitespace-nowrap"
+              >
+                WhatsApp
+              </a>
+            </div>
+          </div>
+
           {/* About — introduction, mission, vision */}
           {(college.introduction || college.mission || college.vision) && (
             <div className="bg-white/[0.04] border border-white/[0.08] rounded-2xl p-6 mb-6 space-y-5">
