@@ -74,9 +74,9 @@ export async function POST(
     .from("student_invoices").select("*").eq("id", id).maybeSingle();
   if (!invoice) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  if (invoice.status !== "paid") {
+  if (invoice.status !== "paid" && invoice.status !== "partially_paid") {
     return NextResponse.json(
-      { error: `Cannot refund invoice in status "${invoice.status}" — only paid invoices can be refunded` },
+      { error: `Cannot refund invoice in status "${invoice.status}" — only paid or partially_paid invoices can be refunded` },
       { status: 409 },
     );
   }
@@ -100,7 +100,7 @@ export async function POST(
       refunded_amount_cents: refundedAmountCents,
     })
     .eq("id", id)
-    .eq("status", "paid")
+    .in("status", ["paid", "partially_paid"])
     .select()
     .single();
 

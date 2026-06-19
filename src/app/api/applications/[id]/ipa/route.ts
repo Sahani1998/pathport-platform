@@ -72,7 +72,7 @@ export async function POST(
     }
 
     // ── Upload to storage ─────────────────────────────────────────────────────
-    const storagePath = `${id}/${Date.now()}-ipa.pdf`;
+    const storagePath = `${rawCourse?.college_id ?? "shared"}/applications/${id}/${Date.now()}-ipa.pdf`;
     const fileBuffer  = await file.arrayBuffer();
 
     const { error: storageErr } = await supabase.storage

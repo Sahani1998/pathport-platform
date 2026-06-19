@@ -89,7 +89,7 @@ export async function POST(request: Request) {
   // Upload file to Supabase Storage
   const fileBuffer  = await file.arrayBuffer();
   const timestamp   = Date.now();
-  const storagePath = `${applicationId}/${timestamp}-v${nextVersion}.pdf`;
+  const storagePath = `${courseCollegeId ?? "shared"}/applications/${applicationId}/${timestamp}-v${nextVersion}.pdf`;
 
   const { error: storageErr } = await supabase.storage
     .from("offer-letters")

@@ -61,6 +61,20 @@ export async function POST(
       { status: 409 },
     );
   }
+
+  // Cap concurrent open attempts per invoice to prevent abuse
+  const { count: activeCount } = await supabase
+    .from("payment_attempts")
+    .select("id", { count: "exact", head: true })
+    .eq("invoice_id", invoiceId)
+    .in("status", ["initiated", "proof_submitted"]);
+  if ((activeCount ?? 0) >= 5) {
+    return NextResponse.json(
+      { error: "Too many open payment attempts for this invoice. Withdraw an existing attempt before creating a new one." },
+      { status: 409 },
+    );
+  }
+
   if (!Array.isArray(invoice.payment_methods_allowed) || !invoice.payment_methods_allowed.includes(method)) {
     return NextResponse.json({ error: "This payment method is not enabled for this invoice" }, { status: 400 });
   }

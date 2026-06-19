@@ -75,6 +75,8 @@ export default function Footer() {
                     "Recruitment Partners":       "/partners/recruitment-partners",
                     "Employers":                  "/partners/employers",
                     "Apply to Partner With Us":   "/partner-with-us",
+                    "Privacy Policy":             "/privacy",
+                    "Terms of Service":           "/terms",
                   };
                   return (
                     <li key={link}>
@@ -123,9 +125,8 @@ export default function Footer() {
             © {new Date().getFullYear()} PathPort · Singapore&apos;s India Diploma Platform
           </p>
           <div className="flex items-center gap-4">
-            <Link href="#" className="text-white/40 hover:text-white/70 font-body text-xs transition-colors">Privacy</Link>
-            <Link href="#" className="text-white/40 hover:text-white/70 font-body text-xs transition-colors">Terms</Link>
-            <Link href="#" className="text-white/40 hover:text-white/70 font-body text-xs transition-colors">Cookies</Link>
+            <Link href="/privacy" className="text-white/40 hover:text-white/70 font-body text-xs transition-colors">Privacy</Link>
+            <Link href="/terms" className="text-white/40 hover:text-white/70 font-body text-xs transition-colors">Terms</Link>
           </div>
         </div>
       </div>

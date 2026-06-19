@@ -27,9 +27,16 @@ export default function NotificationBell({ userId }: NotificationBellProps) {
 
     fetchCount();
 
-    // Poll every 30 s for new notifications
-    const interval = setInterval(fetchCount, 30_000);
-    return () => clearInterval(interval);
+    const channel = supabase
+      .channel(`notif-bell:${userId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "notifications", filter: `user_id=eq.${userId}` },
+        () => { fetchCount(); },
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
   }, [userId]);
 
   return (

@@ -1,11 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin-client";
+import { checkRateLimit, getClientIp, rateLimitResponse, LIMITS } from "@/lib/rate-limit";
 
 export async function PATCH(
   _request: NextRequest,
   { params }: { params: { id: string } },
 ) {
+  const ip = getClientIp(_request);
+  const rl = checkRateLimit(`notif-read:${ip}`, LIMITS.notificationRead.limit, LIMITS.notificationRead.windowMs);
+  if (!rl.success) return rateLimitResponse(rl.resetAt);
+
   const supabase = await createClient();
   const { data: { user }, error: authError } = await supabase.auth.getUser();
   if (authError || !user) {

@@ -30,6 +30,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${BASE_URL}/partners/institutions`,        lastModified: new Date(), changeFrequency: "monthly", priority: 0.5 },
     { url: `${BASE_URL}/partners/recruitment-partners`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.5 },
     { url: `${BASE_URL}/partners/employers`,            lastModified: new Date(), changeFrequency: "monthly", priority: 0.5 },
+    { url: `${BASE_URL}/privacy`,     lastModified: new Date(), changeFrequency: "yearly",  priority: 0.3 },
+    { url: `${BASE_URL}/terms`,       lastModified: new Date(), changeFrequency: "yearly",  priority: 0.3 },
   ];
 
   const collegePages: MetadataRoute.Sitemap = (colleges ?? []).map(c => ({
