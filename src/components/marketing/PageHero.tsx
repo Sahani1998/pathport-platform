@@ -6,17 +6,17 @@ interface PageHeroProps {
 
 export default function PageHero({ eyebrow, title, subtitle }: PageHeroProps) {
   return (
-    <div className="mb-12">
+    <div className="mb-14 md:mb-16">
       {eyebrow && (
-        <p className="text-gold-400/70 font-body text-xs font-semibold uppercase tracking-[0.22em] mb-4">
+        <p className="text-gold-400/75 font-body text-xs font-semibold uppercase tracking-[0.22em] mb-5">
           {eyebrow}
         </p>
       )}
-      <h1 className="font-display text-4xl md:text-5xl lg:text-6xl text-white leading-[1.05] mb-5">
+      <h1 className="font-display text-4xl md:text-5xl lg:text-[3.5rem] text-white leading-[1.05] tracking-tight mb-6">
         {title}
       </h1>
       {subtitle && (
-        <p className="font-body text-white/55 text-lg leading-relaxed max-w-2xl">
+        <p className="font-body text-white/60 text-lg md:text-[1.15rem] leading-relaxed max-w-2xl">
           {subtitle}
         </p>
       )}

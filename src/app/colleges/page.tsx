@@ -147,20 +147,20 @@ export default async function CollegesPage({ searchParams }: PageProps) {
                 <Link
                   key={college.id}
                   href={`/colleges/${college.slug}`}
-                  className="group block bg-white/[0.04] border border-white/[0.08] rounded-2xl p-6 hover:border-gold-400/30 hover:bg-gold-400/[0.03] transition-all duration-200"
+                  className="group block bg-white/[0.04] border border-white/[0.08] rounded-2.5xl p-7 hover:border-gold-400/35 hover:bg-gold-400/[0.04] hover:-translate-y-0.5 hover:shadow-warm transition-all duration-300"
                 >
                   {/* Logo / Avatar */}
-                  <div className="w-12 h-12 rounded-xl border border-white/[0.08] flex items-center justify-center flex-shrink-0 mb-4 overflow-hidden bg-gradient-to-br from-pathBlue-700 to-pathBlue-900">
+                  <div className="w-14 h-14 rounded-2xl border border-white/[0.08] flex items-center justify-center flex-shrink-0 mb-5 overflow-hidden bg-gradient-to-br from-pathBlue-700 to-pathBlue-900">
                     {(college as { logo_url?: string | null }).logo_url ? (
                       <Image
                         src={(college as { logo_url: string }).logo_url}
                         alt={`${college.name} logo`}
-                        width={48} height={48}
+                        width={56} height={56}
                         className="object-contain w-full h-full"
                         unoptimized
                       />
                     ) : (
-                      <span className="font-display font-bold text-pathBlue-300 text-base leading-none">
+                      <span className="font-display font-bold text-pathBlue-300 text-lg leading-none">
                         {college.name.slice(0, 2).toUpperCase()}
                       </span>
                     )}

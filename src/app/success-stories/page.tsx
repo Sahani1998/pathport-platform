@@ -111,13 +111,22 @@ export default async function SuccessStoriesPage() {
         </section>
       ) : (
         <>
-          {/* Empty state — honest, no fake stories */}
-          <section className="mb-10 p-5 rounded-2xl bg-gold-400/[0.06] border border-gold-400/20">
-            <div className="flex items-start gap-3">
-              <Quote className="w-5 h-5 text-gold-400 flex-shrink-0 mt-0.5" />
-              <p className="text-white/75 font-body text-sm leading-relaxed">
-                PathPort is in early operations. We are collecting stories from our first cohort of students with their consent. Full stories — with timelines, photos, and direct quotes — will be published here once students complete their programmes.
-              </p>
+          {/* Empty state — warm invitation panel, no fake stories */}
+          <section className="mb-12 p-7 md:p-8 rounded-3xl warm-panel">
+            <div className="flex items-start gap-4">
+              <div className="w-11 h-11 rounded-2xl bg-gold-200/60 border border-gold-500/30 text-gold-700 flex items-center justify-center flex-shrink-0">
+                <Quote className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="font-display text-xl text-navy-900 mb-2 leading-snug">
+                  The first PathPort stories are coming.
+                </p>
+                <p className="font-body text-navy-800/75 text-sm leading-relaxed">
+                  PathPort is in early operations. We are collecting stories from our first cohort of students
+                  with their consent — full journeys, timelines, photos, and direct quotes. We&apos;d rather wait
+                  for real ones than publish placeholders.
+                </p>
+              </div>
             </div>
           </section>
 

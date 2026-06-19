@@ -10,6 +10,7 @@ import DiplomaCategories   from "@/components/sections/DiplomaCategories";
 import InternshipPathway   from "@/components/sections/InternshipPathway";
 import PrivateColleges        from "@/components/sections/PrivateColleges";
 import InstitutionLogoWall    from "@/components/sections/InstitutionLogoWall";
+import WhyTrustPathPort       from "@/components/sections/WhyTrustPathPort";
 import OfferLetterSupport     from "@/components/sections/OfferLetterSupport";
 import ArrivalServices     from "@/components/sections/ArrivalServices";
 import StudentJourney      from "@/components/sections/StudentJourney";
@@ -52,6 +53,7 @@ export default function HomePage() {
         <InternshipPathway />
         <PrivateColleges />
         <InstitutionLogoWall />
+        <WhyTrustPathPort />
         <OfferLetterSupport />
         <ArrivalServices />
         <StudentJourney />
