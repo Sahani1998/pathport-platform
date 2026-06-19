@@ -3,10 +3,12 @@
 // Links through to /colleges/[slug] for the full public directory.
 
 import Link from "next/link";
+import Image from "next/image";
 import { createAdminClient } from "@/lib/supabase/admin-client";
 import GlassCard from "@/components/ui/GlassCard";
 import SectionHeader from "@/components/ui/SectionHeader";
 import GoldButton from "@/components/ui/GoldButton";
+import VerifiedBadge from "@/components/ui/VerifiedBadge";
 import { ChevronRight } from "lucide-react";
 
 export default async function PrivateColleges() {
@@ -14,7 +16,7 @@ export default async function PrivateColleges() {
 
   const { data: colleges } = await adminDb
     .from("colleges")
-    .select("id, name, slug, description")
+    .select("id, name, slug, description, short_description, logo_url")
     .eq("is_active",    true)
     .eq("is_published", true)
     .order("name")
@@ -48,22 +50,33 @@ export default async function PrivateColleges() {
             <Link key={college.id} href={`/colleges/${college.slug}`}>
               <GlassCard className="p-6 group h-full cursor-pointer">
                 <div className="flex items-start gap-3 mb-3">
-                  {/* College initial avatar */}
-                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-pathBlue-700 to-pathBlue-900 border border-pathBlue-500/30 flex items-center justify-center flex-shrink-0 shadow-blue-sm">
-                    <span className="font-display font-bold text-pathBlue-300 text-base leading-none">
-                      {college.name.slice(0, 2).toUpperCase()}
-                    </span>
+                  {/* College logo or initials avatar */}
+                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-pathBlue-700 to-pathBlue-900 border border-pathBlue-500/30 flex items-center justify-center flex-shrink-0 shadow-blue-sm overflow-hidden">
+                    {(college as { logo_url?: string | null }).logo_url ? (
+                      <Image
+                        src={(college as { logo_url: string }).logo_url}
+                        alt={`${college.name} logo`}
+                        width={48} height={48}
+                        className="object-contain w-full h-full"
+                        unoptimized
+                      />
+                    ) : (
+                      <span className="font-display font-bold text-pathBlue-300 text-base leading-none">
+                        {college.name.slice(0, 2).toUpperCase()}
+                      </span>
+                    )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-body font-semibold text-white/90 text-sm leading-snug group-hover:text-white transition-colors">
+                    <h3 className="font-body font-semibold text-white/90 text-sm leading-snug group-hover:text-white transition-colors mb-1">
                       {college.name}
                     </h3>
+                    <VerifiedBadge />
                   </div>
                 </div>
 
-                {college.description ? (
+                {((college as { short_description?: string | null }).short_description ?? college.description) ? (
                   <p className="text-white/38 font-body text-xs leading-relaxed line-clamp-2 mb-3">
-                    {college.description}
+                    {(college as { short_description?: string | null }).short_description ?? college.description}
                   </p>
                 ) : (
                   <p className="text-white/35 font-body text-xs mb-3 italic">

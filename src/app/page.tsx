@@ -8,8 +8,9 @@ import WhySingapore        from "@/components/sections/WhySingapore";
 import SingaporeGallery    from "@/components/sections/SingaporeGallery";
 import DiplomaCategories   from "@/components/sections/DiplomaCategories";
 import InternshipPathway   from "@/components/sections/InternshipPathway";
-import PrivateColleges     from "@/components/sections/PrivateColleges";
-import OfferLetterSupport  from "@/components/sections/OfferLetterSupport";
+import PrivateColleges        from "@/components/sections/PrivateColleges";
+import InstitutionLogoWall    from "@/components/sections/InstitutionLogoWall";
+import OfferLetterSupport     from "@/components/sections/OfferLetterSupport";
 import ArrivalServices     from "@/components/sections/ArrivalServices";
 import StudentJourney      from "@/components/sections/StudentJourney";
 import CTASection          from "@/components/sections/CTASection";
@@ -50,6 +51,7 @@ export default function HomePage() {
         <DiplomaCategories />
         <InternshipPathway />
         <PrivateColleges />
+        <InstitutionLogoWall />
         <OfferLetterSupport />
         <ArrivalServices />
         <StudentJourney />

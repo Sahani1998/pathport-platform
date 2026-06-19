@@ -8,6 +8,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { createAdminClient } from "@/lib/supabase/admin-client";
 import { Building2, Globe, Search, ChevronRight } from "lucide-react";
+import VerifiedBadge from "@/components/ui/VerifiedBadge";
 
 export const revalidate = 300; // 5-minute cache
 
@@ -165,9 +166,12 @@ export default async function CollegesPage({ searchParams }: PageProps) {
                     )}
                   </div>
 
-                  <h2 className="font-body font-semibold text-white/90 text-sm leading-snug mb-2 group-hover:text-white transition-colors">
-                    {college.name}
-                  </h2>
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <h2 className="font-body font-semibold text-white/90 text-sm leading-snug group-hover:text-white transition-colors">
+                      {college.name}
+                    </h2>
+                    <VerifiedBadge className="flex-shrink-0 mt-0.5" />
+                  </div>
 
                   {college.description && (
                     <p className="text-white/40 font-body text-xs leading-relaxed mb-3 line-clamp-2">

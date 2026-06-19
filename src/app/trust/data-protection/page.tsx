@@ -30,6 +30,15 @@ const RETENTION = [
   { category: "Cookie data (session only)", period: "Session duration only — no persistent tracking" },
 ];
 
+const DATA_COLLECTED = [
+  { type: "Identity & contact", examples: "Name, email, phone, date of birth, nationality", purpose: "Account creation, application processing, communication" },
+  { type: "Passport & immigration", examples: "Passport copy, visa history", purpose: "Application to Singapore private college, IPA facilitation" },
+  { type: "Educational records", examples: "Transcripts, mark sheets, certificates", purpose: "Admissions eligibility verification" },
+  { type: "Financial records", examples: "Bank statements (not card numbers)", purpose: "Financial capability demonstration to colleges" },
+  { type: "Application data", examples: "Course selections, offer letters, IPA status", purpose: "Application processing and tracking" },
+  { type: "Technical data", examples: "IP address, browser type, session identifiers", purpose: "Security, fraud prevention, platform analytics" },
+];
+
 export default function DataProtectionPage() {
   return (
     <MarketingShell>
@@ -44,7 +53,7 @@ export default function DataProtectionPage() {
 
       <section className="mb-10 p-6 rounded-2xl bg-gold-400/[0.06] border border-gold-400/20">
         <p className="font-body text-sm text-white/75 leading-relaxed">
-          <strong className="text-white">Governing law:</strong> Singapore Personal Data Protection Act 2012 (PDPA). PathPort is registered in Singapore. Data is processed by PathPort and stored by Supabase (AWS ap-southeast-1, Singapore region). Full details are in our{" "}
+          <strong className="text-white">Governing law:</strong> Singapore Personal Data Protection Act 2012 (PDPA). PathPort is incorporated in Singapore. Data is processed by PathPort and stored by Supabase (AWS ap-southeast-1, Singapore region). Full details are in our{" "}
           <Link href="/privacy" className="text-gold-400 hover:underline">Privacy Policy</Link>.
         </p>
       </section>
@@ -53,14 +62,7 @@ export default function DataProtectionPage() {
         <h2 className="font-display text-2xl text-white mb-2">What data we collect and why</h2>
         <p className="text-white/55 font-body text-sm mb-5">PathPort collects only data necessary for the services described. We do not sell personal data. We do not share data with third parties for marketing purposes.</p>
         <div className="rounded-2xl bg-white/[0.03] border border-white/[0.07] overflow-hidden">
-          {[
-            { type: "Identity & contact", examples: "Name, email, phone, date of birth, nationality", purpose: "Account creation, application processing, communication" },
-            { type: "Passport & immigration", examples: "Passport copy, visa history", purpose: "Application to Singapore private college, IPA facilitation" },
-            { type: "Educational records", examples: "Transcripts, mark sheets, certificates", purpose: "Admissions eligibility verification" },
-            { type: "Financial records", examples: "Bank statements (not card numbers)", purpose: "Financial capability demonstration to colleges" },
-            { type: "Application data", examples: "Course selections, offer letters, IPA status", purpose: "Application processing and tracking" },
-            { type: "Technical data", examples: "IP address, browser type, session identifiers", purpose: "Security, fraud prevention, platform analytics" },
-          ].map((row, i) => (
+          {DATA_COLLECTED.map((row, i) => (
             <div key={row.type} className={`grid grid-cols-1 md:grid-cols-3 gap-2 p-4 ${i > 0 ? "border-t border-white/[0.05]" : ""}`}>
               <span className="text-white/85 font-body font-semibold text-sm">{row.type}</span>
               <span className="text-white/55 font-body text-sm">{row.examples}</span>
@@ -80,7 +82,46 @@ export default function DataProtectionPage() {
             </div>
           ))}
         </div>
-        <p className="text-white/40 font-body text-xs mt-4">To exercise any right, email <a href="mailto:pathportsg@gmail.com?subject=PDPA%20request" className="text-gold-400 hover:underline">pathportsg@gmail.com</a> with the subject &quot;PDPA request&quot; and your full name and registered email. PathPort responds within 30 days.</p>
+        <p className="text-white/40 font-body text-xs mt-4">
+          To exercise any right, email{" "}
+          <a href="mailto:pathportsg@gmail.com?subject=PDPA%20request" className="text-gold-400 hover:underline">
+            pathportsg@gmail.com
+          </a>{" "}
+          with the subject &quot;PDPA request&quot; and your full name and registered email. PathPort responds within 30 days.
+        </p>
+      </section>
+
+      <section className="mb-12 p-6 rounded-2xl bg-white/[0.03] border border-white/[0.07]">
+        <h2 className="font-display text-2xl text-white mb-2">Data Protection Officer</h2>
+        <p className="text-white/55 font-body text-sm leading-relaxed mb-5">
+          PathPort has designated a Data Protection Officer (DPO) responsible for ensuring compliance with
+          the Personal Data Protection Act 2012 (PDPA). The DPO oversees data protection policies, handles
+          access and correction requests, and manages data breach responses.
+        </p>
+        <div className="space-y-2.5 mb-5">
+          <div className="flex flex-col sm:flex-row gap-1 sm:gap-4">
+            <span className="text-white/35 font-body text-xs uppercase tracking-widest sm:w-36 flex-shrink-0">Role</span>
+            <span className="text-white/70 font-body text-sm">Data Protection Officer</span>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-1 sm:gap-4">
+            <span className="text-white/35 font-body text-xs uppercase tracking-widest sm:w-36 flex-shrink-0">Contact</span>
+            <a href="mailto:pathportsg@gmail.com?subject=PDPA%20request" className="text-gold-400 hover:underline font-body text-sm">
+              pathportsg@gmail.com
+            </a>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-1 sm:gap-4">
+            <span className="text-white/35 font-body text-xs uppercase tracking-widest sm:w-36 flex-shrink-0">Subject line</span>
+            <span className="text-white/70 font-body text-sm">&ldquo;PDPA request&rdquo; + your full name and registered email</span>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-1 sm:gap-4">
+            <span className="text-white/35 font-body text-xs uppercase tracking-widest sm:w-36 flex-shrink-0">Response time</span>
+            <span className="text-white/70 font-body text-sm">Within 30 days of receiving the request</span>
+          </div>
+        </div>
+        <p className="text-white/35 font-body text-xs">
+          For urgent matters, use the subject line &ldquo;Data breach concern&rdquo;. PathPort acknowledges
+          all PDPA-related communications within 3 business days.
+        </p>
       </section>
 
       <section className="mb-12">

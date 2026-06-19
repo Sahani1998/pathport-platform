@@ -124,6 +124,20 @@ export default function Footer() {
           ))}
         </div>
 
+        {/* Compliance strip — Singapore company registration + DPO */}
+        <div className="mb-6 p-3 rounded-xl bg-white/[0.02] border border-white/[0.04] flex flex-wrap gap-x-5 gap-y-1.5">
+          <span className="text-white/20 font-body text-[10px]">PathPort · Incorporated in Singapore</span>
+          <span className="text-white/15 font-body text-[10px] hidden sm:inline">·</span>
+          <span className="text-white/20 font-body text-[10px]">PDPA compliant · Personal Data Protection Act 2012</span>
+          <span className="text-white/15 font-body text-[10px] hidden sm:inline">·</span>
+          <span className="text-white/20 font-body text-[10px]">
+            Data Protection Officer:{" "}
+            <a href="mailto:pathportsg@gmail.com?subject=PDPA%20request" className="hover:text-white/40 transition-colors underline underline-offset-2">
+              pathportsg@gmail.com
+            </a>
+          </span>
+        </div>
+
         {/* Bottom bar */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pt-6 border-t border-white/[0.06]">
           <p className="text-white/25 font-body text-xs">
