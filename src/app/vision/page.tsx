@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import MarketingShell from "@/components/marketing/MarketingShell";
 import PageHero from "@/components/marketing/PageHero";
 import Breadcrumbs from "@/components/marketing/Breadcrumbs";
+import JsonLd from "@/components/marketing/JsonLd";
+import { breadcrumbJsonLd } from "@/lib/jsonld";
 
 export const metadata: Metadata = {
   title: "Our Vision",
@@ -35,6 +37,7 @@ const HORIZONS = [
 export default function VisionPage() {
   return (
     <MarketingShell>
+      <JsonLd data={breadcrumbJsonLd([{ name: "About", url: "/about" }, { name: "Vision", url: "/vision" }])} />
       <Breadcrumbs trail={[{ name: "About", url: "/about" }, { name: "Vision", url: "/vision" }]} />
 
       <PageHero

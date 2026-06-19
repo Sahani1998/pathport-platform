@@ -71,13 +71,13 @@ export default async function CollegesPage({ searchParams }: PageProps) {
             "@context": "https://schema.org",
             "@type":    "ItemList",
             name:       "Singapore Private Colleges on PathPort",
-            url:        "https://pathport.in/colleges",
+            url:        "https://pathport.sg/colleges",
             numberOfItems: total,
             itemListElement: (colleges ?? []).map((c, i) => ({
               "@type":    "ListItem",
               position:   offset + i + 1,
               name:       c.name,
-              url:        `https://pathport.in/colleges/${c.slug}`,
+              url:        `https://pathport.sg/colleges/${c.slug}`,
             })),
           }),
         }}

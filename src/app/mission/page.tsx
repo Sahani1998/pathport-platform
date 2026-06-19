@@ -4,6 +4,8 @@ import MarketingShell from "@/components/marketing/MarketingShell";
 import PageHero from "@/components/marketing/PageHero";
 import Breadcrumbs from "@/components/marketing/Breadcrumbs";
 import InfoCard from "@/components/marketing/InfoCard";
+import JsonLd from "@/components/marketing/JsonLd";
+import { breadcrumbJsonLd } from "@/lib/jsonld";
 
 export const metadata: Metadata = {
   title: "Our Mission",
@@ -32,6 +34,7 @@ const PILLARS = [
 export default function MissionPage() {
   return (
     <MarketingShell>
+      <JsonLd data={breadcrumbJsonLd([{ name: "About", url: "/about" }, { name: "Mission", url: "/mission" }])} />
       <Breadcrumbs trail={[{ name: "About", url: "/about" }, { name: "Mission", url: "/mission" }]} />
 
       <PageHero

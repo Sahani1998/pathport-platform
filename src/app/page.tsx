@@ -1,5 +1,3 @@
-// Supabase-driven sections (PrivateColleges) require a live connection at request time.
-// Switch to `export const revalidate = 60` once env vars are available at build time.
 export const dynamic = "force-dynamic";
 
 import Navbar              from "@/components/layout/Navbar";
@@ -20,13 +18,13 @@ const organizationJsonLd = {
   "@context": "https://schema.org",
   "@type": "Organization",
   name: "PathPort",
-  url: "https://pathport.in",
+  url: "https://pathport.sg",
   description: "India's dedicated platform for Singapore private college diploma, advanced diploma, higher diploma, and specialist diploma programmes.",
   contactPoint: {
     "@type": "ContactPoint",
     telephone: "+65-8377-6492",
     contactType: "customer service",
-    email: "pathpportsg@gmail.com",
+    email: "pathportsg@gmail.com",
     areaServed: ["IN", "SG"],
     availableLanguage: ["English", "Hindi"],
   },

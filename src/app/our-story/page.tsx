@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import MarketingShell from "@/components/marketing/MarketingShell";
 import PageHero from "@/components/marketing/PageHero";
 import Breadcrumbs from "@/components/marketing/Breadcrumbs";
+import JsonLd from "@/components/marketing/JsonLd";
+import { breadcrumbJsonLd } from "@/lib/jsonld";
 
 export const metadata: Metadata = {
   title: "Our Story",
@@ -40,6 +42,7 @@ const CHAPTERS = [
 export default function OurStoryPage() {
   return (
     <MarketingShell maxWidth="narrow">
+      <JsonLd data={breadcrumbJsonLd([{ name: "About", url: "/about" }, { name: "Our Story", url: "/our-story" }])} />
       <Breadcrumbs trail={[{ name: "About", url: "/about" }, { name: "Our Story", url: "/our-story" }]} />
 
       <PageHero

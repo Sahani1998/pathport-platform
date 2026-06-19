@@ -201,7 +201,7 @@ export default async function CollegeDetailPage({ params }: PageProps) {
     "@context": "https://schema.org",
     "@type":    "EducationalOrganization",
     name:       college.name,
-    url:        college.website ?? `https://pathport.in/colleges/${slug}`,
+    url:        college.website ?? `https://pathport.sg/colleges/${slug}`,
     logo:       college.logo_url ?? undefined,
     image:      college.cover_image_url ?? undefined,
     address: {
@@ -217,7 +217,7 @@ export default async function CollegeDetailPage({ params }: PageProps) {
         "@type":    "ListItem",
         position:   i + 1,
         name:       c.title,
-        url:        `https://pathport.in/courses/${c.slug}`,
+        url:        `https://pathport.sg/courses/${c.slug}`,
       })),
     } : undefined,
   };

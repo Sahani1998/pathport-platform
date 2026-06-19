@@ -154,13 +154,13 @@ export default async function CoursesPage({ searchParams }: PageProps) {
             "@context": "https://schema.org",
             "@type":    "ItemList",
             name:       "Singapore Diploma Courses on PathPort",
-            url:        "https://pathport.in/courses",
+            url:        "https://pathport.sg/courses",
             numberOfItems: total,
             itemListElement: courseList.map((c, i) => ({
               "@type":    "ListItem",
               position:   offset + i + 1,
               name:       c.title,
-              url:        `https://pathport.in/courses/${c.slug}`,
+              url:        `https://pathport.sg/courses/${c.slug}`,
             })),
           }),
         }}

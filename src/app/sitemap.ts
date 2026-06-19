@@ -3,7 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin-client";
 
 export const dynamic = "force-dynamic";
 
-const BASE_URL = "https://pathport.in";
+const BASE_URL = "https://pathport.sg";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const adminDb = createAdminClient();

@@ -104,7 +104,7 @@ export default async function PublicCourseDetailPage({ params }: PageProps) {
     "@type":      "Course",
     name:         course.title,
     description:  course.description ?? undefined,
-    url:          `https://pathport.in/courses/${slug}`,
+    url:          `https://pathport.sg/courses/${slug}`,
     provider: {
       "@type":       "EducationalOrganization",
       name:          college?.name,

@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { Mail, Sparkles } from "lucide-react";
 import MarketingShell from "@/components/marketing/MarketingShell";
 import PageHero from "@/components/marketing/PageHero";
 import Breadcrumbs from "@/components/marketing/Breadcrumbs";
+import JsonLd from "@/components/marketing/JsonLd";
+import { breadcrumbJsonLd } from "@/lib/jsonld";
 
 export const metadata: Metadata = {
   title: "Careers at PathPort",
@@ -28,6 +29,7 @@ const AREAS = [
 export default function CareersPage() {
   return (
     <MarketingShell>
+      <JsonLd data={breadcrumbJsonLd([{ name: "About", url: "/about" }, { name: "Careers", url: "/careers" }])} />
       <Breadcrumbs trail={[{ name: "About", url: "/about" }, { name: "Careers", url: "/careers" }]} />
 
       <PageHero
@@ -68,12 +70,12 @@ export default function CareersPage() {
         <p className="text-white/55 font-body text-sm mb-6 max-w-xl mx-auto leading-relaxed">
           Singapore polytechnic students looking for internships — particularly in engineering, content, and operations — are encouraged to introduce themselves. We mentor seriously and credit work openly.
         </p>
-        <Link
+        <a
           href="mailto:pathportsg@gmail.com?subject=Careers%20at%20PathPort"
           className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-gold-500 to-gold-400 text-navy-900 font-body font-bold text-sm hover:shadow-gold-sm transition-all"
         >
           <Mail className="w-4 h-4" /> Introduce yourself
-        </Link>
+        </a>
       </section>
     </MarketingShell>
   );
