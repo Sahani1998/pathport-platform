@@ -315,7 +315,7 @@ export default function PathwayCardsPage() {
         <textarea value={form.what_it_is} onChange={e => setForm(f => ({ ...f, what_it_is: e.target.value }))} placeholder="Describe the qualification…" className={textareaCls} />
       </div>
       <div className="col-span-2">
-        <label className="block font-body text-xs text-white/40 mb-1">Who it's for *</label>
+        <label className="block font-body text-xs text-white/40 mb-1">Who it&rsquo;s for *</label>
         <textarea value={form.who_its_for} onChange={e => setForm(f => ({ ...f, who_its_for: e.target.value }))} placeholder="Who this qualification suits…" className={textareaCls} />
       </div>
       <div className="col-span-2">
@@ -323,7 +323,7 @@ export default function PathwayCardsPage() {
         <textarea value={form.subjects_text} onChange={e => setForm(f => ({ ...f, subjects_text: e.target.value }))} placeholder={"Business Administration\nInformation Technology\nHospitality Management"} className={textareaCls} />
       </div>
       <div className="col-span-2">
-        <label className="block font-body text-xs text-white/40 mb-1">What's next *</label>
+        <label className="block font-body text-xs text-white/40 mb-1">What&rsquo;s next *</label>
         <textarea value={form.whats_next} onChange={e => setForm(f => ({ ...f, whats_next: e.target.value }))} placeholder="Next steps after this qualification…" className={textareaCls} />
       </div>
       <div>
