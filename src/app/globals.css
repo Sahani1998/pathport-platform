@@ -182,6 +182,68 @@
   .public-heading { color: #060C1A; }
   .public-subtext { color: rgba(10, 17, 34, 0.62); }
   .public-eyebrow { color: #1247B3; }
+
+  /* ── Sprint 30 (redo) ── Editorial typography scale + layout containers ────
+     Adds responsive display sizes via clamp() so headlines scale from mobile
+     (48px) up to a true editorial hero size (120px) on large screens. Layout
+     containers widen the canvas and reduce side gutters at large breakpoints,
+     letting hero/photo bands feel immersive rather than dashboard-bordered. */
+  .display-1 {
+    font-family: var(--font-display);
+    font-size: clamp(3rem, 8vw, 7.5rem);
+    line-height: 1.02;
+    letter-spacing: -0.025em;
+    font-weight: 500;
+  }
+  .display-2 {
+    font-family: var(--font-display);
+    font-size: clamp(2.25rem, 6vw, 5.5rem);
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+    font-weight: 500;
+  }
+  .display-3 {
+    font-family: var(--font-display);
+    font-size: clamp(1.875rem, 4.5vw, 4rem);
+    line-height: 1.08;
+    letter-spacing: -0.015em;
+    font-weight: 500;
+  }
+  .display-4 {
+    font-family: var(--font-display);
+    font-size: clamp(1.5rem, 3.5vw, 3rem);
+    line-height: 1.1;
+    letter-spacing: -0.01em;
+    font-weight: 500;
+  }
+  .lead {
+    font-family: var(--font-body);
+    font-size: clamp(1rem, 1.2vw, 1.25rem);
+    line-height: 1.6;
+  }
+  .prose-lg {
+    font-family: var(--font-body);
+    font-size: clamp(1rem, 1.05vw, 1.18rem);
+    line-height: 1.75;
+  }
+  .eyebrow {
+    font-family: var(--font-body);
+    font-size: 0.75rem;
+    line-height: 1;
+    font-weight: 600;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+  }
+
+  /* Layout containers — wider and roomier than the dashboard 1280px box.
+     `layout-shell` is the workhorse for content sections; `layout-prose`
+     keeps long-form readable; `layout-bleed` lets photo bands run full-width. */
+  .layout-x        { @apply mx-auto px-5 sm:px-8 lg:px-12 xl:px-16; }
+  .layout-shell    { @apply max-w-screen-2xl mx-auto px-5 sm:px-8 lg:px-12 xl:px-16; }
+  .layout-prose    { @apply max-w-3xl mx-auto; }
+  .layout-bleed    { @apply w-full; }
+  .section-airy    { @apply py-24 md:py-32 lg:py-40; }
+  .section-medium  { @apply py-20 md:py-24 lg:py-28; }
 }
 
 /* ── Sprint 29 ── Global reduced-motion kill-switch ──────────────────────────

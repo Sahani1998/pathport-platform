@@ -1,18 +1,16 @@
 export const dynamic = "force-dynamic";
 
-import Navbar                from "@/components/layout/Navbar";
-import Footer                from "@/components/layout/Footer";
-import HeroSection           from "@/components/sections/HeroSection";
-import PlatformStats         from "@/components/sections/PlatformStats";
-import JourneySummary        from "@/components/sections/JourneySummary";
-import InstitutionLogoWall   from "@/components/sections/InstitutionLogoWall";
-import DiplomaCategories     from "@/components/sections/DiplomaCategories";
-import StudyEarnGraduate     from "@/components/sections/StudyEarnGraduate";
-import WhyTrustPathPort      from "@/components/sections/WhyTrustPathPort";
-import SingaporeTeaser       from "@/components/sections/SingaporeTeaser";
-import SuccessTeaser         from "@/components/sections/SuccessTeaser";
-import ResourceTeaser        from "@/components/sections/ResourceTeaser";
-import CTASection            from "@/components/sections/CTASection";
+import Navbar                 from "@/components/layout/Navbar";
+import Footer                 from "@/components/layout/Footer";
+import HeroImmersive          from "@/components/sections/HeroImmersive";
+import InstitutionLogoWall    from "@/components/sections/InstitutionLogoWall";
+import WhySingaporeStory      from "@/components/sections/WhySingaporeStory";
+import JourneyVisualTimeline  from "@/components/sections/JourneyVisualTimeline";
+import PhotoBand              from "@/components/ui/PhotoBand";
+import DestinationPathway     from "@/components/sections/DestinationPathway";
+import StudyEarnStory         from "@/components/sections/StudyEarnStory";
+import ParentTrustStory       from "@/components/sections/ParentTrustStory";
+import FinalCTABand           from "@/components/sections/FinalCTABand";
 
 const organizationJsonLd = {
   "@context": "https://schema.org",
@@ -42,32 +40,39 @@ export default function HomePage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
       />
       <Navbar />
-      {/* Public marketing pages use a light base; dashboards keep their own
-          dark navy wrappers and are unaffected. Hero + final CTA opt back into
-          dark via explicit section backgrounds. */}
       <main id="main-content" className="bg-white">
-        {/* 1 · Hero with interest form (dark) */}
-        <HeroSection />
-        {/* 2 · Trust proof row — live DB counters */}
-        <PlatformStats />
-        {/* 3 · Student journey summary — 4 steps, full timeline on /students */}
-        <JourneySummary />
-        {/* 4 · Verified institutions logo wall */}
+        {/* 1 · Full-bleed photography hero with overlaid callback form */}
+        <HeroImmersive />
+
+        {/* 2 · Trust logos strip — verified institutions marquee */}
         <InstitutionLogoWall />
-        {/* 5 · Popular pathways / courses */}
-        <DiplomaCategories />
-        {/* 6 · Study + Internship summary */}
-        <StudyEarnGraduate />
-        {/* 7 · Parent trust summary (cream) */}
-        <WhyTrustPathPort />
-        {/* 8 · Singapore life teaser — full guides on /resources */}
-        <SingaporeTeaser />
-        {/* 9 · Success stories teaser — real DB stories only */}
-        <SuccessTeaser />
-        {/* 10 · Resource / blog teaser */}
-        <ResourceTeaser />
-        {/* 11 · Final CTA (dark) */}
-        <CTASection />
+
+        {/* 3 · Why Singapore — image-left editorial split (cream) */}
+        <WhySingaporeStory />
+
+        {/* 4 · Journey visual timeline — 8 photographed steps */}
+        <JourneyVisualTimeline />
+
+        {/* 5 · Full-bleed photo band — graduation rest beat */}
+        <PhotoBand
+          src="https://images.unsplash.com/photo-1571260899304-425eee4c7efc?auto=format&fit=crop&w=2400&q=75"
+          alt="Diploma graduate holding a certificate at a Singapore graduation ceremony"
+          caption="Graduation day, Singapore"
+          height="lg"
+        />
+
+        {/* 6 · Destination pathway — country/destination strip
+            NOTE: Hardcoded for PR-G. Sprint 31 will swap data source to DB. */}
+        <DestinationPathway />
+
+        {/* 7 · Study + Earn — image-right editorial split (white) */}
+        <StudyEarnStory />
+
+        {/* 8 · Parent trust — cream editorial section */}
+        <ParentTrustStory />
+
+        {/* 9 · Full-bleed photo + interest form conversion CTA */}
+        <FinalCTABand />
       </main>
       <Footer />
     </>
