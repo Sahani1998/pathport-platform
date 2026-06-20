@@ -1,0 +1,100 @@
+import Reveal from "@/components/ui/Reveal";
+import { GraduationCap, ChevronRight } from "lucide-react";
+
+/**
+ * DiplomaProgressionPathway — soft-blue band. Visual progression diagram
+ * showing how Singapore's private diploma qualifications stack from
+ * Certificate up to Specialist Diploma. Honest about duration ranges.
+ */
+const LEVELS = [
+  {
+    code: "CERT",
+    label: "Certificate",
+    duration: "3–6 months",
+    body: "Short, foundational. Often used to bridge into Diploma entry.",
+  },
+  {
+    code: "DIP",
+    label: "Diploma",
+    duration: "12–24 months",
+    body: "Industry-focused entry-level qualification. Most popular starting point.",
+  },
+  {
+    code: "ADV DIP",
+    label: "Advanced Diploma",
+    duration: "6–18 months",
+    body: "Builds on a Diploma. Specialisation in a chosen subject area.",
+  },
+  {
+    code: "HIGHER DIP",
+    label: "Higher Diploma",
+    duration: "12–24 months",
+    body: "Stepping stone to degree programmes. Strong university progression.",
+  },
+  {
+    code: "SPEC DIP",
+    label: "Specialist Diploma",
+    duration: "6–12 months",
+    body: "Applied, industry-aligned. Often for working professionals.",
+    highlight: true,
+  },
+];
+
+export default function DiplomaProgressionPathway() {
+  return (
+    <section className="relative public-section-blue">
+      <div className="max-w-7xl mx-auto px-5 md:px-10 py-20">
+        <Reveal className="text-center mb-12">
+          <p className="text-gold-700 font-body text-xs font-semibold tracking-[0.22em] uppercase mb-4">
+            Diploma Progression
+          </p>
+          <h2 className="font-display text-3xl md:text-4xl text-navy-900 leading-[1.1] max-w-2xl mx-auto mb-4">
+            Singapore&rsquo;s diploma ladder — at a glance.
+          </h2>
+          <p className="text-navy-800/60 font-body text-base max-w-2xl mx-auto">
+            Five recognised qualification tiers. Each one builds on the last and can stand on its own.
+          </p>
+        </Reveal>
+
+        {/* Horizontal ladder on desktop, stacked on mobile */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+          {LEVELS.map(({ code, label, duration, body, highlight }, i) => (
+            <Reveal key={code} delay={i * 70} className="h-full">
+              <div
+                className={`relative h-full p-5 rounded-2xl public-card public-card-hover ${
+                  highlight ? "ring-1 ring-gold-400/45" : ""
+                }`}
+              >
+                {/* Connector arrow — desktop, between cards */}
+                {i < LEVELS.length - 1 && (
+                  <div
+                    aria-hidden
+                    className="hidden lg:flex absolute top-1/2 -right-3 z-10 -translate-y-1/2 w-6 h-6 rounded-full bg-white border border-slate-200 items-center justify-center"
+                  >
+                    <ChevronRight className="w-3 h-3 text-pathBlue-600" />
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between mb-4">
+                  <span className="font-display font-bold text-[10px] tracking-[0.18em] text-pathBlue-700">
+                    {code}
+                  </span>
+                  <div className="w-8 h-8 rounded-lg bg-pathBlue-500/10 border border-pathBlue-500/25 text-pathBlue-700 flex items-center justify-center">
+                    <GraduationCap className="w-4 h-4" strokeWidth={1.75} />
+                  </div>
+                </div>
+                <p className="font-body font-bold text-navy-900 text-sm mb-1 leading-tight">{label}</p>
+                <p className="font-body text-navy-800/55 text-xs mb-3">{duration}</p>
+                <p className="font-body text-navy-800/65 text-xs leading-relaxed">{body}</p>
+              </div>
+            </Reveal>
+          ))}
+        </div>
+
+        <p className="text-center text-navy-800/55 font-body text-xs mt-8 italic">
+          Actual duration varies by institution and intake. Speak to a PathPort advisor for the exact ranges at the colleges you are considering.
+        </p>
+      </div>
+    </section>
+  );
+}
