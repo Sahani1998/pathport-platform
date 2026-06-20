@@ -37,18 +37,18 @@ const DURATION_ROWS = [
 export default function DurationGuide() {
   return (
     <section className="relative cream-band">
-      <div className="max-w-5xl mx-auto px-5 md:px-10 py-20">
+      <div className="layout-shell section-airy">
 
         <div className="text-center mb-10">
-          <p className="inline-flex items-center gap-3 text-gold-700 font-body text-xs font-semibold tracking-[0.22em] uppercase mb-4">
+          <p className="inline-flex items-center gap-3 eyebrow text-gold-700 mb-4">
             <span className="w-8 h-px bg-gold-700/50 rounded-full" />
             Duration Guide
             <span className="w-8 h-px bg-gold-700/50 rounded-full" />
           </p>
-          <h2 className="font-display text-3xl md:text-4xl text-navy-900 leading-[1.1] mb-4 max-w-2xl mx-auto">
+          <h2 className="display-3 text-navy-900 mb-4 max-w-2xl mx-auto">
             How long programmes actually take.
           </h2>
-          <p className="text-navy-800/70 font-body text-base max-w-2xl mx-auto leading-relaxed">
+          <p className="prose-lg text-navy-800/70 max-w-2xl mx-auto">
             These ranges are typical across Singapore&rsquo;s private college sector. Your specific programme may be shorter or longer depending on intake schedule, internship structure, and the college.
           </p>
         </div>

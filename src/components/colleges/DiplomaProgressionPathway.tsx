@@ -43,15 +43,16 @@ const LEVELS = [
 export default function DiplomaProgressionPathway() {
   return (
     <section className="relative public-section-blue">
-      <div className="max-w-7xl mx-auto px-5 md:px-10 py-20">
-        <Reveal className="text-center mb-12">
-          <p className="text-gold-700 font-body text-xs font-semibold tracking-[0.22em] uppercase mb-4">
-            Diploma Progression
-          </p>
-          <h2 className="font-display text-3xl md:text-4xl text-navy-900 leading-[1.1] max-w-2xl mx-auto mb-4">
-            Singapore&rsquo;s diploma ladder — at a glance.
+      <div className="layout-shell section-airy">
+        <Reveal className="max-w-3xl mb-14">
+          <p className="eyebrow text-gold-700 mb-5">Diploma Progression</p>
+          <h2 className="display-3 text-navy-900 mb-5">
+            Singapore&rsquo;s diploma ladder —{" "}
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-gold-600 to-gold-500">
+              at a glance.
+            </span>
           </h2>
-          <p className="text-navy-800/60 font-body text-base max-w-2xl mx-auto">
+          <p className="prose-lg text-navy-800/65">
             Five recognised qualification tiers. Each one builds on the last and can stand on its own.
           </p>
         </Reveal>

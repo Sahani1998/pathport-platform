@@ -9,25 +9,26 @@ import { ArrowRight, Building2, GraduationCap, MapPin } from "lucide-react";
 export default function PrivateCollegeGuide() {
   return (
     <section className="relative public-section-white">
-      <div className="max-w-7xl mx-auto px-5 md:px-10 py-20">
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.2fr] gap-12 items-start">
+      <div className="layout-shell section-airy">
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.2fr] gap-12 lg:gap-16 items-start">
 
           {/* Left — heading + intro */}
           <div className="lg:sticky lg:top-24">
-            <p className="text-pathBlue-700 font-body text-xs font-semibold tracking-[0.22em] uppercase mb-4">
-              Private College Guide
-            </p>
-            <h2 className="font-display text-3xl md:text-4xl text-navy-900 leading-[1.1] mb-5">
-              How Singapore private colleges actually work.
+            <p className="eyebrow text-pathBlue-700 mb-5">Private College Guide</p>
+            <h2 className="display-3 text-navy-900 mb-6">
+              How Singapore private colleges{" "}
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-gold-600 to-gold-500">
+                actually work.
+              </span>
             </h2>
-            <p className="text-navy-800/65 font-body text-base leading-relaxed mb-6">
+            <p className="prose-lg text-navy-800/70 mb-7">
               Singapore&apos;s private education sector is regulated by the{" "}
               <span className="text-navy-900 font-semibold">Committee for Private Education (CPE)</span>
               {" "}under SkillsFuture Singapore. Private colleges are independent institutions — not universities — and they specialise in industry-focused diploma and advanced diploma programmes that take a fraction of the time and cost of a full degree.
             </p>
             <Link
               href="/resources/study-in-singapore"
-              className="inline-flex items-center gap-2 text-pathBlue-700 hover:text-pathBlue-600 font-body text-sm font-semibold transition-colors"
+              className="inline-flex items-center gap-2 text-pathBlue-700 hover:text-pathBlue-600 font-body text-base font-semibold transition-colors"
             >
               Read the full study-in-Singapore guide
               <ArrowRight className="w-4 h-4" />

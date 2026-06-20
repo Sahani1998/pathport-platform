@@ -9,8 +9,9 @@ import Image from "next/image";
 import { createAdminClient } from "@/lib/supabase/admin-client";
 import { Building2, Globe, Search, ChevronRight } from "lucide-react";
 import VerifiedBadge from "@/components/ui/VerifiedBadge";
-import CollegesHero from "@/components/colleges/CollegesHero";
-import WhyStudyInSingapore from "@/components/colleges/WhyStudyInSingapore";
+import PhotoBand from "@/components/ui/PhotoBand";
+import CollegesHeroImmersive from "@/components/colleges/CollegesHeroImmersive";
+import CollegesWhyStory from "@/components/colleges/CollegesWhyStory";
 import PrivateCollegeGuide from "@/components/colleges/PrivateCollegeGuide";
 import EduTrustExplainer from "@/components/colleges/EduTrustExplainer";
 import DiplomaProgressionPathway from "@/components/colleges/DiplomaProgressionPathway";
@@ -91,38 +92,56 @@ export default async function CollegesPage({ searchParams }: PageProps) {
       />
 
       {/* Page body — white base; section bands handle their own backgrounds. */}
-      <main className="bg-white pt-[68px]">
+      <main className="bg-white">
 
-        {/* 1 · Hero */}
-        <CollegesHero search={search} />
+        {/* 1 · Full-bleed photo hero */}
+        <CollegesHeroImmersive search={search} />
 
-        {/* 2 · Why Singapore */}
-        <WhyStudyInSingapore />
+        {/* 2 · Why Singapore — image-left story split */}
+        <CollegesWhyStory />
 
-        {/* 3 · Private College Guide */}
+        {/* 3 · Private College Guide — editorial passage */}
         <PrivateCollegeGuide />
 
-        {/* 4 · EduTrust */}
+        {/* 4 · Full-bleed photo band — Singapore campus aerial */}
+        <PhotoBand
+          src="https://images.unsplash.com/photo-1525625293386-3f8f99389edd?auto=format&fit=crop&w=2400&q=75"
+          alt="Singapore's Marina Bay and campus district from above"
+          caption="Singapore — where you'll study"
+          height="lg"
+        />
+
+        {/* 5 · EduTrust certification — cream rest beat */}
         <EduTrustExplainer />
 
-        {/* 5 · Diploma Progression */}
+        {/* 6 · Diploma Progression ladder */}
         <DiplomaProgressionPathway />
 
-        {/* 6 · University Progression */}
+        {/* 7 · Full-bleed photo band — graduation */}
+        <PhotoBand
+          src="https://images.unsplash.com/photo-1571260899304-425eee4c7efc?auto=format&fit=crop&w=2400&q=75"
+          alt="A graduate holding a diploma certificate at a Singapore graduation ceremony"
+          caption="After your diploma"
+          height="md"
+          captionPosition="right"
+        />
+
+        {/* 8 · After Your Diploma — image-left story split */}
         <UniversityProgressionOpportunities />
 
-        {/* 7 · Directory — light cards */}
+        {/* 9 · Directory — light cards */}
         <section id="directory" className="relative public-section-white py-20">
-          <div className="max-w-7xl mx-auto px-5 md:px-10">
+          <div className="layout-shell">
 
-            <div className="text-center mb-10">
-              <p className="text-pathBlue-700 font-body text-xs font-semibold tracking-[0.22em] uppercase mb-3">
-                The Directory
-              </p>
-              <h2 className="font-display text-3xl md:text-4xl text-navy-900 leading-[1.1] mb-3">
-                {total} verified college{total !== 1 ? "s" : ""} on PathPort.
+            <div className="max-w-3xl mb-12">
+              <p className="eyebrow text-pathBlue-700 mb-5">The Directory</p>
+              <h2 className="display-3 text-navy-900 mb-4">
+                {total} verified college{total !== 1 ? "s" : ""}{" "}
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-gold-600 to-gold-500">
+                  on PathPort.
+                </span>
               </h2>
-              <p className="text-navy-800/60 font-body text-base max-w-xl mx-auto">
+              <p className="prose-lg text-navy-800/65">
                 Browse, search, and tap any college to see its full programme list.
               </p>
             </div>
@@ -273,20 +292,21 @@ export default async function CollegesPage({ searchParams }: PageProps) {
           </div>
         </section>
 
-        {/* 8 · FAQ */}
+        {/* 10 · FAQ */}
         <CollegesFAQ />
 
-        {/* 9 · Final CTA — dark for emphasis */}
-        <section className="relative py-24 bg-[#06142E]">
+        {/* 11 · Final CTA — dark for emphasis */}
+        <section className="relative section-airy bg-[#06142E] overflow-hidden">
           <div aria-hidden className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-gold-400/[0.06] blur-[140px] pointer-events-none" />
-          <div className="relative max-w-3xl mx-auto px-5 md:px-10 text-center">
-            <h2 className="font-display text-4xl md:text-5xl text-white mb-5 leading-[1.08]">
+          <div className="relative layout-shell text-center">
+            <p className="eyebrow text-gold-400 mb-5">Apply with PathPort</p>
+            <h2 className="display-2 text-white mb-6 max-w-3xl mx-auto">
               Ready to{" "}
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-gold-400 to-gold-300">
                 apply?
               </span>
             </h2>
-            <p className="text-white/55 font-body text-lg mb-9 max-w-xl mx-auto leading-relaxed">
+            <p className="lead text-white/65 mb-10 max-w-xl mx-auto">
               Create a free PathPort account and apply to any Singapore private college programme with full advisor guidance.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3">

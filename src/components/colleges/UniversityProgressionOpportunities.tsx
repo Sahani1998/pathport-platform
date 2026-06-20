@@ -28,15 +28,15 @@ const OPTIONS = [
 export default function UniversityProgressionOpportunities() {
   return (
     <section className="relative public-section-white">
-      <div className="max-w-7xl mx-auto px-5 md:px-10 py-20">
-        <div className="grid grid-cols-1 lg:grid-cols-[1.1fr_1fr] gap-12 items-center">
+      <div className="layout-shell section-airy">
+        <div className="grid grid-cols-1 lg:grid-cols-[1.1fr_1fr] gap-12 lg:gap-16 items-center">
 
           {/* Image */}
           <div className="relative order-last lg:order-first">
-            <div className="relative aspect-[5/4] rounded-3xl overflow-hidden border border-slate-200 shadow-[0_20px_50px_-15px_rgba(10,17,34,0.15)]">
+            <div className="relative aspect-[4/5] rounded-3xl overflow-hidden shadow-[0_30px_70px_-25px_rgba(10,17,34,0.35)]">
               <Image
-                src="https://images.unsplash.com/photo-1523050854058-8df90110c9f1?auto=format&fit=crop&w=1200&q=80"
-                alt="Diploma graduates at a Singapore university campus"
+                src="https://images.unsplash.com/photo-1523050854058-8df90110c9f1?auto=format&fit=crop&w=1400&q=80"
+                alt="Diploma graduates at a Singapore campus"
                 fill
                 sizes="(max-width: 1024px) 100vw, 50vw"
                 className="object-cover"
@@ -48,13 +48,14 @@ export default function UniversityProgressionOpportunities() {
 
           {/* Content */}
           <div>
-            <p className="text-pathBlue-700 font-body text-xs font-semibold tracking-[0.22em] uppercase mb-4">
-              After Your Diploma
-            </p>
-            <h2 className="font-display text-3xl md:text-4xl text-navy-900 leading-[1.1] mb-5">
-              Three honest paths a Singapore diploma can open.
+            <p className="eyebrow text-pathBlue-700 mb-5">After Your Diploma</p>
+            <h2 className="display-3 text-navy-900 mb-6">
+              Three honest paths a Singapore diploma can{" "}
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-gold-600 to-gold-500">
+                open.
+              </span>
             </h2>
-            <p className="text-navy-800/65 font-body text-base leading-relaxed mb-8">
+            <p className="prose-lg text-navy-800/70 mb-8">
               A Singapore diploma is not the end of the road. It&rsquo;s a foundation that can be built on — academically, professionally, or both.
             </p>
 

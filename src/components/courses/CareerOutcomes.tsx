@@ -61,15 +61,15 @@ const SECTORS: Sector[] = [
 export default function CareerOutcomes() {
   return (
     <section id="careers" className="relative public-section-white">
-      <div className="max-w-7xl mx-auto px-5 md:px-10 py-20">
+      <div className="layout-shell section-airy">
         <Reveal className="text-center mb-12">
-          <p className="text-gold-700 font-body text-xs font-semibold tracking-[0.22em] uppercase mb-4">
+          <p className="eyebrow text-gold-700 mb-4">
             Career Outcomes
           </p>
-          <h2 className="font-display text-3xl md:text-4xl text-navy-900 leading-[1.1] mb-4 max-w-2xl mx-auto">
+          <h2 className="display-3 text-navy-900 mb-4 max-w-2xl mx-auto">
             Where Singapore diploma graduates actually work.
           </h2>
-          <p className="text-navy-800/60 font-body text-base max-w-2xl mx-auto leading-relaxed">
+          <p className="prose-lg text-navy-800/60 max-w-2xl mx-auto">
             Honest snapshots by sector — based on what PathPort partner colleges report. Outcomes vary by programme, internship performance, and the individual student.
           </p>
         </Reveal>

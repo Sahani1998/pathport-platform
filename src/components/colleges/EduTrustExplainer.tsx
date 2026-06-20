@@ -27,27 +27,27 @@ const STANDARDS = [
 export default function EduTrustExplainer() {
   return (
     <section className="relative cream-band">
-      <div className="max-w-6xl mx-auto px-5 md:px-10 py-20">
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.1fr] gap-12 items-center">
+      <div className="layout-shell section-airy">
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.1fr] gap-12 lg:gap-16 items-center">
 
           {/* Left — heading */}
           <div>
-            <p className="inline-flex items-center gap-3 text-gold-700 font-body text-xs font-semibold tracking-[0.22em] uppercase mb-5">
-              <span className="w-8 h-px bg-gold-700/50 rounded-full" />
-              EduTrust Certification
-            </p>
-            <h2 className="font-display text-3xl md:text-4xl text-navy-900 leading-[1.1] mb-5">
-              What “EduTrust certified” actually means for your family.
+            <p className="eyebrow text-gold-700 mb-5">EduTrust Certification</p>
+            <h2 className="display-3 text-navy-900 mb-6">
+              What &ldquo;EduTrust certified&rdquo; actually means for{" "}
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-gold-700 to-gold-600">
+                your family.
+              </span>
             </h2>
-            <p className="text-navy-800/70 font-body text-base leading-relaxed mb-7">
+            <p className="prose-lg text-navy-800/70 mb-7">
               EduTrust is Singapore&rsquo;s government-backed certification scheme for private education institutions. To earn it, a college must meet rigorous standards across academic quality, financial soundness, and student welfare — and renew its certification on a regular cycle.
             </p>
-            <p className="text-navy-800/70 font-body text-base leading-relaxed mb-7">
+            <p className="prose-lg text-navy-800/70 mb-8">
               <span className="text-navy-900 font-semibold">Every college on PathPort is EduTrust certified.</span> We don&rsquo;t list institutions that aren&rsquo;t — that&rsquo;s the line we don&rsquo;t cross, regardless of partnership pressure.
             </p>
             <Link
               href="/trust/institution-verification"
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gold-500/95 hover:bg-gold-500 text-navy-900 font-body text-sm font-bold transition-all"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gold-600 hover:bg-gold-500 text-white font-body text-base font-bold transition-colors"
             >
               How verification works
               <ArrowRight className="w-4 h-4" />
