@@ -48,12 +48,10 @@ export default function CollegesFAQ() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd(COLLEGES_FAQS)) }}
       />
       <section className="relative public-section-white">
-        <div className="max-w-3xl mx-auto px-5 md:px-10 py-20">
+        <div className="layout-prose section-airy px-5 sm:px-8">
           <div className="text-center mb-12">
-            <p className="text-pathBlue-700 font-body text-xs font-semibold tracking-[0.22em] uppercase mb-4">
-              FAQs
-            </p>
-            <h2 className="font-display text-3xl md:text-4xl text-navy-900 leading-[1.1]">
+            <p className="eyebrow text-pathBlue-700 mb-5">FAQs</p>
+            <h2 className="display-3 text-navy-900">
               Frequently asked questions.
             </h2>
           </div>

@@ -12,11 +12,12 @@ import { COURSE_CATEGORIES } from "@/types/courses";
 import {
   BookOpen, Building2, Clock, DollarSign, Calendar, Search, ChevronRight, BarChart3, X,
 } from "lucide-react";
-import CoursesHero from "@/components/courses/CoursesHero";
+import CoursesHeroImmersive from "@/components/courses/CoursesHeroImmersive";
 import DiplomaTypesExplained from "@/components/courses/DiplomaTypesExplained";
 import CareerOutcomes from "@/components/courses/CareerOutcomes";
 import DurationGuide from "@/components/courses/DurationGuide";
 import CoursesFAQ from "@/components/courses/CoursesFAQ";
+import PhotoBand from "@/components/ui/PhotoBand";
 
 export const revalidate = 300;
 
@@ -174,10 +175,10 @@ export default async function CoursesPage({ searchParams }: PageProps) {
         }}
       />
 
-      <main className="bg-white pt-[68px]">
+      <main className="bg-white">
 
         {/* 1 · Hero */}
-        <CoursesHero search={search} />
+        <CoursesHeroImmersive search={search} />
 
         {/* 2 · Diploma Types Explained */}
         <DiplomaTypesExplained />
@@ -185,21 +186,26 @@ export default async function CoursesPage({ searchParams }: PageProps) {
         {/* 3 · Career Outcomes */}
         <CareerOutcomes />
 
-        {/* 4 · Duration Guide */}
+        {/* 4 · Photo band */}
+        <PhotoBand
+          src="https://images.unsplash.com/photo-1524178232363-1fb2b075b655?auto=format&fit=crop&w=2400&q=80"
+          alt="Students collaborating in a Singapore college"
+          height="md"
+        />
+
+        {/* 5 · Duration Guide */}
         <DurationGuide />
 
-        {/* 5 · Directory — light cards */}
-        <section id="directory" className="relative public-section-white py-20">
-          <div className="max-w-7xl mx-auto px-5 md:px-10">
+        {/* 6 · Directory — light cards */}
+        <section id="directory" className="relative public-section-white">
+          <div className="layout-shell section-airy">
 
             <div className="text-center mb-10">
-              <p className="text-pathBlue-700 font-body text-xs font-semibold tracking-[0.22em] uppercase mb-3">
-                The Directory
-              </p>
-              <h2 className="font-display text-3xl md:text-4xl text-navy-900 leading-[1.1] mb-3">
+              <p className="eyebrow text-pathBlue-700 mb-4">The Directory</p>
+              <h2 className="display-3 text-navy-900 mb-4">
                 {total} programme{total !== 1 ? "s" : ""} ready to apply to.
               </h2>
-              <p className="text-navy-800/60 font-body text-base max-w-xl mx-auto">
+              <p className="prose-lg text-navy-800/60 max-w-xl mx-auto">
                 Filter by subject, level, college, and budget — or compare up to three side by side.
               </p>
             </div>
@@ -441,20 +447,20 @@ export default async function CoursesPage({ searchParams }: PageProps) {
           </div>
         </section>
 
-        {/* 6 · FAQ */}
+        {/* 7 · FAQ */}
         <CoursesFAQ />
 
-        {/* 7 · Final CTA — dark for emphasis */}
+        {/* 8 · Final CTA — dark for emphasis */}
         <section className="relative py-24 bg-[#06142E]">
           <div aria-hidden className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-gold-400/[0.06] blur-[140px] pointer-events-none" />
-          <div className="relative max-w-3xl mx-auto px-5 md:px-10 text-center">
-            <h2 className="font-display text-4xl md:text-5xl text-white mb-5 leading-[1.08]">
+          <div className="relative layout-shell section-medium text-center">
+            <h2 className="display-2 text-white mb-5">
               Ready to{" "}
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-gold-400 to-gold-300">
                 apply?
               </span>
             </h2>
-            <p className="text-white/55 font-body text-lg mb-9 max-w-xl mx-auto leading-relaxed">
+            <p className="lead text-white/55 mb-9 max-w-xl mx-auto">
               Register free and apply to any Singapore diploma programme — PathPort guides you from application through arrival.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3">

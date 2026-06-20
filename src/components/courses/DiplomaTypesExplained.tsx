@@ -74,15 +74,15 @@ const TYPES: DiplomaExplainer[] = [
 export default function DiplomaTypesExplained() {
   return (
     <section id="diploma-types" className="relative public-section-blue">
-      <div className="max-w-7xl mx-auto px-5 md:px-10 py-20">
+      <div className="layout-shell section-airy">
         <Reveal className="text-center mb-12">
-          <p className="text-gold-700 font-body text-xs font-semibold tracking-[0.22em] uppercase mb-4">
+          <p className="eyebrow text-gold-700 mb-4">
             Diploma Types Explained
           </p>
-          <h2 className="font-display text-3xl md:text-4xl text-navy-900 leading-[1.1] mb-4 max-w-2xl mx-auto">
+          <h2 className="display-3 text-navy-900 mb-4 max-w-2xl mx-auto">
             Four diploma tiers, four different stories.
           </h2>
-          <p className="text-navy-800/60 font-body text-base max-w-2xl mx-auto leading-relaxed">
+          <p className="prose-lg text-navy-800/60 max-w-2xl mx-auto">
             Singapore&rsquo;s private college diploma ladder is built so you can enter at the level that fits your background — and stack qualifications over time.
           </p>
         </Reveal>
