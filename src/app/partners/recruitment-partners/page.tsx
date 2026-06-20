@@ -2,6 +2,7 @@
 // Dark hero + dark CTA bookend a light body. B2B partner audience.
 
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
@@ -45,22 +46,33 @@ export default function RecruitmentPartnersPage() {
       <main>
 
         {/* Dark hero */}
-        <section className="relative py-24 overflow-hidden pt-[92px] bg-[#06142E]">
-          <div aria-hidden className="absolute top-[20%] left-[10%] w-[400px] h-[400px] rounded-full bg-gold-400/[0.10] blur-[120px] pointer-events-none" />
-          <div aria-hidden className="absolute bottom-[10%] right-[5%] w-[350px] h-[350px] rounded-full bg-pathBlue-500/[0.08] blur-[110px] pointer-events-none" />
+        <section className="relative w-full min-h-[72vh] overflow-hidden bg-[#06142E]">
+          <div aria-hidden className="absolute inset-0">
+            <Image
+              src="https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=2400&q=80"
+              alt=""
+              fill
+              sizes="100vw"
+              priority
+              className="object-cover object-center"
+              unoptimized
+            />
+            <div className="absolute inset-0 bg-gradient-to-b from-navy-900/85 via-navy-900/65 to-navy-900/90" />
+            <div className="absolute inset-0 bg-gradient-to-r from-navy-900/70 via-transparent to-transparent" />
+          </div>
 
-          <div className="max-w-7xl mx-auto px-5 md:px-10 relative">
+          <div className="relative layout-shell pt-[120px] pb-20 lg:pt-[140px] lg:pb-28 min-h-[72vh] flex items-center">
             <div className="max-w-3xl">
               <span className="inline-flex items-center px-3 py-1 rounded-full bg-gold-400/15 border border-gold-400/30 text-gold-300 font-body text-xs font-semibold tracking-wide mb-6">
                 🤝 For Recruitment Partners
               </span>
-              <h1 className="font-display text-5xl md:text-[3.8rem] text-white leading-[1.06] mb-6">
+              <h1 className="display-2 text-white mb-6">
                 Become a PathPort{" "}
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-gold-400 to-gold-300">
                   Recruitment Partner
                 </span>
               </h1>
-              <p className="text-white/55 font-body text-xl leading-relaxed mb-10 max-w-2xl">
+              <p className="lead text-white/75 mb-10 max-w-2xl">
                 Refer Indian students to Singapore diploma programmes, track every application in real time, and earn transparent commissions — all managed through your dedicated Partner Dashboard.
               </p>
               <div className="flex flex-col sm:flex-row gap-3">
@@ -79,11 +91,11 @@ export default function RecruitmentPartnersPage() {
         </section>
 
         {/* Benefits — white */}
-        <section className="public-section-white py-20">
-          <div className="max-w-7xl mx-auto px-5 md:px-10">
+        <section className="public-section-white">
+          <div className="layout-shell section-airy">
             <Reveal className="text-center mb-12">
-              <p className="text-gold-700 font-body text-xs font-semibold tracking-[0.22em] uppercase mb-4">Why Partner</p>
-              <h2 className="font-display text-3xl md:text-4xl text-navy-900 leading-[1.1]">What recruitment partners get.</h2>
+              <p className="eyebrow text-gold-700 mb-4">Why Partner</p>
+              <h2 className="display-3 text-navy-900">What recruitment partners get.</h2>
             </Reveal>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
               {BENEFITS.map(({ Icon, title, desc }, i) => (
@@ -102,11 +114,11 @@ export default function RecruitmentPartnersPage() {
         </section>
 
         {/* How it works — soft-blue */}
-        <section className="public-section-blue py-20">
-          <div className="max-w-7xl mx-auto px-5 md:px-10">
+        <section className="public-section-blue">
+          <div className="layout-shell section-airy">
             <Reveal className="text-center mb-12">
-              <p className="text-gold-700 font-body text-xs font-semibold tracking-[0.22em] uppercase mb-4">Process</p>
-              <h2 className="font-display text-3xl md:text-4xl text-navy-900 leading-[1.1]">How the partnership works.</h2>
+              <p className="eyebrow text-gold-700 mb-4">Process</p>
+              <h2 className="display-3 text-navy-900">How the partnership works.</h2>
             </Reveal>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5 max-w-4xl mx-auto">
               {HOW_IT_WORKS.map(({ step, title, desc }, i) => (
@@ -128,11 +140,11 @@ export default function RecruitmentPartnersPage() {
         </section>
 
         {/* Features list — cream rest beat */}
-        <section className="cream-band py-20">
-          <div className="max-w-3xl mx-auto px-5 md:px-10">
+        <section className="cream-band">
+          <div className="layout-prose px-5 sm:px-8 section-airy">
             <div className="text-center mb-10">
-              <p className="text-gold-700 font-body text-xs font-semibold tracking-[0.22em] uppercase mb-4">Platform Features</p>
-              <h2 className="font-display text-3xl md:text-4xl text-navy-900 leading-[1.1]">Your Partner Dashboard includes.</h2>
+              <p className="eyebrow text-gold-700 mb-4">Platform Features</p>
+              <h2 className="display-3 text-navy-900">Your Partner Dashboard includes.</h2>
             </div>
             <div className="warm-panel-card rounded-3xl p-7 md:p-8">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -150,9 +162,9 @@ export default function RecruitmentPartnersPage() {
         {/* Dark CTA bookend */}
         <section className="py-24 relative overflow-hidden bg-[#06142E]">
           <div aria-hidden className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full bg-gold-400/[0.06] blur-[130px] pointer-events-none" />
-          <div className="relative max-w-3xl mx-auto px-5 md:px-10 text-center">
-            <h2 className="font-display text-4xl text-white mb-4">Already a recruitment partner?</h2>
-            <p className="text-white/55 font-body text-lg mb-8">Log in to refer students, upload documents, and track your commissions.</p>
+          <div className="relative layout-shell section-medium text-center">
+            <h2 className="display-2 text-white mb-4">Already a recruitment partner?</h2>
+            <p className="lead text-white/75 mb-8">Log in to refer students, upload documents, and track your commissions.</p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link href="/login?role=partner">
                 <GoldButton variant="solid-gold" size="lg">Recruitment Partner Login</GoldButton>
