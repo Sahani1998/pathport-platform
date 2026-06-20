@@ -1,37 +1,17 @@
+import { createAdminClient } from "@/lib/supabase/admin-client";
 import Reveal from "@/components/ui/Reveal";
-
-/**
- * DestinationPathway — country/destination strip.
- *
- * SPRINT 31 NOTE: This data is intentionally hardcoded for PR-G. Sprint 31
- * will introduce a `public_destinations` DB table and swap this constant
- * for a server-side fetch — the visual layout below stays as-is, only the
- * data source changes. Status semantics (live / coming_soon / hidden) are
- * the same as the planned DB enum.
- *
- * Honesty rule: we do NOT imply PathPort supports a country unless its
- * status is "live". Coming-soon countries are clearly marked.
- */
 
 type DestinationStatus = "live" | "coming_soon" | "hidden";
 
-interface Destination {
+interface DbDestination {
+  id: string;
   slug: string;
   name: string;
-  flag: string;     // emoji flag — replaced with real flag images at admin's discretion in Sprint 31
+  flag: string;
   headline: string;
-  status: DestinationStatus;
+  destination_status: DestinationStatus;
+  display_order: number;
 }
-
-// TODO Sprint 31: replace with `SELECT * FROM public_destinations WHERE is_published = true ORDER BY display_order`.
-const DESTINATIONS: Destination[] = [
-  { slug: "singapore",      name: "Singapore",     flag: "🇸🇬", headline: "Diploma, advanced & higher diploma programmes.", status: "live"        },
-  { slug: "australia",      name: "Australia",     flag: "🇦🇺", headline: "Diploma and university pathway programmes.",     status: "coming_soon" },
-  { slug: "new-zealand",    name: "New Zealand",   flag: "🇳🇿", headline: "Diploma and university pathway programmes.",     status: "coming_soon" },
-  { slug: "canada",         name: "Canada",        flag: "🇨🇦", headline: "College diploma and PGWP-eligible pathways.",    status: "coming_soon" },
-  { slug: "united-kingdom", name: "United Kingdom",flag: "🇬🇧", headline: "Foundation, diploma and degree pathways.",       status: "coming_soon" },
-  { slug: "europe",         name: "Europe",        flag: "🇪🇺", headline: "Diploma and bachelor pathways across the EU.",   status: "coming_soon" },
-];
 
 function StatusChip({ status }: { status: DestinationStatus }) {
   if (status === "live") {
@@ -49,8 +29,18 @@ function StatusChip({ status }: { status: DestinationStatus }) {
   );
 }
 
-export default function DestinationPathway() {
-  const visible = DESTINATIONS.filter(d => d.status !== "hidden");
+export default async function DestinationPathway() {
+  const adminDb = createAdminClient();
+  const { data } = await adminDb
+    .from("public_destinations")
+    .select("id, slug, name, flag, headline, destination_status, display_order")
+    .eq("status", "published")
+    .neq("destination_status", "hidden")
+    .order("display_order");
+
+  const destinations = (data ?? []) as DbDestination[];
+
+  if (destinations.length === 0) return null;
 
   return (
     <section className="relative public-section-blue overflow-hidden">
@@ -69,11 +59,11 @@ export default function DestinationPathway() {
         </Reveal>
 
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 md:gap-4">
-          {visible.map((d, i) => (
+          {destinations.map((d, i) => (
             <Reveal key={d.slug} delay={i * 50} className="h-full">
               <div
                 className={`relative h-full p-5 rounded-2.5xl border ${
-                  d.status === "live"
+                  d.destination_status === "live"
                     ? "bg-white border-emerald-500/30 ring-1 ring-emerald-500/15"
                     : "bg-white/60 border-slate-200"
                 } public-card-hover`}
@@ -86,7 +76,7 @@ export default function DestinationPathway() {
                   >
                     {d.flag}
                   </span>
-                  <StatusChip status={d.status} />
+                  <StatusChip status={d.destination_status} />
                 </div>
                 <p className="font-display text-lg text-navy-900 leading-tight mb-1.5">{d.name}</p>
                 <p className="font-body text-navy-800/55 text-xs leading-relaxed">{d.headline}</p>

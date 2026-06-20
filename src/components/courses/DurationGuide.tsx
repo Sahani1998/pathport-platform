@@ -1,40 +1,25 @@
 import { Clock, AlertCircle } from "lucide-react";
+import { createAdminClient } from "@/lib/supabase/admin-client";
 
-/**
- * DurationGuide — cream "rest" band. Honest, scannable table of programme
- * duration ranges across the four diploma tiers with full-time/part-time
- * variations. Includes the prominent "Actual duration varies by institution"
- * disclaimer required by the brief — no marketing exaggeration.
- */
+interface DurationRow {
+  level_label: string;
+  full_time: string;
+  part_time: string;
+  internship: string;
+}
 
-const DURATION_ROWS = [
-  {
-    level: "Diploma",
-    fullTime: "12 – 18 months",
-    partTime: "18 – 24 months",
-    internship: "Optional, structured",
-  },
-  {
-    level: "Advanced Diploma",
-    fullTime: "12 – 18 months",
-    partTime: "18 – 24 months",
-    internship: "Common (3 – 6 months)",
-  },
-  {
-    level: "Higher Diploma",
-    fullTime: "18 – 24 months",
-    partTime: "24 – 30 months",
-    internship: "Common (6 months)",
-  },
-  {
-    level: "Specialist Diploma",
-    fullTime: "6 – 12 months",
-    partTime: "9 – 15 months",
-    internship: "Rare (often working professionals)",
-  },
-];
+export default async function DurationGuide() {
+  const adminDb = createAdminClient();
+  const { data } = await adminDb
+    .from("public_page_sections")
+    .select("data, display_order")
+    .eq("section_key", "duration_guide")
+    .eq("status", "published")
+    .order("display_order");
 
-export default function DurationGuide() {
+  const rows = (data ?? []).map(r => r.data as DurationRow);
+
+  if (rows.length === 0) return null;
   return (
     <section className="relative cream-band">
       <div className="layout-shell section-airy">
@@ -63,14 +48,14 @@ export default function DurationGuide() {
               <div className="p-4 font-body text-navy-900 text-xs font-semibold uppercase tracking-wider">Part-time</div>
               <div className="p-4 font-body text-navy-900 text-xs font-semibold uppercase tracking-wider">Internship</div>
             </div>
-            {DURATION_ROWS.map((row, i) => (
+            {rows.map((row, i) => (
               <div
-                key={row.level}
-                className={`grid grid-cols-4 gap-0 ${i < DURATION_ROWS.length - 1 ? "border-b border-gold-500/15" : ""}`}
+                key={row.level_label}
+                className={`grid grid-cols-4 gap-0 ${i < rows.length - 1 ? "border-b border-gold-500/15" : ""}`}
               >
-                <div className="p-4 font-body font-semibold text-navy-900 text-sm">{row.level}</div>
-                <div className="p-4 font-body text-navy-800/75 text-sm">{row.fullTime}</div>
-                <div className="p-4 font-body text-navy-800/75 text-sm">{row.partTime}</div>
+                <div className="p-4 font-body font-semibold text-navy-900 text-sm">{row.level_label}</div>
+                <div className="p-4 font-body text-navy-800/75 text-sm">{row.full_time}</div>
+                <div className="p-4 font-body text-navy-800/75 text-sm">{row.part_time}</div>
                 <div className="p-4 font-body text-navy-800/75 text-sm">{row.internship}</div>
               </div>
             ))}
@@ -78,20 +63,20 @@ export default function DurationGuide() {
 
           {/* Mobile cards */}
           <div className="md:hidden divide-y divide-gold-500/15">
-            {DURATION_ROWS.map(row => (
-              <div key={row.level} className="p-5">
+            {rows.map(row => (
+              <div key={row.level_label} className="p-5">
                 <div className="flex items-center gap-2 mb-3">
                   <Clock className="w-4 h-4 text-gold-700" />
-                  <p className="font-body font-bold text-navy-900 text-sm">{row.level}</p>
+                  <p className="font-body font-bold text-navy-900 text-sm">{row.level_label}</p>
                 </div>
                 <dl className="space-y-2 text-sm">
                   <div className="flex justify-between gap-3">
                     <dt className="font-body text-navy-800/55">Full-time</dt>
-                    <dd className="font-body text-navy-900 font-medium text-right">{row.fullTime}</dd>
+                    <dd className="font-body text-navy-900 font-medium text-right">{row.full_time}</dd>
                   </div>
                   <div className="flex justify-between gap-3">
                     <dt className="font-body text-navy-800/55">Part-time</dt>
-                    <dd className="font-body text-navy-900 font-medium text-right">{row.partTime}</dd>
+                    <dd className="font-body text-navy-900 font-medium text-right">{row.part_time}</dd>
                   </div>
                   <div className="flex justify-between gap-3">
                     <dt className="font-body text-navy-800/55">Internship</dt>
