@@ -1,46 +1,29 @@
+import { createAdminClient } from "@/lib/supabase/admin-client";
 import Reveal from "@/components/ui/Reveal";
 import { GraduationCap, ChevronRight } from "lucide-react";
 
-/**
- * DiplomaProgressionPathway — soft-blue band. Visual progression diagram
- * showing how Singapore's private diploma qualifications stack from
- * Certificate up to Specialist Diploma. Honest about duration ranges.
- */
-const LEVELS = [
-  {
-    code: "CERT",
-    label: "Certificate",
-    duration: "3–6 months",
-    body: "Short, foundational. Often used to bridge into Diploma entry.",
-  },
-  {
-    code: "DIP",
-    label: "Diploma",
-    duration: "12–24 months",
-    body: "Industry-focused entry-level qualification. Most popular starting point.",
-  },
-  {
-    code: "ADV DIP",
-    label: "Advanced Diploma",
-    duration: "6–18 months",
-    body: "Builds on a Diploma. Specialisation in a chosen subject area.",
-  },
-  {
-    code: "HIGHER DIP",
-    label: "Higher Diploma",
-    duration: "12–24 months",
-    body: "Stepping stone to degree programmes. Strong university progression.",
-  },
-  {
-    code: "SPEC DIP",
-    label: "Specialist Diploma",
-    duration: "6–12 months",
-    body: "Applied, industry-aligned. Often for working professionals.",
-    highlight: true,
-  },
-];
+interface DbLevel {
+  id: string;
+  code: string;
+  label: string;
+  duration: string;
+  body: string;
+  is_highlighted: boolean;
+  display_order: number;
+}
 
-export default function DiplomaProgressionPathway() {
+export default async function DiplomaProgressionPathway() {
+  const adminDb = createAdminClient();
+  const { data } = await adminDb
+    .from("public_qualification_levels")
+    .select("id, code, label, duration, body, is_highlighted, display_order")
+    .eq("status", "published")
+    .order("display_order");
+
+  const levels = (data ?? []) as DbLevel[];
+
+  if (levels.length === 0) return null;
+
   return (
     <section className="relative public-section-blue">
       <div className="layout-shell section-airy">
@@ -59,15 +42,15 @@ export default function DiplomaProgressionPathway() {
 
         {/* Horizontal ladder on desktop, stacked on mobile */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-          {LEVELS.map(({ code, label, duration, body, highlight }, i) => (
-            <Reveal key={code} delay={i * 70} className="h-full">
+          {levels.map(({ id, code, label, duration, body, is_highlighted }, i) => (
+            <Reveal key={id} delay={i * 70} className="h-full">
               <div
                 className={`relative h-full p-5 rounded-2xl public-card public-card-hover ${
-                  highlight ? "ring-1 ring-gold-400/45" : ""
+                  is_highlighted ? "ring-1 ring-gold-400/45" : ""
                 }`}
               >
                 {/* Connector arrow — desktop, between cards */}
-                {i < LEVELS.length - 1 && (
+                {i < levels.length - 1 && (
                   <div
                     aria-hidden
                     className="hidden lg:flex absolute top-1/2 -right-3 z-10 -translate-y-1/2 w-6 h-6 rounded-full bg-white border border-slate-200 items-center justify-center"
