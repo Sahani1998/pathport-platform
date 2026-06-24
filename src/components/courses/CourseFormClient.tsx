@@ -2,7 +2,7 @@
 
 import { useState, type FormEvent, type ChangeEvent } from "react";
 import GoldButton from "@/components/ui/GoldButton";
-import { Loader2, ArrowLeft, ChevronDown, ChevronRight, ImageIcon, Video, Briefcase } from "lucide-react";
+import { Loader2, ArrowLeft, ChevronDown, ChevronRight, ImageIcon, Video, Briefcase, Info, CheckCircle2 } from "lucide-react";
 import type { Course } from "@/types/courses";
 import { COURSE_CATEGORIES } from "@/types/courses";
 import Link from "next/link";
@@ -20,6 +20,7 @@ interface CourseFormClientProps {
   collegeId:   string;
   collegeName: string;
   course?:     Course | null;
+  fromCreate?: boolean;
 }
 
 type FormState = {
@@ -63,7 +64,7 @@ function commas(val: string): string[] {
   return val.split(",").map(s => s.trim()).filter(Boolean);
 }
 
-export default function CourseFormClient({ collegeId, collegeName, course }: CourseFormClientProps) {
+export default function CourseFormClient({ collegeId, collegeName, course, fromCreate = false }: CourseFormClientProps) {
   const isEdit = !!course;
 
   const [form, setForm] = useState<FormState>({
@@ -153,11 +154,15 @@ export default function CourseFormClient({ collegeId, collegeName, course }: Cou
       });
 
       clearTimeout(timeoutId);
-      const json = await res.json() as { error?: string };
+      const json = await res.json() as { id?: string; error?: string };
 
       if (!res.ok) throw new Error(json.error ?? `Server error (${res.status})`);
 
-      window.location.href = "/dashboard/institution/courses";
+      if (!isEdit && json.id) {
+        window.location.href = `/dashboard/institution/courses/${json.id}/edit?from=create`;
+      } else {
+        window.location.href = "/dashboard/institution/courses";
+      }
     } catch (err: unknown) {
       clearTimeout(timeoutId);
       const isAbort = err instanceof Error && err.name === "AbortError";
@@ -185,6 +190,13 @@ export default function CourseFormClient({ collegeId, collegeName, course }: Cou
       </div>
 
       <form onSubmit={onSubmit} method="POST" action="#" noValidate className="space-y-6">
+
+        {fromCreate && (
+          <div className="flex items-center gap-3 p-4 rounded-xl bg-emerald-500/10 border border-emerald-400/25">
+            <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+            <p className="text-emerald-400 font-body text-sm">Course created. You can now upload media assets.</p>
+          </div>
+        )}
 
         {error && (
           <div className="p-4 rounded-xl bg-red-500/10 border border-red-400/30 text-red-400 font-body text-sm">
@@ -294,23 +306,26 @@ export default function CourseFormClient({ collegeId, collegeName, course }: Cou
 
           {showMedia && (
             <div className="p-5 space-y-5 border-t border-white/[0.07]">
-              <p className="text-white/35 font-body text-xs">
-                Add a thumbnail, intro video, brochure, and gallery to make your listing stand out. All fields are optional.
-              </p>
 
-              {/* Thumbnail */}
-              <div>
-                <label className={LABEL}>Thumbnail <span className={OPT_HINT}>(optional)</span></label>
-                {isEdit ? (
-                  <CourseThumbnailUpload courseId={course!.id} initialUrl={course!.thumbnail_url} />
-                ) : (
-                  <p className="text-white/30 font-body text-xs py-3 px-4 rounded-xl bg-white/[0.03] border border-white/[0.07]">
-                    Save the course first, then return here to upload a thumbnail.
+              {/* Info banner — create mode only */}
+              {!isEdit && (
+                <div className="flex items-start gap-2.5 p-3.5 rounded-xl bg-pathBlue-500/[0.08] border border-pathBlue-500/20">
+                  <Info className="w-4 h-4 text-pathBlue-400 flex-shrink-0 mt-0.5" />
+                  <p className="text-pathBlue-300/80 font-body text-xs leading-relaxed">
+                    Create the course first. After saving, you can upload a thumbnail, brochure, and gallery images.
                   </p>
-                )}
-              </div>
+                </div>
+              )}
 
-              {/* Video */}
+              {/* Thumbnail — edit only */}
+              {isEdit && (
+                <div>
+                  <label className={LABEL}>Thumbnail <span className={OPT_HINT}>(optional)</span></label>
+                  <CourseThumbnailUpload courseId={course!.id} initialUrl={course!.thumbnail_url} />
+                </div>
+              )}
+
+              {/* Video URL — always shown */}
               <div>
                 <label className={LABEL}>
                   <Video className="w-3.5 h-3.5 inline mr-1.5 text-white/40" />
@@ -319,29 +334,21 @@ export default function CourseFormClient({ collegeId, collegeName, course }: Cou
                 <input name="video_url" type="url" value={form.video_url} onChange={onChange} placeholder="https://youtube.com/watch?v=… or https://vimeo.com/…" className={INPUT} />
               </div>
 
-              {/* Brochure */}
-              <div>
-                <label className={LABEL}>Brochure (PDF) <span className={OPT_HINT}>(optional)</span></label>
-                {isEdit ? (
+              {/* Brochure — edit only */}
+              {isEdit && (
+                <div>
+                  <label className={LABEL}>Brochure (PDF) <span className={OPT_HINT}>(optional)</span></label>
                   <CourseBrochureUpload courseId={course!.id} initialUrl={course!.brochure_url} />
-                ) : (
-                  <p className="text-white/30 font-body text-xs py-3 px-4 rounded-xl bg-white/[0.03] border border-white/[0.07]">
-                    Save the course first, then return here to upload a brochure.
-                  </p>
-                )}
-              </div>
+                </div>
+              )}
 
-              {/* Gallery */}
-              <div>
-                <label className={cn(LABEL, "mb-2")}>Gallery Images <span className={OPT_HINT}>(optional)</span></label>
-                {isEdit ? (
+              {/* Gallery — edit only */}
+              {isEdit && (
+                <div>
+                  <label className={cn(LABEL, "mb-2")}>Gallery Images <span className={OPT_HINT}>(optional)</span></label>
                   <CourseGalleryManager courseId={course!.id} />
-                ) : (
-                  <p className="text-white/30 font-body text-xs py-3 px-4 rounded-xl bg-white/[0.03] border border-white/[0.07]">
-                    Save the course first, then return here to add gallery images.
-                  </p>
-                )}
-              </div>
+                </div>
+              )}
             </div>
           )}
         </div>

@@ -5,10 +5,14 @@ import type { Course } from "@/types/courses";
 
 export default async function EditCoursePage({
   params,
+  searchParams,
 }: {
-  params: Promise<{ id: string }>;
+  params:       Promise<{ id: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const { id }    = await params;
+  const { id }     = await params;
+  const sp         = await searchParams;
+  const fromCreate = sp.from === "create";
   const supabase  = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
@@ -36,6 +40,7 @@ export default async function EditCoursePage({
         collegeId={profile.college_id}
         collegeName={college?.name ?? "Your College"}
         course={course as Course}
+        fromCreate={fromCreate}
       />
     </div>
   );
