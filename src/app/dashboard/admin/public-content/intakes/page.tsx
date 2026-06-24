@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
+import React from "react";
 import { AlertCircle, Loader2, Plus, Trash2, ChevronDown, ChevronUp } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -302,9 +303,8 @@ export default function IntakesPage() {
               </thead>
               <tbody>
                 {rows.map((row) => (
-                  <>
+                  <React.Fragment key={row.id}>
                     <tr
-                      key={row.id}
                       className="border-b border-white/[0.04] hover:bg-white/[0.02] transition-colors cursor-pointer"
                       onClick={() => handleExpandRow(row)}
                     >
@@ -343,7 +343,7 @@ export default function IntakesPage() {
                     </tr>
 
                     {expandedId === row.id && (
-                      <tr key={row.id + "_edit"} className="border-b border-white/[0.04] bg-white/[0.02]">
+                      <tr className="border-b border-white/[0.04] bg-white/[0.02]">
                         <td colSpan={5} className="px-4 py-4">
                           <div className="space-y-3">
                             <p className="font-body text-xs font-semibold text-white/50 mb-3">Edit Intake</p>
@@ -363,7 +363,7 @@ export default function IntakesPage() {
                         </td>
                       </tr>
                     )}
-                  </>
+                  </React.Fragment>
                 ))}
               </tbody>
             </table>

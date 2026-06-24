@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
-import { AlertCircle, Loader2, Save, RefreshCw } from "lucide-react";
+import { AlertCircle, Loader2, Save, RefreshCw, Database, ShieldX, ServerCrash } from "lucide-react";
 
 interface SettingRow {
   key: string;
@@ -13,6 +13,13 @@ interface SettingRow {
   group_name: string;
   is_public: boolean;
   updated_at: string;
+}
+
+type ErrorKind = "missing_table" | "permission_denied" | "empty_rows" | "timeout" | "unknown";
+
+interface FetchError {
+  kind: ErrorKind;
+  message: string;
 }
 
 const GROUP_TITLES: Record<string, { title: string; description: string }> = {
@@ -32,17 +39,84 @@ const GROUP_TITLES: Record<string, { title: string; description: string }> = {
 
 const GROUP_ORDER = ["contact", "social", "general"];
 
+const ERROR_META: Record<ErrorKind, { title: string; icon: React.ElementType; guidance: React.ReactNode }> = {
+  missing_table: {
+    title: "Table not set up — migration required",
+    icon: Database,
+    guidance: (
+      <>
+        <p className="text-white/50 font-body text-sm">The <code className="text-gold-300">site_settings</code> table does not exist in your Supabase project.</p>
+        <p className="text-white/40 font-body text-xs mt-2">
+          Run <code className="text-gold-300">src/lib/supabase/sprint31b_settings_and_intakes.sql</code> in the Supabase SQL Editor. It creates the table, enables RLS, and seeds the 8 default rows.
+        </p>
+      </>
+    ),
+  },
+  permission_denied: {
+    title: "Admin permission denied — RLS issue",
+    icon: ShieldX,
+    guidance: (
+      <>
+        <p className="text-white/50 font-body text-sm">Your account does not have the <code className="text-gold-300">admin</code> role in <code className="text-gold-300">profiles</code>, or the RLS policy is missing.</p>
+        <p className="text-white/40 font-body text-xs mt-2">
+          Check: <code className="text-gold-300">SELECT role FROM profiles WHERE id = auth.uid();</code> — it must return <code className="text-gold-300">admin</code>.
+          If the policy is missing, re-run the migration SQL.
+        </p>
+      </>
+    ),
+  },
+  empty_rows: {
+    title: "Table exists but has no settings rows",
+    icon: Database,
+    guidance: (
+      <>
+        <p className="text-white/50 font-body text-sm">The <code className="text-gold-300">site_settings</code> table exists but contains no rows.</p>
+        <p className="text-white/40 font-body text-xs mt-2">
+          Re-run the seed section of <code className="text-gold-300">sprint31b_settings_and_intakes.sql</code> (the <code className="text-gold-300">INSERT INTO site_settings</code> block) — all inserts are <code className="text-gold-300">ON CONFLICT DO NOTHING</code> so it is safe to re-run.
+        </p>
+      </>
+    ),
+  },
+  timeout: {
+    title: "Request timed out — Supabase unreachable",
+    icon: ServerCrash,
+    guidance: (
+      <>
+        <p className="text-white/50 font-body text-sm">The query to <code className="text-gold-300">site_settings</code> did not respond within 15 seconds.</p>
+        <p className="text-white/40 font-body text-xs mt-2">
+          Check your Supabase project URL and anon key in <code className="text-gold-300">.env.local</code>. Make sure the project is not paused.
+        </p>
+      </>
+    ),
+  },
+  unknown: {
+    title: "Unexpected error",
+    icon: AlertCircle,
+    guidance: null,
+  },
+};
+
+function classifyError(code: string | undefined, message: string): ErrorKind {
+  if (code === "42P01") return "missing_table";
+  if (code === "42501" || code === "PGRST301" || message.toLowerCase().includes("permission denied")) return "permission_denied";
+  return "unknown";
+}
+
 export default function SiteSettingsPage() {
-  const [rows,    setRows]    = useState<SettingRow[]>([]);
-  const [drafts,  setDrafts]  = useState<Record<string, string>>({});
-  const [loading, setLoading] = useState(true);
-  const [error,   setError]   = useState<string | null>(null);
+  const [rows,      setRows]      = useState<SettingRow[]>([]);
+  const [drafts,    setDrafts]    = useState<Record<string, string>>({});
+  const [loading,   setLoading]   = useState(true);
+  const [fetchErr,  setFetchErr]  = useState<FetchError | null>(null);
   const [savingKey, setSavingKey] = useState<string | null>(null);
   const [savedKey,  setSavedKey]  = useState<string | null>(null);
 
   const fetchRows = useCallback(async () => {
     setLoading(true);
-    setError(null);
+    setFetchErr(null);
+
+    // Abort after 15 s so the spinner never hangs indefinitely
+    const controller = new AbortController();
+    const timeoutId  = setTimeout(() => controller.abort(), 15_000);
 
     try {
       const supabase = createClient();
@@ -50,25 +124,36 @@ export default function SiteSettingsPage() {
         .from("site_settings")
         .select("*")
         .order("group_name", { ascending: true })
-        .order("key",        { ascending: true });
+        .order("key",        { ascending: true })
+        .abortSignal(controller.signal);
 
       if (fetchError) {
-        if (fetchError.code === "42P01") {
-          setError("Table not found. Run migration sprint31b_settings_and_intakes.sql in Supabase SQL Editor.");
-        } else {
-          setError(`Query failed: ${fetchError.message} (${fetchError.code})`);
-        }
+        const kind = classifyError(fetchError.code, fetchError.message);
+        setFetchErr({ kind, message: `${fetchError.message} (${fetchError.code})` });
+        setRows([]);
+        setDrafts({});
       } else {
         const fetched = (data ?? []) as SettingRow[];
+        if (fetched.length === 0) {
+          setFetchErr({ kind: "empty_rows", message: "Query succeeded but returned 0 rows." });
+        }
         setRows(fetched);
         const draftMap: Record<string, string> = {};
         for (const r of fetched) draftMap[r.key] = r.value;
         setDrafts(draftMap);
       }
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      setError(`Unexpected error: ${msg}`);
+      const isAbort = err instanceof Error && err.name === "AbortError";
+      if (isAbort) {
+        setFetchErr({ kind: "timeout", message: "Request aborted after 15 s." });
+      } else {
+        const msg = err instanceof Error ? err.message : String(err);
+        setFetchErr({ kind: "unknown", message: msg });
+      }
+      setRows([]);
+      setDrafts({});
     } finally {
+      clearTimeout(timeoutId);
       setLoading(false);
     }
   }, []);
@@ -97,7 +182,7 @@ export default function SiteSettingsPage() {
     }
   };
 
-  const inputCls = "w-full bg-white/[0.05] border border-white/[0.09] rounded-xl px-3 py-2 font-body text-sm text-white placeholder-white/25 focus:outline-none focus:border-gold-400/50 transition-all";
+  const inputCls  = "w-full bg-white/[0.05] border border-white/[0.09] rounded-xl px-3 py-2 font-body text-sm text-white placeholder-white/25 focus:outline-none focus:border-gold-400/50 transition-all";
   const btnPrimary = "inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-gold-500/20 border border-gold-400/40 text-gold-300 font-body text-xs font-semibold hover:bg-gold-500/30 transition-all disabled:opacity-50";
 
   // Group rows for rendering
@@ -110,6 +195,9 @@ export default function SiteSettingsPage() {
     ...GROUP_ORDER.filter(g => groups[g]),
     ...Object.keys(groups).filter(g => !GROUP_ORDER.includes(g)),
   ];
+
+  const errMeta = fetchErr ? ERROR_META[fetchErr.kind] : null;
+  const ErrIcon = errMeta?.icon ?? AlertCircle;
 
   return (
     <div className="space-y-6 max-w-7xl">
@@ -125,7 +213,12 @@ export default function SiteSettingsPage() {
         <div>
           <h2 className="font-display text-3xl text-white mb-1">Site Settings</h2>
           <p className="text-white/45 font-body text-sm">
-            {rows.length} keys · table = site_settings · global contact &amp; social config
+            {loading
+              ? "Loading… · table = site_settings"
+              : fetchErr
+                ? `Error · table = site_settings`
+                : `${rows.length} key${rows.length !== 1 ? "s" : ""} · table = site_settings · global contact & social config`
+            }
           </p>
         </div>
         <button
@@ -138,25 +231,28 @@ export default function SiteSettingsPage() {
         </button>
       </div>
 
-      {error && (
-        <div className="flex items-start gap-3 p-5 rounded-2xl bg-gold-400/[0.07] border border-gold-400/25">
-          <AlertCircle className="w-5 h-5 text-gold-400 flex-shrink-0 mt-0.5" />
-          <div>
-            <p className="text-white/75 font-body text-sm font-semibold mb-1">Table not set up</p>
-            <p className="text-white/50 font-body text-sm">{error}</p>
-            <p className="text-white/40 font-body text-xs mt-2">
-              File: <code className="text-gold-300">src/lib/supabase/sprint31b_settings_and_intakes.sql</code>
-            </p>
-          </div>
-        </div>
-      )}
-
-      {loading ? (
+      {/* ── State: loading ─────────────────────────────────────────── */}
+      {loading && (
         <div className="flex items-center justify-center py-20 gap-3 text-white/35">
           <Loader2 className="w-5 h-5 animate-spin" />
           <span className="font-body text-sm">Loading settings…</span>
         </div>
-      ) : (
+      )}
+
+      {/* ── State: error ───────────────────────────────────────────── */}
+      {!loading && fetchErr && (
+        <div className="flex items-start gap-3 p-5 rounded-2xl bg-gold-400/[0.07] border border-gold-400/25">
+          <ErrIcon className="w-5 h-5 text-gold-400 flex-shrink-0 mt-0.5" />
+          <div className="space-y-2">
+            <p className="text-white/75 font-body text-sm font-semibold">{errMeta?.title}</p>
+            {errMeta?.guidance}
+            <p className="text-white/25 font-mono text-[10px] pt-1">{fetchErr.message}</p>
+          </div>
+        </div>
+      )}
+
+      {/* ── State: loaded (rows present) ───────────────────────────── */}
+      {!loading && !fetchErr && rows.length > 0 && (
         <div className="space-y-5">
           {orderedGroups.map(groupName => {
             const meta = GROUP_TITLES[groupName] ?? { title: groupName, description: "" };
