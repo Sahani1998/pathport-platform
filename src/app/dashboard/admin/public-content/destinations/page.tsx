@@ -84,14 +84,25 @@ export default function DestinationsPage() {
     setLoading(true);
     setError(null);
 
+    // Hard ceiling so a stalled query can never leave the page on an infinite
+    // "Loading…" spinner — surface an actionable error instead.
+    const TIMEOUT_MS = 10_000;
+    let timed_out = false;
+    const timeout = new Promise<never>((_, reject) =>
+      setTimeout(() => { timed_out = true; reject(new Error(`Timed out after ${TIMEOUT_MS / 1000}s`)); }, TIMEOUT_MS)
+    );
+
     try {
       const supabase = createClient();
       console.log("[Destinations] querying public_destinations…");
 
-      const { data, error: fetchError } = await supabase
-        .from("public_destinations")
-        .select("*")
-        .order("display_order", { ascending: true });
+      const { data, error: fetchError } = await Promise.race([
+        supabase
+          .from("public_destinations")
+          .select("*")
+          .order("display_order", { ascending: true }),
+        timeout,
+      ]);
 
       console.log(
         "[Destinations] result — rows:", data?.length ?? 0,
@@ -111,7 +122,9 @@ export default function DestinationsPage() {
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       console.error("[Destinations] unexpected exception:", msg);
-      setError(`Unexpected error: ${msg}`);
+      setError(timed_out
+        ? "Query timed out — Supabase did not respond. Check your connection and try Refresh."
+        : `Unexpected error: ${msg}`);
     } finally {
       setLoading(false);
     }
