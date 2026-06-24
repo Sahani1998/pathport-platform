@@ -4,151 +4,175 @@ import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
-import { AlertCircle, Globe, GraduationCap, LayoutGrid, BookOpen, Loader2, CalendarRange, Settings as SettingsIcon } from "lucide-react";
+import {
+  AlertCircle,
+  Globe,
+  GraduationCap,
+  LayoutGrid,
+  BookOpen,
+  Loader2,
+  CalendarRange,
+  Settings as SettingsIcon,
+  RefreshCw,
+} from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-interface ContentCard {
+type CardState =
+  | { kind: "idle" }
+  | { kind: "loading" }
+  | { kind: "ok"; count: number }
+  | { kind: "missing_table"; message: string }
+  | { kind: "timeout" }
+  | { kind: "error"; code: string | null; message: string };
+
+type CountTask =
+  | { key: string; kind: "table";   table: string }
+  | { key: string; kind: "section"; sectionKey: string };
+
+interface CardSpec {
+  key: string;
   title: string;
   description: string;
   icon: React.ElementType;
   href: string;
-  table: string;
-  count: number | null;
-  error: boolean;
+  tableLabel: string;
+  task: CountTask;
+}
+
+// ─── Card specs (single source of truth) ──────────────────────────────────────
+
+const CARDS: CardSpec[] = [
+  {
+    key:         "public_destinations",
+    title:       "Destinations",
+    description: "Countries shown on the homepage DestinationPathway section. Control live/coming soon/hidden status per destination.",
+    icon:        Globe,
+    href:        "/dashboard/admin/public-content/destinations",
+    tableLabel:  "public_destinations",
+    task:        { key: "public_destinations", kind: "table", table: "public_destinations" },
+  },
+  {
+    key:         "public_qualification_levels",
+    title:       "Qualification Levels",
+    description: "Diploma progression pathway cards shown on /colleges. Control labels, durations, body copy, and highlighted state.",
+    icon:        GraduationCap,
+    href:        "/dashboard/admin/public-content/qualification-levels",
+    tableLabel:  "public_qualification_levels",
+    task:        { key: "public_qualification_levels", kind: "table", table: "public_qualification_levels" },
+  },
+  {
+    key:         "public_pathway_cards",
+    title:       "Pathway Cards",
+    description: "DiplomaTypesExplained cards on /courses. Edit icons, badges, subject lists, and progression copy.",
+    icon:        BookOpen,
+    href:        "/dashboard/admin/public-content/pathway-cards",
+    tableLabel:  "public_pathway_cards",
+    task:        { key: "public_pathway_cards", kind: "table", table: "public_pathway_cards" },
+  },
+  {
+    key:         "public_page_sections",
+    title:       "Duration Guide",
+    description: "Study duration table rows for the DurationGuide section. Edit full-time, part-time, and internship fields per level.",
+    icon:        LayoutGrid,
+    href:        "/dashboard/admin/public-content/duration-guide",
+    tableLabel:  "public_page_sections",
+    task:        { key: "public_page_sections", kind: "table", table: "public_page_sections" },
+  },
+  {
+    key:         "intake_options",
+    title:       "Intake Options",
+    description: "Intake dates shown in the student interest form. Add or retire intakes with no deploy. Past intakes should be archived.",
+    icon:        CalendarRange,
+    href:        "/dashboard/admin/public-content/intakes",
+    tableLabel:  "public_page_sections (section_key=intake_options)",
+    task:        { key: "intake_options", kind: "section", sectionKey: "intake_options" },
+  },
+  {
+    key:         "site_settings",
+    title:       "Site Settings",
+    description: "Global contact details: WhatsApp number, support email, social links. Read by footer, JSON-LD, interest form, and the floating advisor widget.",
+    icon:        SettingsIcon,
+    href:        "/dashboard/admin/public-content/site-settings",
+    tableLabel:  "site_settings",
+    task:        { key: "site_settings", kind: "table", table: "site_settings" },
+  },
+];
+
+// ─── Per-card count fetch with 10 s timeout ───────────────────────────────────
+
+async function fetchCount(task: CountTask): Promise<CardState> {
+  const controller = new AbortController();
+  const timeoutId  = setTimeout(() => controller.abort(), 10_000);
+
+  try {
+    const supabase = createClient();
+    const query = task.kind === "table"
+      ? supabase.from(task.table).select("id", { count: "exact", head: true })
+      : supabase.from("public_page_sections").select("id", { count: "exact", head: true }).eq("section_key", task.sectionKey);
+
+    const { count, error } = await query.abortSignal(controller.signal);
+
+    if (error) {
+      if (error.code === "42P01") {
+        return { kind: "missing_table", message: error.message };
+      }
+      console.warn(`[PublicContent] ${task.key} query error:`, error.code, error.message);
+      return { kind: "error", code: error.code ?? null, message: error.message };
+    }
+    return { kind: "ok", count: count ?? 0 };
+  } catch (err: unknown) {
+    if (err instanceof Error && err.name === "AbortError") {
+      console.warn(`[PublicContent] ${task.key} timed out after 10 s`);
+      return { kind: "timeout" };
+    }
+    const msg = err instanceof Error ? err.message : String(err);
+    console.warn(`[PublicContent] ${task.key} unexpected:`, msg);
+    return { kind: "error", code: null, message: msg };
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function PublicContentOverviewPage() {
-  const [counts, setCounts] = useState<Record<string, number | null>>({
-    public_destinations: null,
-    public_qualification_levels: null,
-    public_pathway_cards: null,
-    public_page_sections: null,
-    intake_options: null,
-    site_settings: null,
-  });
-  const [errors, setErrors] = useState<Record<string, boolean>>({});
-  const [loading, setLoading] = useState(true);
-  const [anyError, setAnyError] = useState(false);
+  const [states, setStates] = useState<Record<string, CardState>>(
+    () => Object.fromEntries(CARDS.map(c => [c.key, { kind: "idle" } as CardState]))
+  );
 
-  const fetchCounts = useCallback(async () => {
-    setLoading(true);
-    setAnyError(false);
+  const fetchAll = useCallback(async () => {
+    setStates(prev => {
+      const next: Record<string, CardState> = { ...prev };
+      for (const c of CARDS) next[c.key] = { kind: "loading" };
+      return next;
+    });
 
-    const supabase = createClient();
-
-    type CountTask =
-      | { kind: "table"; key: string; table: string }
-      | { kind: "section"; key: string; sectionKey: string };
-
-    const tasks: CountTask[] = [
-      { kind: "table",   key: "public_destinations",        table: "public_destinations"        },
-      { kind: "table",   key: "public_qualification_levels",table: "public_qualification_levels"},
-      { kind: "table",   key: "public_pathway_cards",       table: "public_pathway_cards"       },
-      { kind: "table",   key: "public_page_sections",       table: "public_page_sections"       },
-      { kind: "section", key: "intake_options",             sectionKey: "intake_options"        },
-      { kind: "table",   key: "site_settings",              table: "site_settings"              },
-    ];
-
-    const results = await Promise.all(
-      tasks.map(async (t) => {
-        try {
-          if (t.kind === "section") {
-            const { count, error } = await supabase
-              .from("public_page_sections")
-              .select("id", { count: "exact", head: true })
-              .eq("section_key", t.sectionKey);
-            if (error) return { key: t.key, count: null, error: true };
-            return { key: t.key, count: count ?? 0, error: false };
-          }
-          const { count, error } = await supabase
-            .from(t.table)
-            .select("id", { count: "exact", head: true });
-          if (error) return { key: t.key, count: null, error: true };
-          return { key: t.key, count: count ?? 0, error: false };
-        } catch (err) {
-          console.error(`[PublicContent] ${t.key} exception:`, err);
-          return { key: t.key, count: null, error: true };
-        }
-      })
+    // Each fetchCount() always resolves with a CardState — it never throws —
+    // so Promise.all would also work, but allSettled is the safer contract.
+    const results = await Promise.allSettled(
+      CARDS.map(async (c) => ({ key: c.key, state: await fetchCount(c.task) }))
     );
 
-    const newCounts: Record<string, number | null> = {};
-    const newErrors: Record<string, boolean> = {};
-    let hasError = false;
-
-    for (const r of results) {
-      newCounts[r.key] = r.count;
-      newErrors[r.key] = r.error;
-      if (r.error) hasError = true;
-    }
-
-    setCounts(newCounts);
-    setErrors(newErrors);
-    setAnyError(hasError);
-    setLoading(false);
+    setStates(prev => {
+      const next: Record<string, CardState> = { ...prev };
+      for (const r of results) {
+        if (r.status === "fulfilled") {
+          next[r.value.key] = r.value.state;
+        } else {
+          // Defensive: should be unreachable since fetchCount catches.
+          console.warn("[PublicContent] settle rejected:", r.reason);
+        }
+      }
+      return next;
+    });
   }, []);
 
-  useEffect(() => { fetchCounts(); }, [fetchCounts]);
+  useEffect(() => { fetchAll(); }, [fetchAll]);
 
-  const cards: ContentCard[] = [
-    {
-      title: "Destinations",
-      description: "Countries shown on the homepage DestinationPathway section. Control live/coming soon/hidden status per destination.",
-      icon: Globe,
-      href: "/dashboard/admin/public-content/destinations",
-      table: "public_destinations",
-      count: counts.public_destinations,
-      error: errors.public_destinations ?? false,
-    },
-    {
-      title: "Qualification Levels",
-      description: "Diploma progression pathway cards shown on /colleges. Control labels, durations, body copy, and highlighted state.",
-      icon: GraduationCap,
-      href: "/dashboard/admin/public-content/qualification-levels",
-      table: "public_qualification_levels",
-      count: counts.public_qualification_levels,
-      error: errors.public_qualification_levels ?? false,
-    },
-    {
-      title: "Pathway Cards",
-      description: "DiplomaTypesExplained cards on /courses. Edit icons, badges, subject lists, and progression copy.",
-      icon: BookOpen,
-      href: "/dashboard/admin/public-content/pathway-cards",
-      table: "public_pathway_cards",
-      count: counts.public_pathway_cards,
-      error: errors.public_pathway_cards ?? false,
-    },
-    {
-      title: "Duration Guide",
-      description: "Study duration table rows for the DurationGuide section. Edit full-time, part-time, and internship fields per level.",
-      icon: LayoutGrid,
-      href: "/dashboard/admin/public-content/duration-guide",
-      table: "public_page_sections",
-      count: counts.public_page_sections,
-      error: errors.public_page_sections ?? false,
-    },
-    {
-      title: "Intake Options",
-      description: "Intake dates shown in the student interest form. Add or retire intakes with no deploy. Past intakes should be archived.",
-      icon: CalendarRange,
-      href: "/dashboard/admin/public-content/intakes",
-      table: "public_page_sections (section_key=intake_options)",
-      count: counts.intake_options,
-      error: errors.intake_options ?? false,
-    },
-    {
-      title: "Site Settings",
-      description: "Global contact details: WhatsApp number, support email, social links. Read by footer, JSON-LD, interest form, and the floating advisor widget.",
-      icon: SettingsIcon,
-      href: "/dashboard/admin/public-content/site-settings",
-      table: "site_settings",
-      count: counts.site_settings,
-      error: errors.site_settings ?? false,
-    },
-  ];
+  const anyLoading       = Object.values(states).some(s => s.kind === "loading");
+  const missingTables    = CARDS.filter(c => states[c.key]?.kind === "missing_table").map(c => c.tableLabel);
+  const hasMissingTables = missingTables.length > 0;
 
   return (
     <div className="space-y-6 max-w-7xl">
@@ -162,29 +186,31 @@ export default function PublicContentOverviewPage() {
           </p>
         </div>
         <button
-          onClick={fetchCounts}
-          disabled={loading}
+          onClick={fetchAll}
+          disabled={anyLoading}
           className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white/[0.05] border border-white/[0.09] text-white/55 hover:text-white/80 hover:border-white/20 font-body text-sm transition-all disabled:opacity-50"
         >
-          <Loader2 className={cn("w-3.5 h-3.5", loading && "animate-spin")} />
-          Refresh
+          <RefreshCw className={cn("w-3.5 h-3.5", anyLoading && "animate-spin")} />
+          {anyLoading ? "Refreshing…" : "Refresh"}
         </button>
       </div>
 
-      {/* ── Error banner ────────────────────────────────────────────── */}
-      {anyError && (
+      {/* ── Migration banner: only for genuinely missing tables ─────── */}
+      {hasMissingTables && (
         <div className="flex items-start gap-3 p-5 rounded-2xl bg-gold-400/[0.07] border border-gold-400/25">
           <AlertCircle className="w-5 h-5 text-gold-400 flex-shrink-0 mt-0.5" />
-          <div>
-            <p className="text-white/75 font-body text-sm font-semibold mb-1">Migration not yet applied</p>
+          <div className="space-y-2">
+            <p className="text-white/75 font-body text-sm font-semibold">Migration not yet applied</p>
             <p className="text-white/50 font-body text-sm">
-              One or more public content tables are missing. Run the migration in Supabase SQL Editor.
+              The following table{missingTables.length === 1 ? " is" : "s are"} missing:{" "}
+              {missingTables.map(t => <code key={t} className="text-gold-300 mr-1.5">{t}</code>)}
             </p>
-            <p className="text-white/40 font-body text-xs mt-2">
-              Files:{" "}
+            <p className="text-white/40 font-body text-xs">
+              Run{" "}
               <code className="text-gold-300">src/lib/supabase/sprint31_public_content.sql</code>
               {" "}and{" "}
               <code className="text-gold-300">sprint31b_settings_and_intakes.sql</code>
+              {" "}in the Supabase SQL Editor.
             </p>
           </div>
         </div>
@@ -192,11 +218,12 @@ export default function PublicContentOverviewPage() {
 
       {/* ── Content cards grid ──────────────────────────────────────── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {cards.map((card) => {
-          const Icon = card.icon;
+        {CARDS.map((card) => {
+          const Icon  = card.icon;
+          const state = states[card.key] ?? { kind: "idle" };
           return (
             <div
-              key={card.table}
+              key={card.key}
               className="bg-white/[0.03] border border-white/[0.07] rounded-2xl p-6 flex flex-col gap-4"
             >
               <div className="flex items-start justify-between gap-3">
@@ -207,25 +234,14 @@ export default function PublicContentOverviewPage() {
                   <h3 className="font-display text-lg text-white/90">{card.title}</h3>
                 </div>
 
-                {/* Count pill */}
-                {loading ? (
-                  <div className="px-2.5 py-0.5 rounded-full bg-white/[0.05] border border-white/[0.08]">
-                    <Loader2 className="w-3 h-3 text-white/30 animate-spin" />
-                  </div>
-                ) : card.error ? (
-                  <span className="px-2.5 py-0.5 rounded-full bg-gold-400/15 text-gold-400 border border-gold-400/30 font-body text-xs font-semibold">
-                    —
-                  </span>
-                ) : (
-                  <span className="px-2.5 py-0.5 rounded-full bg-white/[0.06] text-white/55 border border-white/[0.08] font-body text-xs font-semibold">
-                    {card.count ?? 0} rows
-                  </span>
-                )}
+                <CountPill state={state} />
               </div>
 
               <p className="font-body text-sm text-white/45 leading-relaxed flex-1">
                 {card.description}
               </p>
+
+              <p className="font-mono text-[10px] text-white/25">{card.tableLabel}</p>
 
               <Link
                 href={card.href}
@@ -239,4 +255,51 @@ export default function PublicContentOverviewPage() {
       </div>
     </div>
   );
+}
+
+// ─── Count pill — pure state→pixel mapping ────────────────────────────────────
+
+function CountPill({ state }: { state: CardState }) {
+  switch (state.kind) {
+    case "idle":
+    case "loading":
+      return (
+        <div className="px-2.5 py-0.5 rounded-full bg-white/[0.05] border border-white/[0.08]">
+          <Loader2 className="w-3 h-3 text-white/30 animate-spin" />
+        </div>
+      );
+    case "ok":
+      return (
+        <span className="px-2.5 py-0.5 rounded-full bg-white/[0.06] text-white/55 border border-white/[0.08] font-body text-xs font-semibold whitespace-nowrap">
+          {state.count} row{state.count === 1 ? "" : "s"}
+        </span>
+      );
+    case "missing_table":
+      return (
+        <span
+          className="px-2.5 py-0.5 rounded-full bg-gold-400/15 text-gold-400 border border-gold-400/30 font-body text-xs font-semibold whitespace-nowrap"
+          title="Table not found — run migration"
+        >
+          Check table
+        </span>
+      );
+    case "timeout":
+      return (
+        <span
+          className="px-2.5 py-0.5 rounded-full bg-white/[0.06] text-white/45 border border-white/[0.12] font-body text-xs font-semibold whitespace-nowrap"
+          title="Query timed out after 10 s — Supabase unreachable"
+        >
+          Timeout
+        </span>
+      );
+    case "error":
+      return (
+        <span
+          className="px-2.5 py-0.5 rounded-full bg-white/[0.06] text-white/45 border border-white/[0.12] font-body text-xs font-semibold whitespace-nowrap"
+          title={`${state.code ?? "ERR"} — ${state.message}`}
+        >
+          Unavailable
+        </span>
+      );
+  }
 }
