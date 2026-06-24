@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
@@ -141,18 +141,31 @@ export default function PublicContentOverviewPage() {
     () => Object.fromEntries(CARDS.map(c => [c.key, { kind: "idle" } as CardState]))
   );
 
+  // Each fetchAll bumps reqIdRef. State updates from a stale request are dropped,
+  // so overlapping invocations (e.g. StrictMode double-mount, Refresh while
+  // initial load is in flight) can never leave cards stuck on "loading".
+  const reqIdRef = useRef(0);
+  const mountedRef = useRef(true);
+  useEffect(() => () => { mountedRef.current = false; }, []);
+
   const fetchAll = useCallback(async () => {
+    const myReqId = ++reqIdRef.current;
+
     setStates(prev => {
       const next: Record<string, CardState> = { ...prev };
       for (const c of CARDS) next[c.key] = { kind: "loading" };
       return next;
     });
 
-    // Each fetchCount() always resolves with a CardState — it never throws —
-    // so Promise.all would also work, but allSettled is the safer contract.
+    // fetchCount() always resolves with a CardState — it never throws — but
+    // allSettled is the safer contract: a thrown rejection cannot wedge the
+    // entire batch.
     const results = await Promise.allSettled(
       CARDS.map(async (c) => ({ key: c.key, state: await fetchCount(c.task) }))
     );
+
+    // Drop results if a newer fetch has started, or component unmounted.
+    if (!mountedRef.current || myReqId !== reqIdRef.current) return;
 
     setStates(prev => {
       const next: Record<string, CardState> = { ...prev };
@@ -162,6 +175,15 @@ export default function PublicContentOverviewPage() {
         } else {
           // Defensive: should be unreachable since fetchCount catches.
           console.warn("[PublicContent] settle rejected:", r.reason);
+          // Don't leave the card stuck on loading — flip it to error.
+        }
+      }
+      // Belt-and-braces: any card still in "loading" at this point is a bug;
+      // flip it to error so the spinner never hangs indefinitely.
+      for (const c of CARDS) {
+        if (next[c.key]?.kind === "loading") {
+          console.warn(`[PublicContent] ${c.key} settled with no state — forcing error.`);
+          next[c.key] = { kind: "error", code: null, message: "No state returned" };
         }
       }
       return next;
