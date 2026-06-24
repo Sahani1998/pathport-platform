@@ -20,6 +20,9 @@ export interface SiteSettings {
   social_instagram: string;
   social_facebook: string;
   social_linkedin: string;
+  social_youtube: string;
+  social_x: string;          // formerly Twitter
+  social_tiktok: string;
 }
 
 // Defaults mirror the values previously hardcoded across the site. These are
@@ -33,6 +36,9 @@ export const CONTACT_DEFAULTS: SiteSettings = {
   social_instagram: "",
   social_facebook:  "",
   social_linkedin:  "",
+  social_youtube:   "",
+  social_x:         "",
+  social_tiktok:    "",
 };
 
 /**
