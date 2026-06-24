@@ -38,6 +38,9 @@ export const MEDIA_STATUS_META: Record<MediaStatus, { label: string; colour: str
 export const IMAGE_MIME_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"] as const;
 export const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB
 
+export const PDF_MIME_TYPE = "application/pdf";
+export const MAX_PDF_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
+
 export function fmtFileSize(bytes: number): string {
   if (bytes < 1024)         return `${bytes} B`;
   if (bytes < 1024 * 1024)  return `${(bytes / 1024).toFixed(1)} KB`;
