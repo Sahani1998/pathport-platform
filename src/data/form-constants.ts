@@ -74,9 +74,12 @@ export const COURSE_OPTIONS = [
 ] as const;
 
 // ─── Intake Options ───────────────────────────────────────────────────────────
+// Fallback only. The live list is admin-managed in public_page_sections
+// (section_key='intake_options') and fetched at runtime by the interest form.
+// Kept in sync as a safe default for when the DB is unreachable.
+// NOTE: past/unreachable intakes (e.g. July 2026) are intentionally excluded.
 
 export const INTAKE_OPTIONS = [
-  "July 2026",
   "October 2026",
   "January 2027",
   "April 2027",

@@ -1,4 +1,4 @@
-import Image from "next/image";
+import SafeImage from "@/components/ui/SafeImage";
 
 interface PhotoBandProps {
   /** Image URL. Unsplash, Supabase Storage, or any absolute URL. */
@@ -41,7 +41,7 @@ export default function PhotoBand({
 }: PhotoBandProps) {
   return (
     <section className={`relative w-full ${HEIGHTS[height]} overflow-hidden bg-navy-900`}>
-      <Image
+      <SafeImage
         src={src}
         alt={alt}
         fill

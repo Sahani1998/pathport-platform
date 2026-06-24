@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
-import { AlertCircle, Globe, GraduationCap, LayoutGrid, BookOpen, Loader2 } from "lucide-react";
+import { AlertCircle, Globe, GraduationCap, LayoutGrid, BookOpen, Loader2, CalendarRange, Settings as SettingsIcon } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -26,6 +26,8 @@ export default function PublicContentOverviewPage() {
     public_qualification_levels: null,
     public_pathway_cards: null,
     public_page_sections: null,
+    intake_options: null,
+    site_settings: null,
   });
   const [errors, setErrors] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
@@ -37,32 +39,38 @@ export default function PublicContentOverviewPage() {
 
     const supabase = createClient();
 
-    const tables = [
-      "public_destinations",
-      "public_qualification_levels",
-      "public_pathway_cards",
-      "public_page_sections",
-    ] as const;
+    type CountTask =
+      | { kind: "table"; key: string; table: string }
+      | { kind: "section"; key: string; sectionKey: string };
+
+    const tasks: CountTask[] = [
+      { kind: "table",   key: "public_destinations",        table: "public_destinations"        },
+      { kind: "table",   key: "public_qualification_levels",table: "public_qualification_levels"},
+      { kind: "table",   key: "public_pathway_cards",       table: "public_pathway_cards"       },
+      { kind: "table",   key: "public_page_sections",       table: "public_page_sections"       },
+      { kind: "section", key: "intake_options",             sectionKey: "intake_options"        },
+      { kind: "table",   key: "site_settings",              table: "site_settings"              },
+    ];
 
     const results = await Promise.all(
-      tables.map(async (table) => {
+      tasks.map(async (t) => {
         try {
-          const { count, error } = await supabase
-            .from(table)
-            .select("id", { count: "exact", head: true });
-
-          console.log(
-            `[PublicContent] ${table} — count:`, count,
-            "| error:", error?.code ?? "none"
-          );
-
-          if (error) {
-            return { table, count: null, error: true };
+          if (t.kind === "section") {
+            const { count, error } = await supabase
+              .from("public_page_sections")
+              .select("id", { count: "exact", head: true })
+              .eq("section_key", t.sectionKey);
+            if (error) return { key: t.key, count: null, error: true };
+            return { key: t.key, count: count ?? 0, error: false };
           }
-          return { table, count: count ?? 0, error: false };
+          const { count, error } = await supabase
+            .from(t.table)
+            .select("id", { count: "exact", head: true });
+          if (error) return { key: t.key, count: null, error: true };
+          return { key: t.key, count: count ?? 0, error: false };
         } catch (err) {
-          console.error(`[PublicContent] ${table} exception:`, err);
-          return { table, count: null, error: true };
+          console.error(`[PublicContent] ${t.key} exception:`, err);
+          return { key: t.key, count: null, error: true };
         }
       })
     );
@@ -72,8 +80,8 @@ export default function PublicContentOverviewPage() {
     let hasError = false;
 
     for (const r of results) {
-      newCounts[r.table] = r.count;
-      newErrors[r.table] = r.error;
+      newCounts[r.key] = r.count;
+      newErrors[r.key] = r.error;
       if (r.error) hasError = true;
     }
 
@@ -122,6 +130,24 @@ export default function PublicContentOverviewPage() {
       count: counts.public_page_sections,
       error: errors.public_page_sections ?? false,
     },
+    {
+      title: "Intake Options",
+      description: "Intake dates shown in the student interest form. Add or retire intakes with no deploy. Past intakes should be archived.",
+      icon: CalendarRange,
+      href: "/dashboard/admin/public-content/intakes",
+      table: "public_page_sections (section_key=intake_options)",
+      count: counts.intake_options,
+      error: errors.intake_options ?? false,
+    },
+    {
+      title: "Site Settings",
+      description: "Global contact details: WhatsApp number, support email, social links. Read by footer, JSON-LD, interest form, and the floating advisor widget.",
+      icon: SettingsIcon,
+      href: "/dashboard/admin/public-content/site-settings",
+      table: "site_settings",
+      count: counts.site_settings,
+      error: errors.site_settings ?? false,
+    },
   ];
 
   return (
@@ -155,8 +181,10 @@ export default function PublicContentOverviewPage() {
               One or more public content tables are missing. Run the migration in Supabase SQL Editor.
             </p>
             <p className="text-white/40 font-body text-xs mt-2">
-              File:{" "}
+              Files:{" "}
               <code className="text-gold-300">src/lib/supabase/sprint31_public_content.sql</code>
+              {" "}and{" "}
+              <code className="text-gold-300">sprint31b_settings_and_intakes.sql</code>
             </p>
           </div>
         </div>

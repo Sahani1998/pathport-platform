@@ -1,9 +1,18 @@
 "use client";
 
+import { useSiteSettings } from "@/lib/use-site-settings";
+import { whatsappHref } from "@/lib/site-settings";
+
 export default function AdvisorWidget() {
+  const settings = useSiteSettings();
+  const href = whatsappHref(
+    settings.whatsapp_number,
+    "Hi PathPort, I'd like to talk to an advisor",
+  );
+
   return (
     <a
-      href="https://wa.me/6583776492?text=Hi%20PathPort%2C%20I%27d%20like%20to%20talk%20to%20an%20advisor"
+      href={href}
       target="_blank"
       rel="noopener noreferrer"
       aria-label="Talk to a PathPort advisor on WhatsApp"

@@ -11,28 +11,13 @@ import DestinationPathway     from "@/components/sections/DestinationPathway";
 import StudyEarnStory         from "@/components/sections/StudyEarnStory";
 import ParentTrustStory       from "@/components/sections/ParentTrustStory";
 import FinalCTABand           from "@/components/sections/FinalCTABand";
+import { getSiteSettings }    from "@/lib/site-settings";
+import { buildOrganizationJsonLd } from "@/lib/jsonld";
 
-const organizationJsonLd = {
-  "@context": "https://schema.org",
-  "@type": "Organization",
-  name: "PathPort",
-  url: "https://pathport.sg",
-  description: "India's dedicated platform for Singapore private college diploma, advanced diploma, higher diploma, and specialist diploma programmes.",
-  contactPoint: {
-    "@type": "ContactPoint",
-    telephone: "+65-8377-6492",
-    contactType: "customer service",
-    email: "pathportsg@gmail.com",
-    areaServed: ["IN", "SG"],
-    availableLanguage: ["English", "Hindi"],
-  },
-  address: {
-    "@type": "PostalAddress",
-    addressCountry: "SG",
-  },
-};
+export default async function HomePage() {
+  const settings = await getSiteSettings();
+  const organizationJsonLd = buildOrganizationJsonLd(settings);
 
-export default function HomePage() {
   return (
     <>
       <script

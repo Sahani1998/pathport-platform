@@ -1,6 +1,6 @@
-import Image from "next/image";
 import Link from "next/link";
 import { createAdminClient } from "@/lib/supabase/admin-client";
+import LogoMark from "@/components/sections/LogoMark";
 import type { CSSProperties } from "react";
 
 export default async function InstitutionLogoWall() {
@@ -29,23 +29,16 @@ export default async function InstitutionLogoWall() {
       title={c.name}
       aria-hidden={dup}
       tabIndex={dup ? -1 : undefined}
-      className="flex-shrink-0 opacity-70 hover:opacity-100 transition-opacity duration-300"
+      className="flex-shrink-0 flex items-center opacity-80 hover:opacity-100 transition-opacity duration-300"
     >
-      <Image
-        src={c.logo_url!}
-        alt={dup ? "" : c.name}
-        width={110}
-        height={44}
-        className="h-8 w-auto object-contain"
-        unoptimized
-      />
+      <LogoMark name={c.name} logoUrl={c.logo_url!} decorative={dup} />
     </Link>
   );
 
   return (
-    <section className="py-12 border-t border-navy-900/10 overflow-hidden public-section-white">
+    <section className="py-14 md:py-16 border-t border-navy-900/10 overflow-hidden public-section-white">
       <div className="max-w-7xl mx-auto px-5 md:px-10">
-        <p className="text-center text-navy-800/45 font-body text-[10px] uppercase tracking-[0.18em] mb-8">
+        <p className="text-center text-navy-800/45 font-body text-[10px] uppercase tracking-[0.18em] mb-10">
           Verified institutions on PathPort
         </p>
 
@@ -55,7 +48,7 @@ export default async function InstitutionLogoWall() {
           <div aria-hidden className="absolute inset-y-0 right-0 w-16 md:w-24 z-10 bg-gradient-to-l from-white to-transparent pointer-events-none" />
 
           <div
-            className="marquee-track flex w-max items-center gap-10 md:gap-16"
+            className="marquee-track flex w-max items-center gap-14 md:gap-20"
             style={{ "--marquee-duration": `${duration}s` } as CSSProperties}
           >
             {colleges.map(c => renderLogo(c, false))}
