@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ChangeEvent, type FormEvent } from "react";
+import { useState, useEffect, type ChangeEvent, type FormEvent } from "react";
 import GoldButton from "@/components/ui/GoldButton";
 import SectionHeader from "@/components/ui/SectionHeader";
 import GlassCard from "@/components/ui/GlassCard";
@@ -9,6 +9,8 @@ import {
   INDIAN_STATES, SUPPORTED_COUNTRIES, COURSE_OPTIONS,
   INTAKE_OPTIONS, BUDGET_RANGES,
 } from "@/data/form-constants";
+import { createClient } from "@/lib/supabase/client";
+import { useSiteSettings } from "@/lib/use-site-settings";
 import { Send, CheckCircle2, Loader2, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -30,7 +32,37 @@ export default function StudentInterestForm() {
   const [loading,   setLoading]   = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error,     setError]     = useState<string | null>(null);
+  const [intakes,   setIntakes]   = useState<string[]>([...INTAKE_OPTIONS]);
   const showStateField = form.country === "India";
+  const settings = useSiteSettings();
+
+  // Admin-managed intakes (public_page_sections section_key='intake_options').
+  // Falls back to the bundled INTAKE_OPTIONS constant on any error/empty result.
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const supabase = createClient();
+        const { data, error: fetchErr } = await supabase
+          .from("public_page_sections")
+          .select("data, display_order")
+          .eq("section_key", "intake_options")
+          .eq("status", "published")
+          .order("display_order", { ascending: true });
+
+        if (!active || fetchErr || !data || data.length === 0) return;
+
+        const labels = data
+          .map(r => (r.data as { label?: string } | null)?.label)
+          .filter((l): l is string => typeof l === "string" && l.length > 0);
+
+        if (labels.length > 0) setIntakes(labels);
+      } catch {
+        // keep fallback
+      }
+    })();
+    return () => { active = false; };
+  }, []);
 
   const onChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
     setForm(p => ({ ...p, [e.target.name]: e.target.value }));
@@ -64,14 +96,14 @@ export default function StudentInterestForm() {
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({})) as { error?: string };
-        setError(data.error ?? "Something went wrong. Please try again or WhatsApp us at +65 8377 6492.");
+        setError(data.error ?? `Something went wrong. Please try again or WhatsApp us at ${settings.whatsapp_display}.`);
         return;
       }
 
       setSubmitted(true);
     } catch (err: unknown) {
       console.error("[InquirySubmit] interest form exception:", err);
-      setError("Something went wrong. Please try again or WhatsApp us at +65 8377 6492.");
+      setError(`Something went wrong. Please try again or WhatsApp us at ${settings.whatsapp_display}.`);
     } finally {
       setLoading(false);
     }
@@ -198,7 +230,7 @@ export default function StudentInterestForm() {
                       value={form.intendedIntake} onChange={onChange}
                       className={cn(INPUT, "appearance-none cursor-pointer")}>
                       <option value="">Select intake</option>
-                      {INTAKE_OPTIONS.map(i => <option key={i} value={i}>{i}</option>)}
+                      {intakes.map(i => <option key={i} value={i}>{i}</option>)}
                     </select>
                   </div>
                 </div>
@@ -224,7 +256,7 @@ export default function StudentInterestForm() {
 
                 <p className="text-center text-white/35 font-body text-xs leading-relaxed">
                   We respect your privacy. Your details are never shared or sold. No spam, ever.<br />
-                  Questions? WhatsApp us: <span className="text-gold-400">+65 8377 6492</span>
+                  Questions? WhatsApp us: <span className="text-gold-400">{settings.whatsapp_display}</span>
                 </p>
               </form>
             )}
