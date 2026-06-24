@@ -65,10 +65,12 @@ export interface Course {
   is_published:    boolean;
 
   // ── Optional: Media & Assets ───────────────────────────────────────────────
-  thumbnail_url:   string | null;
-  video_url:       string | null;
-  brochure_url:    string | null;
-  gallery_images:  string[] | null;  // array of image URLs
+  thumbnail_url:          string | null;
+  thumbnail_storage_path: string | null;
+  video_url:              string | null;
+  brochure_url:           string | null;
+  brochure_storage_path:  string | null;
+  gallery_images:         string[] | null;  // legacy JSONB — superseded by course_gallery table
 
   // ── Optional: Career Outcomes ──────────────────────────────────────────────
   career_outcomes:                string[] | null;  // e.g. ["Business Manager", "Marketing Executive"]

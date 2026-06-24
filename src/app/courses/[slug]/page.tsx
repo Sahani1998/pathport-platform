@@ -5,7 +5,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
+import SafeImage from "@/components/ui/SafeImage";
 import { createAdminClient } from "@/lib/supabase/admin-client";
 import {
   ArrowLeft, Building2, Clock, Calendar, Users,
@@ -81,6 +81,16 @@ export default async function PublicCourseDetailPage({ params }: PageProps) {
 
   if (error || !data) notFound();
 
+  // Fetch gallery images from the normalised table (Sprint 32)
+  const { data: galleryRows } = await adminDb
+    .from("course_gallery")
+    .select("id, public_url, alt_text, sort_order")
+    .eq("course_id", data.id)
+    .order("sort_order", { ascending: true })
+    .order("created_at", { ascending: true });
+
+  const galleryImages = galleryRows ?? [];
+
   const course  = data as typeof data & Record<string, unknown>;
   const college = (course.colleges as Record<string, string> | null);
 
@@ -90,7 +100,7 @@ export default async function PublicCourseDetailPage({ params }: PageProps) {
   const hasThumbnail      = !!course.thumbnail_url;
   const hasVideo          = !!course.video_url;
   const hasBrochure       = !!course.brochure_url;
-  const hasGallery        = Array.isArray(course.gallery_images) && (course.gallery_images as unknown[]).length > 0;
+  const hasGallery        = galleryImages.length > 0;
   const hasCareerOutcomes = Array.isArray(course.career_outcomes) && (course.career_outcomes as unknown[]).length > 0;
   const hasIndustries     = Array.isArray(course.industries) && (course.industries as unknown[]).length > 0;
   const hasInternship     = course.internship_available === true;
@@ -164,7 +174,7 @@ export default async function PublicCourseDetailPage({ params }: PageProps) {
               {/* Thumbnail */}
               {hasThumbnail && (
                 <div className="relative w-full h-48 rounded-2xl overflow-hidden border border-white/[0.08]">
-                  <Image src={course.thumbnail_url as string} alt={course.title as string} fill className="object-cover" />
+                  <SafeImage src={course.thumbnail_url as string} alt={course.title as string} fill className="object-cover" placeholderClassName="bg-navy-900/40" />
                   <div className="absolute inset-0 bg-gradient-to-t from-navy-950/80 via-transparent to-transparent" />
                 </div>
               )}
@@ -305,10 +315,15 @@ export default async function PublicCourseDetailPage({ params }: PageProps) {
                 <div className="bg-white/[0.04] border border-white/[0.08] rounded-2xl p-6">
                   <h2 className="font-display text-xl text-white mb-4">Campus Gallery</h2>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    {(course.gallery_images as string[]).map((src, i) => (
-                      <a key={i} href={src} target="_blank" rel="noopener noreferrer">
+                    {galleryImages.map((img, i) => (
+                      <a key={img.id} href={img.public_url} target="_blank" rel="noopener noreferrer">
                         <div className="relative aspect-video rounded-xl overflow-hidden bg-navy-950 border border-white/[0.06] hover:border-gold-400/30 transition-colors">
-                          <Image src={src} alt={`Gallery ${i + 1}`} fill className="object-cover" />
+                          <SafeImage
+                            src={img.public_url}
+                            alt={img.alt_text ?? `Gallery ${i + 1}`}
+                            fill
+                            className="object-cover"
+                          />
                         </div>
                       </a>
                     ))}

@@ -2,11 +2,14 @@
 
 import { useState, type FormEvent, type ChangeEvent } from "react";
 import GoldButton from "@/components/ui/GoldButton";
-import { Loader2, ArrowLeft, ChevronDown, ChevronRight, Image, Video, Briefcase, Link2 } from "lucide-react";
+import { Loader2, ArrowLeft, ChevronDown, ChevronRight, ImageIcon, Video, Briefcase } from "lucide-react";
 import type { Course } from "@/types/courses";
 import { COURSE_CATEGORIES } from "@/types/courses";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import CourseThumbnailUpload from "@/components/courses/CourseThumbnailUpload";
+import CourseBrochureUpload  from "@/components/courses/CourseBrochureUpload";
+import CourseGalleryManager  from "@/components/courses/CourseGalleryManager";
 
 const INPUT       = "w-full bg-white/[0.06] border border-white/[0.10] rounded-xl px-4 py-3 font-body text-sm text-white placeholder-white/25 focus:outline-none focus:border-gold-400/60 transition-all [color-scheme:dark] [&>option]:bg-navy-800";
 const LABEL       = "block text-white/55 font-body text-sm mb-1.5 font-medium";
@@ -34,10 +37,7 @@ type FormState = {
   status:          string;
 
   // ── Optional: Media & Assets ──────────────────────────────────────────────
-  thumbnail_url:  string;
-  video_url:      string;
-  brochure_url:   string;
-  gallery_images: string;  // one URL per line in UI → string[] in DB
+  video_url: string;  // thumbnail, brochure, gallery managed by upload widgets in edit mode
 
   // ── Optional: Career Outcomes ─────────────────────────────────────────────
   career_outcomes:                string;  // one outcome per line → string[]
@@ -79,11 +79,8 @@ export default function CourseFormClient({ collegeId, collegeName, course }: Cou
     level:           course?.level           ?? "diploma",
     status:          course?.status          ?? "open",
 
-    // optional — media
-    thumbnail_url:  course?.thumbnail_url  ?? "",
-    video_url:      course?.video_url      ?? "",
-    brochure_url:   course?.brochure_url   ?? "",
-    gallery_images: (course?.gallery_images ?? []).join("\n"),
+    // optional — media (thumbnail, brochure, gallery managed by upload widgets)
+    video_url: course?.video_url ?? "",
 
     // optional — career
     career_outcomes:                (course?.career_outcomes ?? []).join("\n"),
@@ -97,9 +94,7 @@ export default function CourseFormClient({ collegeId, collegeName, course }: Cou
 
   const [loading,      setLoading]      = useState(false);
   const [error,        setError]        = useState<string | null>(null);
-  const [showMedia,    setShowMedia]    = useState(!!(
-    course?.thumbnail_url || course?.video_url || course?.brochure_url || course?.gallery_images?.length
-  ));
+  const [showMedia, setShowMedia] = useState(isEdit);
   const [showCareer,   setShowCareer]   = useState(!!(
     course?.career_outcomes?.length || course?.industries?.length ||
     course?.internship_available || course?.pathway_description
@@ -136,10 +131,7 @@ export default function CourseFormClient({ collegeId, collegeName, course }: Cou
         study_mode:                     form.study_mode,
         level:                          form.level,
         status:                         form.status,
-        thumbnail_url:                  form.thumbnail_url.trim() || null,
-        video_url:                      form.video_url.trim()     || null,
-        brochure_url:                   form.brochure_url.trim()  || null,
-        gallery_images:                 lines(form.gallery_images).length  ? lines(form.gallery_images)  : null,
+        video_url:                      form.video_url.trim() || null,
         career_outcomes:                lines(form.career_outcomes).length  ? lines(form.career_outcomes) : null,
         industries:                     commas(form.industries).length     ? commas(form.industries)     : null,
         internship_available:           form.internship_available,
@@ -293,7 +285,7 @@ export default function CourseFormClient({ collegeId, collegeName, course }: Cou
             className="w-full flex items-center justify-between px-5 py-4 bg-white/[0.02] hover:bg-white/[0.04] transition-colors"
           >
             <div className="flex items-center gap-3">
-              <Image className="w-4 h-4 text-pathBlue-400" />
+              <ImageIcon className="w-4 h-4 text-pathBlue-400" />
               <span className="font-body text-sm font-semibold text-white/70">Media &amp; Assets</span>
               <span className="px-2 py-0.5 rounded-full bg-white/[0.06] border border-white/[0.09] text-white/35 font-body text-[10px] uppercase tracking-wider">Optional</span>
             </div>
@@ -301,16 +293,21 @@ export default function CourseFormClient({ collegeId, collegeName, course }: Cou
           </button>
 
           {showMedia && (
-            <div className="p-5 space-y-4 border-t border-white/[0.07]">
+            <div className="p-5 space-y-5 border-t border-white/[0.07]">
               <p className="text-white/35 font-body text-xs">
-                Add a thumbnail, intro video, and brochure to make your listing stand out. All fields are optional — courses publish fine without them.
+                Add a thumbnail, intro video, brochure, and gallery to make your listing stand out. All fields are optional.
               </p>
 
               {/* Thumbnail */}
               <div>
-                <label className={LABEL}>Thumbnail Image URL <span className={OPT_HINT}>(optional)</span></label>
-                <input name="thumbnail_url" type="url" value={form.thumbnail_url} onChange={onChange} placeholder="https://…/thumbnail.jpg" className={INPUT} />
-                <p className="text-white/25 font-body text-xs mt-1">Recommended: 1200×630px JPG or PNG</p>
+                <label className={LABEL}>Thumbnail <span className={OPT_HINT}>(optional)</span></label>
+                {isEdit ? (
+                  <CourseThumbnailUpload courseId={course!.id} initialUrl={course!.thumbnail_url} />
+                ) : (
+                  <p className="text-white/30 font-body text-xs py-3 px-4 rounded-xl bg-white/[0.03] border border-white/[0.07]">
+                    Save the course first, then return here to upload a thumbnail.
+                  </p>
+                )}
               </div>
 
               {/* Video */}
@@ -324,27 +321,26 @@ export default function CourseFormClient({ collegeId, collegeName, course }: Cou
 
               {/* Brochure */}
               <div>
-                <label className={LABEL}>
-                  <Link2 className="w-3.5 h-3.5 inline mr-1.5 text-white/40" />
-                  Brochure / PDF URL <span className={OPT_HINT}>(optional)</span>
-                </label>
-                <input name="brochure_url" type="url" value={form.brochure_url} onChange={onChange} placeholder="https://…/brochure.pdf" className={INPUT} />
+                <label className={LABEL}>Brochure (PDF) <span className={OPT_HINT}>(optional)</span></label>
+                {isEdit ? (
+                  <CourseBrochureUpload courseId={course!.id} initialUrl={course!.brochure_url} />
+                ) : (
+                  <p className="text-white/30 font-body text-xs py-3 px-4 rounded-xl bg-white/[0.03] border border-white/[0.07]">
+                    Save the course first, then return here to upload a brochure.
+                  </p>
+                )}
               </div>
 
               {/* Gallery */}
               <div>
-                <label className={LABEL}>Gallery Image URLs <span className={OPT_HINT}>(optional — one URL per line)</span></label>
-                <textarea
-                  name="gallery_images"
-                  value={form.gallery_images}
-                  onChange={onChange}
-                  rows={4}
-                  placeholder={"https://…/campus-1.jpg\nhttps://…/campus-2.jpg\nhttps://…/classroom.jpg"}
-                  className={cn(INPUT, "resize-none font-mono text-xs")}
-                />
-                <p className="text-white/25 font-body text-xs mt-1">
-                  {lines(form.gallery_images).length > 0 ? `${lines(form.gallery_images).length} image${lines(form.gallery_images).length !== 1 ? "s" : ""}` : "No images added yet"}
-                </p>
+                <label className={cn(LABEL, "mb-2")}>Gallery Images <span className={OPT_HINT}>(optional)</span></label>
+                {isEdit ? (
+                  <CourseGalleryManager courseId={course!.id} />
+                ) : (
+                  <p className="text-white/30 font-body text-xs py-3 px-4 rounded-xl bg-white/[0.03] border border-white/[0.07]">
+                    Save the course first, then return here to add gallery images.
+                  </p>
+                )}
               </div>
             </div>
           )}
