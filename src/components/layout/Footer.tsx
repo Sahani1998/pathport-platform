@@ -1,5 +1,9 @@
+"use client";
+
 import Link from "next/link";
 import { Mail, Phone } from "lucide-react";
+import { whatsappHref } from "@/lib/site-settings";
+import { useSiteSettings } from "@/lib/use-site-settings";
 
 const FOOTER_COLS: Record<string, { label: string; href: string }[]> = {
   About: [
@@ -51,6 +55,12 @@ const FOOTER_COLS: Record<string, { label: string; href: string }[]> = {
 };
 
 export default function Footer() {
+  const settings = useSiteSettings();
+  const waHref = whatsappHref(settings.whatsapp_number);
+  const mailtoNewsletter = `mailto:${settings.contact_email}?subject=Newsletter%20subscription`;
+  const mailtoContact    = `mailto:${settings.contact_email}`;
+  const mailtoDpo        = `mailto:${settings.contact_email}?subject=PDPA%20request`;
+
   return (
     <footer className="relative border-t border-white/[0.07] bg-navy-950/90 backdrop-blur-sm">
       <div aria-hidden className="absolute top-0 left-1/2 -translate-x-1/2 w-[400px] h-px bg-gradient-to-r from-transparent via-gold-400/30 to-transparent" />
@@ -80,7 +90,7 @@ export default function Footer() {
           <div className="max-w-xs">
             <p className="font-body font-semibold text-white/75 text-sm mb-2">Get PathPort updates</p>
             <p className="text-white/35 font-body text-xs mb-3">New college listings, resource guides, and platform updates for Indian students.</p>
-            <a href="mailto:pathportsg@gmail.com?subject=Newsletter%20subscription"
+            <a href={mailtoNewsletter}
               className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gold-400/10 border border-gold-400/25 text-gold-400 font-body text-sm font-semibold hover:bg-gold-400/20 transition-all">
               Subscribe by email
             </a>
@@ -107,12 +117,12 @@ export default function Footer() {
 
         {/* Contact strip */}
         <div className="flex flex-wrap gap-5 mb-8 p-4 rounded-2xl bg-white/[0.02] border border-white/[0.06]">
-          <a href="mailto:pathportsg@gmail.com" className="flex items-center gap-2 text-white/50 hover:text-white/80 font-body text-sm transition-colors">
-            <Mail className="w-3.5 h-3.5 text-gold-400" /> pathportsg@gmail.com
+          <a href={mailtoContact} className="flex items-center gap-2 text-white/50 hover:text-white/80 font-body text-sm transition-colors">
+            <Mail className="w-3.5 h-3.5 text-gold-400" /> {settings.contact_email}
           </a>
-          <a href="https://wa.me/6583776492" target="_blank" rel="noopener noreferrer"
+          <a href={waHref} target="_blank" rel="noopener noreferrer"
             className="flex items-center gap-2 text-white/50 hover:text-white/80 font-body text-sm transition-colors">
-            <Phone className="w-3.5 h-3.5 text-gold-400" /> +65 8377 6492 (WhatsApp)
+            <Phone className="w-3.5 h-3.5 text-gold-400" /> {settings.whatsapp_display} (WhatsApp)
           </a>
           <span className="text-white/25 font-body text-sm">🇸🇬 Based in Singapore</span>
         </div>
@@ -133,8 +143,8 @@ export default function Footer() {
           <span className="text-white/15 font-body text-[10px] hidden sm:inline">·</span>
           <span className="text-white/20 font-body text-[10px]">
             Data Protection Officer:{" "}
-            <a href="mailto:pathportsg@gmail.com?subject=PDPA%20request" className="hover:text-white/40 transition-colors underline underline-offset-2">
-              pathportsg@gmail.com
+            <a href={mailtoDpo} className="hover:text-white/40 transition-colors underline underline-offset-2">
+              {settings.contact_email}
             </a>
           </span>
         </div>
