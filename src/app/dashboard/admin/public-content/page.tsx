@@ -100,38 +100,42 @@ const CARDS: CardSpec[] = [
 ];
 
 // ─── Per-card count fetch with 10 s timeout ───────────────────────────────────
+// Uses Promise.race so the timeout fires regardless of whether the Supabase
+// client's abortSignal propagates correctly to the underlying fetch.
 
 async function fetchCount(task: CountTask): Promise<CardState> {
-  const controller = new AbortController();
-  const timeoutId  = setTimeout(() => controller.abort(), 10_000);
-
-  try {
-    const supabase = createClient();
-    const query = task.kind === "table"
-      ? supabase.from(task.table).select("id", { count: "exact", head: true })
-      : supabase.from("public_page_sections").select("id", { count: "exact", head: true }).eq("section_key", task.sectionKey);
-
-    const { count, error } = await query.abortSignal(controller.signal);
-
-    if (error) {
-      if (error.code === "42P01") {
-        return { kind: "missing_table", message: error.message };
-      }
-      console.warn(`[PublicContent] ${task.key} query error:`, error.code, error.message);
-      return { kind: "error", code: error.code ?? null, message: error.message };
-    }
-    return { kind: "ok", count: count ?? 0 };
-  } catch (err: unknown) {
-    if (err instanceof Error && err.name === "AbortError") {
+  const timeoutPromise = new Promise<CardState>(resolve =>
+    setTimeout(() => {
       console.warn(`[PublicContent] ${task.key} timed out after 10 s`);
-      return { kind: "timeout" };
+      resolve({ kind: "timeout" });
+    }, 10_000)
+  );
+
+  const queryPromise: Promise<CardState> = (async () => {
+    try {
+      const supabase = createClient();
+      const q = task.kind === "table"
+        ? supabase.from(task.table).select("id", { count: "exact", head: true })
+        : supabase.from("public_page_sections").select("id", { count: "exact", head: true }).eq("section_key", task.sectionKey);
+
+      const { count, error } = await q;
+
+      if (error) {
+        if (error.code === "42P01") {
+          return { kind: "missing_table", message: error.message };
+        }
+        console.warn(`[PublicContent] ${task.key} query error:`, error.code, error.message);
+        return { kind: "error", code: error.code ?? null, message: error.message };
+      }
+      return { kind: "ok", count: count ?? 0 };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.warn(`[PublicContent] ${task.key} unexpected:`, msg);
+      return { kind: "error", code: null, message: msg };
     }
-    const msg = err instanceof Error ? err.message : String(err);
-    console.warn(`[PublicContent] ${task.key} unexpected:`, msg);
-    return { kind: "error", code: null, message: msg };
-  } finally {
-    clearTimeout(timeoutId);
-  }
+  })();
+
+  return Promise.race([queryPromise, timeoutPromise]);
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -145,8 +149,6 @@ export default function PublicContentOverviewPage() {
   // so overlapping invocations (e.g. StrictMode double-mount, Refresh while
   // initial load is in flight) can never leave cards stuck on "loading".
   const reqIdRef = useRef(0);
-  const mountedRef = useRef(true);
-  useEffect(() => () => { mountedRef.current = false; }, []);
 
   const fetchAll = useCallback(async () => {
     const myReqId = ++reqIdRef.current;
@@ -164,8 +166,8 @@ export default function PublicContentOverviewPage() {
       CARDS.map(async (c) => ({ key: c.key, state: await fetchCount(c.task) }))
     );
 
-    // Drop results if a newer fetch has started, or component unmounted.
-    if (!mountedRef.current || myReqId !== reqIdRef.current) return;
+    // Drop results if a newer fetch has started (Refresh clicked mid-flight, StrictMode remount, etc.).
+    if (myReqId !== reqIdRef.current) return;
 
     setStates(prev => {
       const next: Record<string, CardState> = { ...prev };
