@@ -6,6 +6,7 @@ import { notFound }      from "next/navigation";
 import Link              from "next/link";
 import { createAdminClient } from "@/lib/supabase/admin-client";
 import Image             from "next/image";
+import SafeImage         from "@/components/ui/SafeImage";
 import {
   ArrowLeft, Globe, Building2, BookOpen, Clock,
   ChevronRight, DollarSign, Calendar, CheckCircle2, Play,
@@ -246,12 +247,13 @@ export default async function CollegeDetailPage({ params }: PageProps) {
           {/* Cover image hero */}
           {college.cover_image_url && (
             <div className="relative w-full h-48 md:h-64 rounded-2xl overflow-hidden mb-6 border border-white/[0.08]">
-              <Image
+              <SafeImage
                 src={college.cover_image_url}
                 alt={`${college.name} campus`}
                 fill
                 className="object-cover"
                 priority
+                placeholderClassName="bg-navy-900/30"
               />
               {/* Gradient overlay for text legibility */}
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
@@ -269,11 +271,12 @@ export default async function CollegeDetailPage({ params }: PageProps) {
                 style={{ background: primaryColour ? `linear-gradient(135deg, ${primaryColour}33, ${primaryColour}11)` : undefined }}
               >
                 {college.logo_url ? (
-                  <Image
+                  <SafeImage
                     src={college.logo_url}
                     alt={`${college.name} logo`}
                     width={64} height={64}
                     className="object-contain w-full h-full"
+                    placeholderClassName="w-full h-full flex items-center justify-center"
                   />
                 ) : (
                   <span
