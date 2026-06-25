@@ -35,9 +35,11 @@ interface CardSpec {
 async function getCount(table: string, sectionKey?: string): Promise<CountResult> {
   try {
     const db = createAdminClient();
+    // Use "*" rather than a specific column — site_settings has no `id`
+    // column (its primary key is `key`), and "*" works on every table.
     const q = sectionKey
-      ? db.from(table).select("id", { count: "exact", head: true }).eq("section_key", sectionKey)
-      : db.from(table).select("id", { count: "exact", head: true });
+      ? db.from(table).select("*", { count: "exact", head: true }).eq("section_key", sectionKey)
+      : db.from(table).select("*", { count: "exact", head: true });
 
     const { count, error } = await q;
 
