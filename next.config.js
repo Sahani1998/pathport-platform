@@ -43,14 +43,13 @@ const nextConfig = {
 };
 
 module.exports = withSentryConfig(nextConfig, {
-  // Sentry webpack plugin options
   org:     process.env.SENTRY_ORG,
   project: process.env.SENTRY_PROJECT,
-  // Upload source maps in CI/production only
-  silent:          true,
-  hideSourceMaps:  true,
-  disableLogger:   true,
-  // Automatically instrument Next.js data fetching methods and API routes
-  autoInstrumentServerFunctions: true,
-  autoInstrumentMiddleware:      true,
+  silent:  true,
+  hideSourceMaps: true,
+  webpack: {
+    autoInstrumentServerFunctions: true,
+    autoInstrumentMiddleware:      true,
+    treeshake: { removeDebugLogging: true },
+  },
 });
