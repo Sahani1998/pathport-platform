@@ -10,6 +10,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin-client";
 import { checkRateLimit, getClientIp, rateLimitResponse, LIMITS } from "@/lib/rate-limit";
 import { notifyUser, recordTimelineEvent, logAudit } from "@/lib/application-timeline";
+import { withIdempotency } from "@/lib/payments/idempotency";
 import type { StudentInvoice } from "@/types/payment";
 import type { ApplicationStage } from "@/types/timeline";
 
@@ -32,6 +33,11 @@ export async function POST(
   if (profile?.role !== "institution" && profile?.role !== "admin") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
+
+  // Idempotency guard — replay within 24h returns cached response
+  const adminDb = createAdminClient();
+  const idempotencyGuard = await withIdempotency(request, "invoice-void", id, user.id, adminDb);
+  if (idempotencyGuard.cached) return idempotencyGuard.cachedResponse!;
 
   const body = await request.json().catch(() => ({})) as Record<string, unknown>;
   const reason = typeof body.reason === "string" ? body.reason.trim().slice(0, 500) : "";
@@ -62,7 +68,6 @@ export async function POST(
 
   // Notify the student only if the invoice had been issued (draft voids are silent).
   if (invoice.status !== "draft") {
-    const adminDb = createAdminClient();
     const { data: appRow } = await adminDb
       .from("applications").select("current_stage").eq("id", invoice.application_id).single();
     const stage = (appRow?.current_stage as ApplicationStage | null) ?? "fee_payment_pending";
@@ -99,5 +104,7 @@ export async function POST(
     ]);
   }
 
-  return NextResponse.json({ invoice: updated as StudentInvoice });
+  const responseBody = { invoice: updated as StudentInvoice };
+  await idempotencyGuard.store(responseBody, 200);
+  return NextResponse.json(responseBody);
 }

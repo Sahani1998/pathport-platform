@@ -1,6 +1,7 @@
 import { getEmailClient, FROM_ADDRESS } from "./client";
 import { renderTemplate, type EmailTemplate, type TemplateContext } from "./templates";
 import { createClient } from "@/lib/supabase/server";
+import { signUnsubscribeToken } from "@/lib/unsubscribe-token";
 
 // ─── Centralized send + log ───────────────────────────────────────────────────
 //
@@ -84,7 +85,17 @@ export async function sendTemplatedEmail(opts: SendOptions): Promise<SendResult>
 
     // Resend v6 never throws on API errors — it returns { data, error }.
     // The error branch must be checked explicitly or failures are silent.
-    const unsubscribeUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? "https://pathport.sg"}/unsubscribe?email=${encodeURIComponent(to)}`;
+    // Issue an HMAC-signed unsubscribe token so the one-click POST link
+    // cannot be tampered with. If EMAIL_UNSUBSCRIBE_SECRET is not set we
+    // fall back to the unsigned link (server will refuse it, but the email
+    // still sends — better than blocking notifications).
+    let unsubscribeUrl: string;
+    try {
+      const tok = await signUnsubscribeToken(to, Date.now());
+      unsubscribeUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? "https://pathport.sg"}/unsubscribe?token=${encodeURIComponent(tok)}&email=${encodeURIComponent(to)}`;
+    } catch {
+      unsubscribeUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? "https://pathport.sg"}/unsubscribe?email=${encodeURIComponent(to)}`;
+    }
     const { data: sendData, error: sendError } = await resend.emails.send({
       from:    FROM_ADDRESS,
       to,

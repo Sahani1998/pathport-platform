@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient }      from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin-client";
 import { checkRateLimit, getClientIp, rateLimitResponse, LIMITS } from "@/lib/rate-limit";
+import { scanFile } from "@/lib/virus-scan";
 import {
   IMAGE_MIME_TYPES, MAX_IMAGE_SIZE_BYTES, MEDIA_CATEGORIES,
 } from "@/types/institution-media";
@@ -57,6 +58,16 @@ export async function POST(request: NextRequest) {
 
   const adminDb = createAdminClient();
   const buffer  = await file.arrayBuffer();
+
+  // Virus / magic-byte scan before storage write
+  const scan = await scanFile(buffer, file.name, file.type);
+  if (scan.status === "threat") {
+    console.warn(`[InstitutionMedia] scan blocked file: ${file.name} threat=${scan.threat} user=${user.id}`);
+    return NextResponse.json(
+      { error: "File was rejected by the security scanner. Please ensure the image is not corrupted and try again." },
+      { status: 422 },
+    );
+  }
 
   const { error: storageErr } = await adminDb.storage
     .from("institution-media")

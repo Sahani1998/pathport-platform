@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient }      from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin-client";
 import { checkRateLimit, getClientIp, rateLimitResponse, LIMITS } from "@/lib/rate-limit";
+import { scanFile } from "@/lib/virus-scan";
 import { IMAGE_MIME_TYPES, MAX_IMAGE_SIZE_BYTES } from "@/types/institution-media";
 import type { CourseMediaAction } from "@/types/course-media";
 
@@ -84,6 +85,16 @@ export async function POST(
   const ext         = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
   const storagePath = `${course.college_id}/${courseId}/thumbnail/${Date.now()}.${ext}`;
   const buffer      = await file.arrayBuffer();
+
+  // Virus / magic-byte scan before storage write
+  const scan = await scanFile(buffer, file.name, file.type);
+  if (scan.status === "threat") {
+    console.warn(`[CourseThumbnail] scan blocked file: ${file.name} threat=${scan.threat} user=${user.id}`);
+    return NextResponse.json(
+      { error: "File was rejected by the security scanner. Please ensure the image is not corrupted and try again." },
+      { status: 422 },
+    );
+  }
 
   // Delete old file (best effort — don't fail the upload if cleanup fails)
   if (course.thumbnail_storage_path) {

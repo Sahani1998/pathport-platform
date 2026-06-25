@@ -19,6 +19,8 @@ import { notifyUser, recordTimelineEvent, logAudit } from "@/lib/application-tim
 import { sendTemplatedEmail } from "@/lib/email/send";
 import { formatCents } from "@/lib/payments/invoice-helpers";
 import { loadAttemptWithContext } from "@/lib/payments/verification-helpers";
+import { withIdempotency } from "@/lib/payments/idempotency";
+import { scanFile } from "@/lib/virus-scan";
 import type { OfficialReceipt, Currency } from "@/types/payment";
 import type { ApplicationStage } from "@/types/timeline";
 
@@ -42,6 +44,11 @@ export async function POST(
   if (profile?.role !== "institution" && profile?.role !== "admin") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
+
+  // Idempotency guard — replay within 24h returns cached response
+  const adminDb = createAdminClient();
+  const idempotencyGuard = await withIdempotency(request, "official-receipt", id, user.id, adminDb);
+  if (idempotencyGuard.cached) return idempotencyGuard.cachedResponse!;
 
   const callerCollegeId = profile.role === "institution" ? (profile.college_id ?? "") : null;
   const ctx = await loadAttemptWithContext(supabase, id, callerCollegeId);
@@ -97,12 +104,22 @@ export async function POST(
     const notesField = formData.get("notes");
     if (typeof notesField === "string" && notesField.trim()) notes = notesField.trim();
 
-    const adminDb = createAdminClient();
+    // Virus / magic-byte scan before storage write
+    const buffer = await file.arrayBuffer();
+    const scan   = await scanFile(buffer, file.name, file.type);
+    if (scan.status === "threat") {
+      console.warn(`[Receipt] scan blocked file: ${file.name} threat=${scan.threat} user=${user.id}`);
+      return NextResponse.json(
+        { error: "File was rejected by the security scanner. Please ensure the PDF is not corrupted and try again." },
+        { status: 422 },
+      );
+    }
+
     const timestamp = Date.now();
     filePath = `${id}/${timestamp}.pdf`;
     const { error: storageErr } = await adminDb.storage
       .from("official-receipts")
-      .upload(filePath, await file.arrayBuffer(), {
+      .upload(filePath, buffer, {
         contentType:    "application/pdf",
         upsert:         false,
         cacheControl:   "3600",
@@ -140,7 +157,6 @@ export async function POST(
     .single();
   if (rcpErr) {
     if (isUpload) {
-      const adminDb = createAdminClient();
       await adminDb.storage.from("official-receipts").remove([filePath]);
     }
     // 23505 = unique_violation: concurrent receipt insert hit the DB-level
@@ -152,7 +168,6 @@ export async function POST(
   }
 
   // ─── Side effects (non-fatal, admin client) ────────────────────────────────
-  const adminDb = createAdminClient();
 
   const { data: appRow } = await adminDb
     .from("applications").select("current_stage").eq("id", ctx.applicationId).single();
@@ -215,5 +230,7 @@ export async function POST(
     }).catch(err => console.error("[Receipt] email failed (non-fatal):", err));
   }
 
-  return NextResponse.json({ receipt: receipt as OfficialReceipt });
+  const responseBody = { receipt: receipt as OfficialReceipt };
+  await idempotencyGuard.store(responseBody, 200);
+  return NextResponse.json(responseBody);
 }
