@@ -16,6 +16,7 @@ import { checkRateLimit, getClientIp, rateLimitResponse, LIMITS } from "@/lib/ra
 import { notifyUser, recordTimelineEvent, logAudit } from "@/lib/application-timeline";
 import { sendTemplatedEmail } from "@/lib/email/send";
 import { formatCents } from "@/lib/payments/invoice-helpers";
+import { withIdempotency } from "@/lib/payments/idempotency";
 import type { Currency, StudentInvoice } from "@/types/payment";
 import type { ApplicationStage } from "@/types/timeline";
 
@@ -36,6 +37,11 @@ export async function POST(
   if (profile?.role !== "institution" && profile?.role !== "admin") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
+
+  // Idempotency guard — replay within 24h returns cached response
+  const adminDb = createAdminClient();
+  const idempotencyGuard = await withIdempotency(request, "invoice-issue", id, user.id, adminDb);
+  if (idempotencyGuard.cached) return idempotencyGuard.cachedResponse!;
 
   const { data: invoice } = await supabase
     .from("student_invoices").select("*").eq("id", id).maybeSingle();
@@ -78,7 +84,6 @@ export async function POST(
   // ─── Side effects (non-fatal) ─────────────────────────────────────────────
   // Use admin client for inserts that students can't write to (notifications,
   // timeline) — matches existing offer letter / IPA pattern.
-  const adminDb = createAdminClient();
 
   // Look up the current stage so the timeline event is tagged correctly.
   const { data: appRow } = await adminDb
@@ -147,5 +152,7 @@ export async function POST(
     }).catch(err => console.error("[Invoice] email failed (non-fatal):", err));
   }
 
-  return NextResponse.json({ invoice: updated as StudentInvoice });
+  const responseBody = { invoice: updated as StudentInvoice };
+  await idempotencyGuard.store(responseBody, 200);
+  return NextResponse.json(responseBody);
 }

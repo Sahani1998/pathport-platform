@@ -13,6 +13,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useSiteSettings } from "@/lib/use-site-settings";
 import { Send, CheckCircle2, Loader2, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import TurnstileWidget from "@/components/ui/TurnstileWidget";
 
 const INITIAL: StudentInterestFormData = {
   fullName: "", whatsapp: "", email: "", country: "India",
@@ -33,6 +34,7 @@ export default function StudentInterestForm() {
   const [submitted, setSubmitted] = useState(false);
   const [error,     setError]     = useState<string | null>(null);
   const [intakes,   setIntakes]   = useState<string[]>([...INTAKE_OPTIONS]);
+  const [captchaToken, setCaptchaToken] = useState<string>("");
   const showStateField = form.country === "India";
   const settings = useSiteSettings();
 
@@ -86,6 +88,7 @@ export default function StudentInterestForm() {
           course_interest: form.courseInterest,
           intended_intake: form.intendedIntake,
           budget_range:    form.budgetRange,
+          cf_turnstile_response: captchaToken,
         }),
       });
 
@@ -253,6 +256,10 @@ export default function StudentInterestForm() {
                     <><Send className="w-5 h-5" /> Submit My Interest — It&apos;s Free</>
                   )}
                 </GoldButton>
+
+                <div className="flex justify-center">
+                  <TurnstileWidget onToken={setCaptchaToken} theme="dark" />
+                </div>
 
                 <p className="text-center text-white/35 font-body text-xs leading-relaxed">
                   We respect your privacy. Your details are never shared or sold. No spam, ever.<br />

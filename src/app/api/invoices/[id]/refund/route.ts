@@ -28,6 +28,7 @@ import { createAdminClient } from "@/lib/supabase/admin-client";
 import { checkRateLimitAsync, getClientIp, rateLimitResponse, LIMITS } from "@/lib/rate-limit";
 import { notifyUser, recordTimelineEvent, logAudit } from "@/lib/application-timeline";
 import { formatCents } from "@/lib/payments/invoice-helpers";
+import { withIdempotency } from "@/lib/payments/idempotency";
 import type { StudentInvoice, Currency } from "@/types/payment";
 import type { ApplicationStage } from "@/types/timeline";
 
@@ -51,6 +52,11 @@ export async function POST(
   if (profile?.role !== "admin") {
     return NextResponse.json({ error: "Forbidden — admin access required" }, { status: 403 });
   }
+
+  // Idempotency guard — replay within 24h returns cached response
+  const adminDb = createAdminClient();
+  const idempotencyGuard = await withIdempotency(request, "invoice-refund", id, user.id, adminDb);
+  if (idempotencyGuard.cached) return idempotencyGuard.cachedResponse!;
 
   const body = await request.json().catch(() => ({})) as Record<string, unknown>;
   const reason              = typeof body.reason === "string"                   ? body.reason.trim().slice(0, 500) : "";
@@ -87,7 +93,6 @@ export async function POST(
   }
 
   const now = new Date().toISOString();
-  const adminDb = createAdminClient();
 
   // Atomic UPDATE WHERE status='paid' prevents concurrent refunds
   const { data: updated, error: updErr } = await adminDb
@@ -154,5 +159,7 @@ export async function POST(
     }),
   ]);
 
-  return NextResponse.json({ invoice: updated as StudentInvoice });
+  const responseBody = { invoice: updated as StudentInvoice };
+  await idempotencyGuard.store(responseBody, 200);
+  return NextResponse.json(responseBody);
 }
