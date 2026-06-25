@@ -38,6 +38,7 @@ import { sendTemplatedEmail } from "@/lib/email/send";
 import { formatCents } from "@/lib/payments/invoice-helpers";
 import { loadAttemptWithContext } from "@/lib/payments/verification-helpers";
 import { resolveStageAdvance } from "@/lib/payments/stage-advance";
+import { withIdempotency } from "@/lib/payments/idempotency";
 import type { Currency, InvoiceFeeType } from "@/types/payment";
 import type { ApplicationStage } from "@/types/timeline";
 import { getStageMeta } from "@/types/timeline";
@@ -93,6 +94,12 @@ export async function POST(
       return NextResponse.json({ error: "payment_date cannot be in the future" }, { status: 400 });
     }
   }
+
+  const adminDb = createAdminClient();
+
+  // Idempotency — replay within 24 h returns the cached response
+  const idempotencyGuard = await withIdempotency(request, "payment-verify", id, user.id, adminDb);
+  if (idempotencyGuard.cached) return idempotencyGuard.cachedResponse!;
 
   const callerCollegeId = profile.role === "institution" ? (profile.college_id ?? "") : null;
   const ctx = await loadAttemptWithContext(supabase, id, callerCollegeId);
@@ -173,7 +180,6 @@ export async function POST(
 
   // Update invoice status — admin client required; fatal if it fails
   const invoiceStatus = isPartial ? "partially_paid" : "paid";
-  const adminDb = createAdminClient();
   const { error: invErr } = await adminDb
     .from("student_invoices")
     .update({
@@ -223,14 +229,16 @@ export async function POST(
       }),
     ]);
 
-    return NextResponse.json({
+    const partialBody = {
       attempt:             updatedAttempt,
       partial:             true,
       previously_paid:     previouslyPaidCents,
       total_paid:          totalPaidCents,
       remaining:           ctx.invoice.amount_cents - totalPaidCents,
       message:             "Partial payment recorded. No stage advance. Issue receipt only after full invoice amount is verified.",
-    });
+    };
+    await idempotencyGuard.store(partialBody, 200);
+    return NextResponse.json(partialBody);
   }
 
   // Full payment: advance stage
@@ -296,9 +304,11 @@ export async function POST(
     }).catch(err => console.error("[Verify] email failed (non-fatal):", err));
   }
 
-  return NextResponse.json({
+  const fullBody = {
     attempt:           updatedAttempt,
     advanced_to_stage: toStage,
     advanced_to_label: getStageMeta(toStage).label,
-  });
+  };
+  await idempotencyGuard.store(fullBody, 200);
+  return NextResponse.json(fullBody);
 }

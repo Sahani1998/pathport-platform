@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin-client";
 import { checkRateLimit, getClientIp, rateLimitResponse } from "@/lib/rate-limit";
 import { ALLOWED_MIME_TYPES, MAX_FILE_SIZE_BYTES, DOCUMENT_TYPES } from "@/types/documents";
+import { scanFile } from "@/lib/virus-scan";
 import type { StudentDocument, DocumentType } from "@/types/documents";
 import { resolveStage } from "@/lib/application-stage-mapping";
 import { recordTimelineEvent, notifyUser, logAudit } from "@/lib/application-timeline";
@@ -106,6 +107,20 @@ export async function POST(request: NextRequest) {
     buffer = await file.arrayBuffer();
   } catch {
     return NextResponse.json({ error: "Failed to read file" }, { status: 400 });
+  }
+
+  // Virus / malware scan — runs magic-byte check + optional external scanner.
+  // Blocks the upload on threat; errors are logged but do not block (fail-open).
+  const scan = await scanFile(buffer, file.name, file.type);
+  if (scan.status === "threat") {
+    console.warn(`[DocUpload] scan blocked file: ${file.name} threat=${scan.threat} user=${user.id}`);
+    return NextResponse.json(
+      { error: "File was rejected by the security scanner. Please ensure the file is not corrupted and try again." },
+      { status: 422 },
+    );
+  }
+  if (scan.status === "error") {
+    console.error(`[DocUpload] scan error for ${file.name} — proceeding with upload (fail-open)`);
   }
 
   // Upload to storage

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { checkRateLimit, getClientIp, rateLimitResponse, LIMITS } from "@/lib/rate-limit";
+import { verifyTurnstileToken } from "@/lib/turnstile";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -10,6 +11,13 @@ export async function POST(request: Request) {
   if (!rl.success) return rateLimitResponse(rl.resetAt);
 
   const body = await request.json().catch(() => ({})) as Record<string, unknown>;
+
+  // CAPTCHA — Cloudflare Turnstile server-side verification
+  const turnstileToken = typeof body.cf_turnstile_response === "string" ? body.cf_turnstile_response : null;
+  const captcha = await verifyTurnstileToken(turnstileToken, ip ?? undefined);
+  if (!captcha.success) {
+    return NextResponse.json({ error: captcha.error ?? "CAPTCHA verification failed" }, { status: 400 });
+  }
 
   const fullName = String(body.full_name       ?? "").trim();
   const email    = String(body.email           ?? "").trim().toLowerCase();
