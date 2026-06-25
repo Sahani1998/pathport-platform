@@ -13,6 +13,8 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin-client";
 import { checkRateLimit, getClientIp, rateLimitResponse, LIMITS } from "@/lib/rate-limit";
 import { notifyUser, recordTimelineEvent, logAudit } from "@/lib/application-timeline";
+import { scanFile } from "@/lib/virus-scan";
+import { withIdempotency } from "@/lib/payments/idempotency";
 import { ALLOWED_PROOF_MIME, MAX_FILE_BYTES, type AllowedProofMime, type PaymentProof } from "@/types/payment";
 import type { ApplicationStage } from "@/types/timeline";
 
@@ -38,6 +40,11 @@ export async function POST(
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  // Idempotency guard — replay within 24h returns cached response
+  const adminDbForGuard = createAdminClient();
+  const idempotencyGuard = await withIdempotency(request, "payment-proof", attemptId, user.id, adminDbForGuard);
+  if (idempotencyGuard.cached) return idempotencyGuard.cachedResponse!;
 
   // Load attempt + verify ownership (student) or role (institution/admin).
   const { data: attempt } = await supabase
@@ -71,6 +78,16 @@ export async function POST(
   // Hash file for duplicate detection.
   const buffer    = Buffer.from(await file.arrayBuffer());
   const fileHash  = createHash("sha256").update(buffer).digest("hex");
+
+  // Virus / magic-byte scan before storage write
+  const scan = await scanFile(buffer.buffer as ArrayBuffer, file.name, file.type);
+  if (scan.status === "threat") {
+    console.warn(`[Proof] scan blocked file: ${file.name} threat=${scan.threat} user=${user.id}`);
+    return NextResponse.json(
+      { error: "File was rejected by the security scanner. Please ensure the file is not corrupted and try again." },
+      { status: 422 },
+    );
+  }
 
   // Build storage path — first folder MUST be auth.uid() for RLS policy.
   const mime      = file.type as AllowedProofMime;
@@ -112,7 +129,7 @@ export async function POST(
   // invoice stuck on "Awaiting Payment", hiding the institution's verification
   // actions. The student_invoices guard trigger only blocks financial-field
   // changes, so a status-only update is permitted.
-  const adminDb = createAdminClient();
+  const adminDb = adminDbForGuard;
 
   // Advance attempt → proof_submitted (only if currently initiated/info_requested/rejected).
   // 'rejected' attempts can accept a new proof — they go back to proof_submitted.
@@ -193,5 +210,7 @@ export async function POST(
     }),
   ]);
 
-  return NextResponse.json({ proof: proof as PaymentProof }, { status: 201 });
+  const responseBody = { proof: proof as PaymentProof };
+  await idempotencyGuard.store(responseBody, 201);
+  return NextResponse.json(responseBody, { status: 201 });
 }

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { sendTemplatedEmail } from "@/lib/email/send";
 import { checkRateLimit, getClientIp, rateLimitResponse, LIMITS } from "@/lib/rate-limit";
+import { scanFile } from "@/lib/virus-scan";
 import type { ApplicationStage } from "@/types/timeline";
 import { advanceApplicationStage } from "@/lib/application-timeline";
 
@@ -88,6 +89,17 @@ export async function POST(request: Request) {
 
   // Upload file to Supabase Storage
   const fileBuffer  = await file.arrayBuffer();
+
+  // Virus / magic-byte scan before storage write
+  const scan = await scanFile(fileBuffer, file.name, file.type);
+  if (scan.status === "threat") {
+    console.warn(`[OfferLetter] scan blocked file: ${file.name} threat=${scan.threat} user=${user.id}`);
+    return NextResponse.json(
+      { error: "File was rejected by the security scanner. Please ensure the PDF is not corrupted and try again." },
+      { status: 422 },
+    );
+  }
+
   const timestamp   = Date.now();
   const storagePath = `${courseCollegeId ?? "shared"}/applications/${applicationId}/${timestamp}-v${nextVersion}.pdf`;
 

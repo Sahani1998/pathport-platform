@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { sendTemplatedEmail } from "@/lib/email/send";
 import { checkRateLimit, getClientIp, rateLimitResponse, LIMITS } from "@/lib/rate-limit";
 import { recordTimelineEvent, notifyUser, logAudit } from "@/lib/application-timeline";
+import { scanFile } from "@/lib/virus-scan";
 import { STAGE_TO_STATUS } from "@/lib/application-workflow";
 
 const MAX_FILE_BYTES = 10 * 1024 * 1024; // 10 MB
@@ -74,6 +75,16 @@ export async function POST(
     // ── Upload to storage ─────────────────────────────────────────────────────
     const storagePath = `${rawCourse?.college_id ?? "shared"}/applications/${id}/${Date.now()}-ipa.pdf`;
     const fileBuffer  = await file.arrayBuffer();
+
+    // Virus / magic-byte scan before storage write
+    const scan = await scanFile(fileBuffer, file.name, file.type);
+    if (scan.status === "threat") {
+      console.warn(`[IPA] scan blocked file: ${file.name} threat=${scan.threat} user=${user.id}`);
+      return NextResponse.json(
+        { error: "File was rejected by the security scanner. Please ensure the PDF is not corrupted and try again." },
+        { status: 422 },
+      );
+    }
 
     const { error: storageErr } = await supabase.storage
       .from("ipa-documents")

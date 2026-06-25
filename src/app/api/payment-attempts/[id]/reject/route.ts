@@ -14,6 +14,7 @@ import { checkRateLimitAsync, getClientIp, rateLimitResponse, LIMITS } from "@/l
 import { notifyUser, recordTimelineEvent, logAudit } from "@/lib/application-timeline";
 import { sendTemplatedEmail } from "@/lib/email/send";
 import { loadAttemptWithContext } from "@/lib/payments/verification-helpers";
+import { withIdempotency } from "@/lib/payments/idempotency";
 import type { ApplicationStage } from "@/types/timeline";
 
 export async function POST(
@@ -40,6 +41,11 @@ export async function POST(
   if (!reason) {
     return NextResponse.json({ error: "A reason is required when rejecting a payment" }, { status: 400 });
   }
+
+  // Idempotency guard — replay within 24h returns cached response
+  const adminDb = createAdminClient();
+  const idempotencyGuard = await withIdempotency(request, "payment-reject", id, user.id, adminDb);
+  if (idempotencyGuard.cached) return idempotencyGuard.cachedResponse!;
 
   const callerCollegeId = profile.role === "institution" ? (profile.college_id ?? "") : null;
   const ctx = await loadAttemptWithContext(supabase, id, callerCollegeId);
@@ -69,7 +75,6 @@ export async function POST(
   if (invErr) console.error("[Reject] invoice status update failed:", invErr.message);
 
   // ─── Side effects (non-fatal, admin client) ────────────────────────────────
-  const adminDb = createAdminClient();
 
   const { data: appRow } = await adminDb
     .from("applications")
@@ -129,5 +134,7 @@ export async function POST(
     }).catch(err => console.error("[Reject] email failed (non-fatal):", err));
   }
 
-  return NextResponse.json({ attempt: updatedAttempt });
+  const responseBody = { attempt: updatedAttempt };
+  await idempotencyGuard.store(responseBody, 200);
+  return NextResponse.json(responseBody);
 }

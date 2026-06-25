@@ -12,6 +12,7 @@ import {
   Building2, Users, Briefcase,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import TurnstileWidget from "@/components/ui/TurnstileWidget";
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
@@ -82,6 +83,7 @@ export default function PartnerWithUsPage() {
   const [loading,   setLoading]   = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error,     setError]     = useState<string | null>(null);
+  const [captchaToken, setCaptchaToken] = useState<string>("");
 
   const onChange = (
     e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
@@ -111,6 +113,7 @@ export default function PartnerWithUsPage() {
           country:      form.country.trim() || null,
           website:      form.website.trim() || null,
           message:      form.message.trim() || null,
+          cf_turnstile_response: captchaToken,
         }),
       });
 
@@ -389,6 +392,10 @@ export default function PartnerWithUsPage() {
                         <><Send className="w-5 h-5" /> Submit Partner Application</>
                       )}
                     </GoldButton>
+
+                    <div className="flex justify-center">
+                      <TurnstileWidget onToken={setCaptchaToken} theme="dark" />
+                    </div>
 
                     {/* Note */}
                     <p className="text-center text-white/28 font-body text-xs leading-relaxed">
