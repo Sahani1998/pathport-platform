@@ -26,9 +26,21 @@ export interface SendResult {
 
 export async function sendTemplatedEmail(opts: SendOptions): Promise<SendResult> {
   const { to, template, context, applicationId, userId, metadata } = opts;
-  const rendered = renderTemplate(template, context);
 
+  // Bounce / complaint suppression check before ANY other work.
+  // Profiles with do_not_contact=true are never emailed again.
   const supabase = await createClient();
+  const { data: profileCheck } = await supabase
+    .from("profiles")
+    .select("do_not_contact")
+    .eq("email", to.toLowerCase().trim())
+    .maybeSingle();
+  if (profileCheck?.do_not_contact) {
+    console.info(`[Email] suppressed ${template} → ${to} (do_not_contact)`);
+    return { success: false, error: "suppressed:do_not_contact" };
+  }
+
+  const rendered = renderTemplate(template, context);
 
   // Insert log row in queued state
   const { data: logRow } = await supabase
@@ -72,11 +84,16 @@ export async function sendTemplatedEmail(opts: SendOptions): Promise<SendResult>
 
     // Resend v6 never throws on API errors — it returns { data, error }.
     // The error branch must be checked explicitly or failures are silent.
+    const unsubscribeUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? "https://pathport.sg"}/unsubscribe?email=${encodeURIComponent(to)}`;
     const { data: sendData, error: sendError } = await resend.emails.send({
       from:    FROM_ADDRESS,
       to,
       subject: rendered.subject,
       html:    rendered.html,
+      headers: {
+        "List-Unsubscribe":      `<mailto:unsubscribe@pathport.sg?subject=unsubscribe>, <${unsubscribeUrl}>`,
+        "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+      },
     });
 
     console.log("[Email] resend response:", {
