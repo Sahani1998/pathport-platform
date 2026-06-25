@@ -1,8 +1,6 @@
-"use client";
+// Server component — counts are fetched with the admin client (service role)
+// so RLS never blocks them and they render inline with the page, no spinners.
 
-import { useState, useEffect, useCallback, useRef } from "react";
-import { createClient } from "@/lib/supabase/client";
-import { cn } from "@/lib/utils";
 import Link from "next/link";
 import {
   AlertCircle,
@@ -10,193 +8,132 @@ import {
   GraduationCap,
   LayoutGrid,
   BookOpen,
-  Loader2,
   CalendarRange,
   Settings as SettingsIcon,
-  RefreshCw,
 } from "lucide-react";
+import { createAdminClient } from "@/lib/supabase/admin-client";
+import RefreshButton from "./RefreshButton";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type CardState =
-  | { kind: "idle" }
-  | { kind: "loading" }
-  | { kind: "ok"; count: number }
-  | { kind: "missing_table"; message: string }
-  | { kind: "timeout" }
-  | { kind: "error"; code: string | null; message: string };
-
-type CountTask =
-  | { key: string; kind: "table";   table: string }
-  | { key: string; kind: "section"; sectionKey: string };
+type CountResult =
+  | { kind: "ok";    count: number }
+  | { kind: "error"; message: string };
 
 interface CardSpec {
-  key: string;
-  title: string;
+  key:         string;
+  title:       string;
   description: string;
-  icon: React.ElementType;
-  href: string;
-  tableLabel: string;
-  task: CountTask;
+  icon:        React.ElementType;
+  href:        string;
+  tableLabel:  string;
+  result:      CountResult;
 }
 
-// ─── Card specs (single source of truth) ──────────────────────────────────────
+// ─── Server-side count fetch ──────────────────────────────────────────────────
 
-const CARDS: CardSpec[] = [
-  {
-    key:         "public_destinations",
-    title:       "Destinations",
-    description: "Countries shown on the homepage DestinationPathway section. Control live/coming soon/hidden status per destination.",
-    icon:        Globe,
-    href:        "/dashboard/admin/public-content/destinations",
-    tableLabel:  "public_destinations",
-    task:        { key: "public_destinations", kind: "table", table: "public_destinations" },
-  },
-  {
-    key:         "public_qualification_levels",
-    title:       "Qualification Levels",
-    description: "Diploma progression pathway cards shown on /colleges. Control labels, durations, body copy, and highlighted state.",
-    icon:        GraduationCap,
-    href:        "/dashboard/admin/public-content/qualification-levels",
-    tableLabel:  "public_qualification_levels",
-    task:        { key: "public_qualification_levels", kind: "table", table: "public_qualification_levels" },
-  },
-  {
-    key:         "public_pathway_cards",
-    title:       "Pathway Cards",
-    description: "DiplomaTypesExplained cards on /courses. Edit icons, badges, subject lists, and progression copy.",
-    icon:        BookOpen,
-    href:        "/dashboard/admin/public-content/pathway-cards",
-    tableLabel:  "public_pathway_cards",
-    task:        { key: "public_pathway_cards", kind: "table", table: "public_pathway_cards" },
-  },
-  {
-    key:         "public_page_sections",
-    title:       "Duration Guide",
-    description: "Study duration table rows for the DurationGuide section. Edit full-time, part-time, and internship fields per level.",
-    icon:        LayoutGrid,
-    href:        "/dashboard/admin/public-content/duration-guide",
-    tableLabel:  "public_page_sections",
-    task:        { key: "public_page_sections", kind: "table", table: "public_page_sections" },
-  },
-  {
-    key:         "intake_options",
-    title:       "Intake Options",
-    description: "Intake dates shown in the student interest form. Add or retire intakes with no deploy. Past intakes should be archived.",
-    icon:        CalendarRange,
-    href:        "/dashboard/admin/public-content/intakes",
-    tableLabel:  "public_page_sections (section_key=intake_options)",
-    task:        { key: "intake_options", kind: "section", sectionKey: "intake_options" },
-  },
-  {
-    key:         "site_settings",
-    title:       "Site Settings",
-    description: "Global contact details: WhatsApp number, support email, social links. Read by footer, JSON-LD, interest form, and the floating advisor widget.",
-    icon:        SettingsIcon,
-    href:        "/dashboard/admin/public-content/site-settings",
-    tableLabel:  "site_settings",
-    task:        { key: "site_settings", kind: "table", table: "site_settings" },
-  },
-];
+async function getCount(table: string, sectionKey?: string): Promise<CountResult> {
+  try {
+    const db = createAdminClient();
+    const q = sectionKey
+      ? db.from(table).select("id", { count: "exact", head: true }).eq("section_key", sectionKey)
+      : db.from(table).select("id", { count: "exact", head: true });
 
-// ─── Per-card count fetch with 10 s timeout ───────────────────────────────────
-// Uses Promise.race so the timeout fires regardless of whether the Supabase
-// client's abortSignal propagates correctly to the underlying fetch.
+    const { count, error } = await q;
 
-async function fetchCount(task: CountTask): Promise<CardState> {
-  const timeoutPromise = new Promise<CardState>(resolve =>
-    setTimeout(() => {
-      console.warn(`[PublicContent] ${task.key} timed out after 10 s`);
-      resolve({ kind: "timeout" });
-    }, 10_000)
-  );
-
-  const queryPromise: Promise<CardState> = (async () => {
-    try {
-      const supabase = createClient();
-      const q = task.kind === "table"
-        ? supabase.from(task.table).select("id", { count: "exact", head: true })
-        : supabase.from("public_page_sections").select("id", { count: "exact", head: true }).eq("section_key", task.sectionKey);
-
-      const { count, error } = await q;
-
-      if (error) {
-        if (error.code === "42P01") {
-          return { kind: "missing_table", message: error.message };
-        }
-        console.warn(`[PublicContent] ${task.key} query error:`, error.code, error.message);
-        return { kind: "error", code: error.code ?? null, message: error.message };
-      }
-      return { kind: "ok", count: count ?? 0 };
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      console.warn(`[PublicContent] ${task.key} unexpected:`, msg);
-      return { kind: "error", code: null, message: msg };
+    if (error) {
+      return { kind: "error", message: `${error.code ?? "ERR"}: ${error.message}` };
     }
-  })();
-
-  return Promise.race([queryPromise, timeoutPromise]);
+    return { kind: "ok", count: count ?? 0 };
+  } catch (err) {
+    return { kind: "error", message: err instanceof Error ? err.message : String(err) };
+  }
 }
 
-// ─── Component ────────────────────────────────────────────────────────────────
+// ─── Page ─────────────────────────────────────────────────────────────────────
 
-export default function PublicContentOverviewPage() {
-  const [states, setStates] = useState<Record<string, CardState>>(
-    () => Object.fromEntries(CARDS.map(c => [c.key, { kind: "idle" } as CardState]))
+export default async function PublicContentOverviewPage() {
+  // All six counts fetched in parallel on the server — no client-side loading.
+  const [
+    destinations,
+    qualLevels,
+    pathwayCards,
+    durationGuide,
+    intakes,
+    siteSettings,
+  ] = await Promise.all([
+    getCount("public_destinations"),
+    getCount("public_qualification_levels"),
+    getCount("public_pathway_cards"),
+    getCount("public_page_sections"),
+    getCount("public_page_sections", "intake_options"),
+    getCount("site_settings"),
+  ]);
+
+  const CARDS: CardSpec[] = [
+    {
+      key:         "public_destinations",
+      title:       "Destinations",
+      description: "Countries shown on the homepage DestinationPathway section. Control live/coming soon/hidden status per destination.",
+      icon:        Globe,
+      href:        "/dashboard/admin/public-content/destinations",
+      tableLabel:  "public_destinations",
+      result:      destinations,
+    },
+    {
+      key:         "public_qualification_levels",
+      title:       "Qualification Levels",
+      description: "Diploma progression pathway cards shown on /colleges. Control labels, durations, body copy, and highlighted state.",
+      icon:        GraduationCap,
+      href:        "/dashboard/admin/public-content/qualification-levels",
+      tableLabel:  "public_qualification_levels",
+      result:      qualLevels,
+    },
+    {
+      key:         "public_pathway_cards",
+      title:       "Pathway Cards",
+      description: "DiplomaTypesExplained cards on /courses. Edit icons, badges, subject lists, and progression copy.",
+      icon:        BookOpen,
+      href:        "/dashboard/admin/public-content/pathway-cards",
+      tableLabel:  "public_pathway_cards",
+      result:      pathwayCards,
+    },
+    {
+      key:         "public_page_sections",
+      title:       "Duration Guide",
+      description: "Study duration table rows for the DurationGuide section. Edit full-time, part-time, and internship fields per level.",
+      icon:        LayoutGrid,
+      href:        "/dashboard/admin/public-content/duration-guide",
+      tableLabel:  "public_page_sections",
+      result:      durationGuide,
+    },
+    {
+      key:         "intake_options",
+      title:       "Intake Options",
+      description: "Intake dates shown in the student interest form. Add or retire intakes with no deploy. Past intakes should be archived.",
+      icon:        CalendarRange,
+      href:        "/dashboard/admin/public-content/intakes",
+      tableLabel:  "public_page_sections (section_key=intake_options)",
+      result:      intakes,
+    },
+    {
+      key:         "site_settings",
+      title:       "Site Settings",
+      description: "Global contact details: WhatsApp number, support email, social links. Read by footer, JSON-LD, interest form, and the floating advisor widget.",
+      icon:        SettingsIcon,
+      href:        "/dashboard/admin/public-content/site-settings",
+      tableLabel:  "site_settings",
+      result:      siteSettings,
+    },
+  ];
+
+  const missingTables = CARDS
+    .filter(c => c.result.kind === "error" && c.result.message.includes("42P01"))
+    .map(c => c.tableLabel);
+
+  const errors = CARDS.filter(
+    c => c.result.kind === "error" && !c.result.message.includes("42P01")
   );
-
-  // Each fetchAll bumps reqIdRef. State updates from a stale request are dropped,
-  // so overlapping invocations (e.g. StrictMode double-mount, Refresh while
-  // initial load is in flight) can never leave cards stuck on "loading".
-  const reqIdRef = useRef(0);
-
-  const fetchAll = useCallback(async () => {
-    const myReqId = ++reqIdRef.current;
-
-    setStates(prev => {
-      const next: Record<string, CardState> = { ...prev };
-      for (const c of CARDS) next[c.key] = { kind: "loading" };
-      return next;
-    });
-
-    // fetchCount() always resolves with a CardState — it never throws — but
-    // allSettled is the safer contract: a thrown rejection cannot wedge the
-    // entire batch.
-    const results = await Promise.allSettled(
-      CARDS.map(async (c) => ({ key: c.key, state: await fetchCount(c.task) }))
-    );
-
-    // Drop results if a newer fetch has started (Refresh clicked mid-flight, StrictMode remount, etc.).
-    if (myReqId !== reqIdRef.current) return;
-
-    setStates(prev => {
-      const next: Record<string, CardState> = { ...prev };
-      for (const r of results) {
-        if (r.status === "fulfilled") {
-          next[r.value.key] = r.value.state;
-        } else {
-          // Defensive: should be unreachable since fetchCount catches.
-          console.warn("[PublicContent] settle rejected:", r.reason);
-          // Don't leave the card stuck on loading — flip it to error.
-        }
-      }
-      // Belt-and-braces: any card still in "loading" at this point is a bug;
-      // flip it to error so the spinner never hangs indefinitely.
-      for (const c of CARDS) {
-        if (next[c.key]?.kind === "loading") {
-          console.warn(`[PublicContent] ${c.key} settled with no state — forcing error.`);
-          next[c.key] = { kind: "error", code: null, message: "No state returned" };
-        }
-      }
-      return next;
-    });
-  }, []);
-
-  useEffect(() => { fetchAll(); }, [fetchAll]);
-
-  const anyLoading       = Object.values(states).some(s => s.kind === "loading");
-  const missingTables    = CARDS.filter(c => states[c.key]?.kind === "missing_table").map(c => c.tableLabel);
-  const hasMissingTables = missingTables.length > 0;
 
   return (
     <div className="space-y-6 max-w-7xl">
@@ -209,18 +146,11 @@ export default function PublicContentOverviewPage() {
             Manage admin-editable content shown on the public site
           </p>
         </div>
-        <button
-          onClick={fetchAll}
-          disabled={anyLoading}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white/[0.05] border border-white/[0.09] text-white/55 hover:text-white/80 hover:border-white/20 font-body text-sm transition-all disabled:opacity-50"
-        >
-          <RefreshCw className={cn("w-3.5 h-3.5", anyLoading && "animate-spin")} />
-          {anyLoading ? "Refreshing…" : "Refresh"}
-        </button>
+        <RefreshButton />
       </div>
 
-      {/* ── Migration banner: only for genuinely missing tables ─────── */}
-      {hasMissingTables && (
+      {/* ── Missing-table banner ─────────────────────────────────────── */}
+      {missingTables.length > 0 && (
         <div className="flex items-start gap-3 p-5 rounded-2xl bg-gold-400/[0.07] border border-gold-400/25">
           <AlertCircle className="w-5 h-5 text-gold-400 flex-shrink-0 mt-0.5" />
           <div className="space-y-2">
@@ -240,11 +170,26 @@ export default function PublicContentOverviewPage() {
         </div>
       )}
 
+      {/* ── Unexpected-error banner ──────────────────────────────────── */}
+      {errors.length > 0 && (
+        <div className="flex items-start gap-3 p-5 rounded-2xl bg-red-500/[0.07] border border-red-500/25">
+          <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+          <div className="space-y-1">
+            <p className="text-white/75 font-body text-sm font-semibold">Some counts could not be fetched</p>
+            {errors.map(c => (
+              <p key={c.key} className="text-white/50 font-body text-xs">
+                <span className="text-white/70">{c.title}:</span>{" "}
+                {(c.result as { kind: "error"; message: string }).message}
+              </p>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* ── Content cards grid ──────────────────────────────────────── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {CARDS.map((card) => {
-          const Icon  = card.icon;
-          const state = states[card.key] ?? { kind: "idle" };
+          const Icon = card.icon;
           return (
             <div
               key={card.key}
@@ -258,7 +203,7 @@ export default function PublicContentOverviewPage() {
                   <h3 className="font-display text-lg text-white/90">{card.title}</h3>
                 </div>
 
-                <CountPill state={state} />
+                <CountPill result={card.result} />
               </div>
 
               <p className="font-body text-sm text-white/45 leading-relaxed flex-1">
@@ -281,49 +226,34 @@ export default function PublicContentOverviewPage() {
   );
 }
 
-// ─── Count pill — pure state→pixel mapping ────────────────────────────────────
+// ─── Count pill ───────────────────────────────────────────────────────────────
 
-function CountPill({ state }: { state: CardState }) {
-  switch (state.kind) {
-    case "idle":
-    case "loading":
-      return (
-        <div className="px-2.5 py-0.5 rounded-full bg-white/[0.05] border border-white/[0.08]">
-          <Loader2 className="w-3 h-3 text-white/30 animate-spin" />
-        </div>
-      );
-    case "ok":
-      return (
-        <span className="px-2.5 py-0.5 rounded-full bg-white/[0.06] text-white/55 border border-white/[0.08] font-body text-xs font-semibold whitespace-nowrap">
-          {state.count} row{state.count === 1 ? "" : "s"}
-        </span>
-      );
-    case "missing_table":
-      return (
-        <span
-          className="px-2.5 py-0.5 rounded-full bg-gold-400/15 text-gold-400 border border-gold-400/30 font-body text-xs font-semibold whitespace-nowrap"
-          title="Table not found — run migration"
-        >
-          Check table
-        </span>
-      );
-    case "timeout":
-      return (
-        <span
-          className="px-2.5 py-0.5 rounded-full bg-white/[0.06] text-white/45 border border-white/[0.12] font-body text-xs font-semibold whitespace-nowrap"
-          title="Query timed out after 10 s — Supabase unreachable"
-        >
-          Timeout
-        </span>
-      );
-    case "error":
-      return (
-        <span
-          className="px-2.5 py-0.5 rounded-full bg-white/[0.06] text-white/45 border border-white/[0.12] font-body text-xs font-semibold whitespace-nowrap"
-          title={`${state.code ?? "ERR"} — ${state.message}`}
-        >
-          Unavailable
-        </span>
-      );
+function CountPill({ result }: { result: CountResult }) {
+  if (result.kind === "ok") {
+    return (
+      <span className="px-2.5 py-0.5 rounded-full bg-white/[0.06] text-white/55 border border-white/[0.08] font-body text-xs font-semibold whitespace-nowrap">
+        {result.count} row{result.count === 1 ? "" : "s"}
+      </span>
+    );
   }
+
+  if (result.message.includes("42P01")) {
+    return (
+      <span
+        className="px-2.5 py-0.5 rounded-full bg-gold-400/15 text-gold-400 border border-gold-400/30 font-body text-xs font-semibold whitespace-nowrap"
+        title="Table not found — run migration"
+      >
+        Missing table
+      </span>
+    );
+  }
+
+  return (
+    <span
+      className="px-2.5 py-0.5 rounded-full bg-red-500/10 text-red-400 border border-red-500/20 font-body text-xs font-semibold whitespace-nowrap"
+      title={result.message}
+    >
+      Error
+    </span>
+  );
 }
