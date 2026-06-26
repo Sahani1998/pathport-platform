@@ -71,9 +71,6 @@ jobs:
 
       - name: Run Playwright tests
         run: npx playwright test
-        env:
-          PLAYWRIGHT_BROWSERS_PATH: /opt/pw-browsers
-          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: 1
 
       - uses: actions/upload-artifact@v4
         if: failure()
