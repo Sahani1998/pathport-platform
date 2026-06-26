@@ -11,7 +11,7 @@ import {
   Users, Settings, LogOut, ChevronLeft, ChevronRight,
   GraduationCap, BarChart2, UserCircle, ClipboardList,
   Globe, Award, MessageSquare, Bell, Loader2, Stethoscope, CreditCard,
-  ScrollText, Newspaper,
+  ScrollText, Newspaper, PlusCircle,
 } from "lucide-react";
 
 // ─── Role-specific nav items ──────────────────────────────────────────────────
@@ -45,15 +45,16 @@ const NAV_ITEMS: Record<UserRole, { label: string; href: string; icon: React.Ele
     { label: "Settings",         href: "/dashboard/admin/settings",       icon: Settings        },
   ],
   institution: [
-    { label: "Dashboard",        href: "/dashboard/institution",             icon: LayoutDashboard },
-    { label: "Students",         href: "/dashboard/institution/students",    icon: GraduationCap   },
-    { label: "Applications",     href: "/dashboard/institution/applications",icon: FileText        },
-    { label: "Documents",        href: "/dashboard/institution/documents",   icon: ClipboardList   },
-    { label: "Notifications",    href: "/dashboard/institution/notifications", icon: Bell          },
-    { label: "Payments",         href: "/dashboard/institution/payments",    icon: CreditCard      },
-    { label: "Courses",          href: "/dashboard/institution/courses",     icon: BookOpen        },
-    { label: "Reports",          href: "/dashboard/institution/reports",     icon: BarChart2       },
-    { label: "Settings",         href: "/dashboard/institution/settings",    icon: Settings        },
+    { label: "Dashboard",          href: "/dashboard/institution",                          icon: LayoutDashboard },
+    { label: "Students",           href: "/dashboard/institution/students",                 icon: GraduationCap   },
+    { label: "Applications",       href: "/dashboard/institution/applications",             icon: FileText        },
+    { label: "Internship Access",  href: "/dashboard/institution/internship-eligibility",  icon: Briefcase       },
+    { label: "Documents",          href: "/dashboard/institution/documents",                icon: ClipboardList   },
+    { label: "Notifications",      href: "/dashboard/institution/notifications",            icon: Bell            },
+    { label: "Payments",           href: "/dashboard/institution/payments",                 icon: CreditCard      },
+    { label: "Courses",            href: "/dashboard/institution/courses",                  icon: BookOpen        },
+    { label: "Reports",            href: "/dashboard/institution/reports",                  icon: BarChart2       },
+    { label: "Settings",           href: "/dashboard/institution/settings",                 icon: Settings        },
   ],
   recruitment_partner: [
     { label: "Dashboard",        href: "/dashboard/partner",                    icon: LayoutDashboard },
@@ -66,6 +67,11 @@ const NAV_ITEMS: Record<UserRole, { label: string; href: string; icon: React.Ele
   ],
   employer: [
     { label: "Dashboard",        href: "/dashboard/employer",             icon: LayoutDashboard },
+    { label: "Postings",         href: "/dashboard/employer/postings",    icon: Briefcase       },
+    { label: "New Posting",      href: "/dashboard/employer/postings/new",icon: PlusCircle      },
+    { label: "Pipeline",         href: "/dashboard/employer/pipeline",    icon: Users           },
+    { label: "Company Profile",  href: "/dashboard/employer/company",     icon: Building2       },
+    { label: "Settings",         href: "/dashboard/employer/settings",    icon: Settings        },
   ],
 };
 

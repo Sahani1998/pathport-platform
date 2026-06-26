@@ -1,10 +1,12 @@
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin-client";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { Briefcase, CheckCircle2, Clock, ArrowRight, AlertCircle, Building2 } from "lucide-react";
+import { Briefcase, CheckCircle2, Clock, ArrowRight, AlertCircle, Building2, MapPin, DollarSign } from "lucide-react";
 import type { ApplicationStage } from "@/types/timeline";
 import { getStageMeta } from "@/types/timeline";
 import ApplicationStageBadge from "@/components/applications/ApplicationStageBadge";
+import InternshipHubClient from "./InternshipHubClient";
 
 function stageStep(stage: ApplicationStage): number {
   return getStageMeta(stage).step;
@@ -17,8 +19,8 @@ const INTERNSHIP_STEPS: {
 }[] = [
   { title: "Enrolled",               desc: "Complete enrollment in your programme.",                    doneAt: "enrolled"            },
   { title: "Internship Eligible",    desc: "PathPort confirms your eligibility for internship placement.", doneAt: "internship_eligible" },
-  { title: "Internship Preparation", desc: "Your advisor coordinates your internship placement.",        doneAt: "completed"           },
-  { title: "Internship Completed",   desc: "Graduate with a diploma and real-world work experience.",    doneAt: "completed"           },
+  { title: "Internship Preparation", desc: "Browse and apply to internship postings from employers.",   doneAt: "completed"           },
+  { title: "Internship Completed",   desc: "Graduate with a diploma and real-world work experience.",   doneAt: "completed"           },
 ];
 
 export default async function StudentInternshipsPage() {
@@ -26,21 +28,28 @@ export default async function StudentInternshipsPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data: appRow } = await supabase
-    .from("applications")
-    .select(`
-      id, current_stage,
-      courses (
-        title, internship_available, internship_duration_months,
-        estimated_internship_allowance,
-        colleges ( name )
-      )
-    `)
-    .eq("student_id", user.id)
-    .not("current_stage", "in", '("rejected","withdrawn")')
-    .order("submitted_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  const db = createAdminClient();
+
+  const [{ data: appRow }, { data: eligibility }] = await Promise.all([
+    db.from("applications")
+      .select(`
+        id, current_stage,
+        courses (
+          title, internship_available, internship_duration_months,
+          estimated_internship_allowance,
+          colleges ( name )
+        )
+      `)
+      .eq("student_id", user.id)
+      .not("current_stage", "in", '("rejected","withdrawn")')
+      .order("submitted_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    db.from("internship_eligibility")
+      .select("status, suspension_reason")
+      .eq("student_id", user.id)
+      .maybeSingle(),
+  ]);
 
   type RawCourse = {
     title: string;
@@ -50,36 +59,75 @@ export default async function StudentInternshipsPage() {
     colleges: { name: string } | { name: string }[] | null;
   } | null;
 
-  const rawCourse = appRow
-    ? (Array.isArray(appRow.courses) ? appRow.courses[0] : appRow.courses) as RawCourse
-    : null;
+  const rawCourse   = appRow ? (Array.isArray(appRow.courses) ? appRow.courses[0] : appRow.courses) as RawCourse : null;
   const rawCollege  = rawCourse ? (Array.isArray(rawCourse.colleges) ? rawCourse.colleges[0] : rawCourse.colleges) : null;
   const courseName  = rawCourse?.title ?? null;
   const collegeName = rawCollege?.name ?? null;
-  const internshipAvailable   = rawCourse?.internship_available ?? null;
-  const internshipDuration    = rawCourse?.internship_duration_months ?? 6;
-  const internshipAllowance   = rawCourse?.estimated_internship_allowance ?? null;
+  const internshipDuration  = rawCourse?.internship_duration_months ?? 6;
+  const internshipAllowance = rawCourse?.estimated_internship_allowance ?? null;
 
   const currentStage  = (appRow?.current_stage ?? null) as ApplicationStage | null;
   const currentStep   = currentStage ? stageStep(currentStage) : 0;
 
-  const isEligible  = currentStep >= stageStep("internship_eligible");
   const isEnrolled  = currentStep >= stageStep("enrolled");
   const isCompleted = currentStep >= stageStep("completed");
 
-  function fmtSGD(n: number) {
-    return `S$${n.toLocaleString("en-SG")}`;
-  }
+  // Eligibility logic: eligible record OR stage >= internship_eligible, unless suspended
+  const isSuspended  = eligibility?.status === "suspended";
+  const eligibleByStage = currentStep >= stageStep("internship_eligible");
+  const isEligible   = (eligibility?.status === "eligible" || eligibleByStage) && !isSuspended;
+
+  // Fetch open postings only when eligible
+  const postings = isEligible
+    ? await db
+        .from("internship_postings")
+        .select(`
+          id, title, department, location, work_type,
+          monthly_allowance_sgd, duration_months, openings,
+          skills_required, start_date, application_deadline,
+          employer_companies(company_name, logo_url, industry)
+        `)
+        .eq("status", "open")
+        .order("created_at", { ascending: false })
+        .then(r => r.data ?? [])
+    : [];
+
+  // Fetch student's candidacies
+  const candidacies = isEligible
+    ? await db
+        .from("internship_candidacies")
+        .select("posting_id, status")
+        .eq("student_id", user.id)
+        .then(r => r.data ?? [])
+    : [];
+
+  const appliedSet = new Set((candidacies as { posting_id: string; status: string }[]).map(c => c.posting_id));
+
+  function fmtSGD(n: number) { return `S$${n.toLocaleString("en-SG")}`; }
 
   return (
-    <div className="max-w-2xl space-y-6">
+    <div className="max-w-4xl space-y-6">
       <div>
         <h2 className="font-display text-3xl text-white mb-1">Internships</h2>
         <p className="text-white/40 font-body text-sm">Paid internship placements in Singapore</p>
       </div>
 
+      {/* Suspended banner */}
+      {isSuspended && (
+        <div className="p-5 rounded-2xl bg-orange-500/10 border border-orange-400/25 flex items-start gap-3">
+          <AlertCircle className="w-5 h-5 text-orange-400 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="font-body text-sm font-semibold text-orange-400 mb-1">Internship access temporarily suspended</p>
+            {eligibility?.suspension_reason && (
+              <p className="font-body text-xs text-orange-300/70">{eligibility.suspension_reason as string}</p>
+            )}
+            <p className="font-body text-xs text-white/45 mt-1">Please contact your institution for more information.</p>
+          </div>
+        </div>
+      )}
+
       {/* Status banner */}
-      {currentStage ? (
+      {currentStage && !isSuspended ? (
         <div className={`p-5 rounded-2xl border ${
           isCompleted
             ? "bg-gradient-to-br from-gold-500/10 to-transparent border-gold-400/20"
@@ -103,21 +151,16 @@ export default async function StudentInternshipsPage() {
                 {isCompleted
                   ? "Programme completed — congratulations! 🏁"
                   : isEligible
-                    ? "You are eligible for internship placement! 💼"
+                    ? `You are eligible! Browse ${postings.length} open position${postings.length !== 1 ? "s" : ""} below. 💼`
                     : isEnrolled
                       ? "Internship placement begins after 6 months of study."
                       : "Internships are available after you enroll in your programme."}
               </p>
-              {isEligible && !isCompleted && (
-                <p className="font-body text-xs text-white/50 mt-1">
-                  Your PathPort advisor is matching you with host companies. We&apos;ll contact you shortly.
-                </p>
-              )}
             </div>
             <ApplicationStageBadge stage={currentStage} size="sm" />
           </div>
         </div>
-      ) : (
+      ) : !currentStage && (
         <div className="p-5 rounded-2xl bg-white/[0.03] border border-white/[0.07] flex items-start gap-3">
           <AlertCircle className="w-5 h-5 text-white/30 flex-shrink-0 mt-0.5" />
           <div>
@@ -130,14 +173,14 @@ export default async function StudentInternshipsPage() {
         </div>
       )}
 
-      {/* Programme details (from course) */}
-      {internshipAvailable && (
+      {/* Programme details */}
+      {rawCourse?.internship_available && !isEligible && (
         <div className="grid grid-cols-2 gap-3">
           {[
-            { label: "Monthly allowance",   value: internshipAllowance ? fmtSGD(internshipAllowance) : "S$800 – S$1,500" },
-            { label: "Duration",            value: `${internshipDuration} months`                                         },
-            { label: "Industries",          value: "IT, Business, Hospitality & more"                                    },
-            { label: "Placement support",   value: "Fully managed by PathPort"                                           },
+            { label: "Monthly allowance", value: internshipAllowance ? fmtSGD(internshipAllowance) : "S$800 – S$1,500" },
+            { label: "Duration",          value: `${internshipDuration} months`                                          },
+            { label: "Industries",        value: "IT, Business, Hospitality & more"                                     },
+            { label: "Placement support", value: "Fully managed by PathPort"                                            },
           ].map(({ label, value }) => (
             <div key={label} className="p-4 rounded-2xl bg-white/[0.03] border border-white/[0.07]">
               <p className="font-body text-[10px] text-white/35 uppercase tracking-wider mb-1">{label}</p>
@@ -147,79 +190,71 @@ export default async function StudentInternshipsPage() {
         </div>
       )}
 
-      {/* Pathway steps */}
-      <div>
-        <p className="font-body text-xs text-white/35 uppercase tracking-wider mb-3">Your Pathway</p>
-        <div className="space-y-3">
-          {(() => {
-            const stepDone     = INTERNSHIP_STEPS.map(s => currentStep >= stageStep(s.doneAt));
-            const firstNotDone = stepDone.findIndex(d => !d);
+      {/* ── Live job listings (eligible students only) ── */}
+      {isEligible && !isCompleted && (() => {
+        // Normalise Supabase FK arrays to single objects for typed props
+        const normPostings = (postings as Record<string, unknown>[]).map(p => ({
+          ...p,
+          employer_companies: Array.isArray(p.employer_companies) ? (p.employer_companies as unknown[])[0] ?? null : p.employer_companies,
+        })) as unknown as Parameters<typeof InternshipHubClient>[0]["postings"];
+        return (
+          <InternshipHubClient
+            postings={normPostings}
+            appliedSet={Array.from(appliedSet)}
+            candidacies={candidacies as { posting_id: string; status: string }[]}
+          />
+        );
+      })()}
 
-            return INTERNSHIP_STEPS.map((step, i) => {
-              const isDone = stepDone[i];
-              const isNow  = !isDone && i === firstNotDone;
-
-              return (
-              <div
-                key={i}
-                className={`flex items-start gap-4 p-4 rounded-xl border transition-all ${
-                  isDone
-                    ? "bg-emerald-500/[0.06] border-emerald-400/20"
-                    : isNow
-                      ? "bg-gold-400/[0.06] border-gold-400/20"
+      {/* Pathway steps (show when not yet eligible) */}
+      {!isEligible && !isSuspended && (
+        <div>
+          <p className="font-body text-xs text-white/35 uppercase tracking-wider mb-3">Your Pathway</p>
+          <div className="space-y-3">
+            {(() => {
+              const stepDone     = INTERNSHIP_STEPS.map(s => currentStep >= stageStep(s.doneAt));
+              const firstNotDone = stepDone.findIndex(d => !d);
+              return INTERNSHIP_STEPS.map((step, i) => {
+                const isDone = stepDone[i];
+                const isNow  = !isDone && i === firstNotDone;
+                return (
+                  <div
+                    key={i}
+                    className={`flex items-start gap-4 p-4 rounded-xl border transition-all ${
+                      isDone ? "bg-emerald-500/[0.06] border-emerald-400/20"
+                      : isNow ? "bg-gold-400/[0.06] border-gold-400/20"
                       : "bg-white/[0.03] border-white/[0.07]"
-                }`}
-              >
-                <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                  isDone ? "bg-emerald-500/20 border border-emerald-400/30"
-                         : isNow ? "bg-gold-400/15 border border-gold-400/30"
-                                 : "bg-white/[0.05] border border-white/10"
-                }`}>
-                  {isDone
-                    ? <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                    : isNow
-                      ? <Clock className="w-4 h-4 text-gold-400" />
-                      : <span className="font-body text-xs text-white/30 font-bold">{i + 1}</span>}
-                </div>
-                <div>
-                  <p className={`font-body text-sm font-semibold ${
-                    isDone ? "text-white/80" : isNow ? "text-white/85" : "text-white/40"
-                  }`}>
-                    {step.title}
-                    {isDone && <span className="ml-2 text-emerald-400 text-[10px] font-semibold uppercase tracking-wider">Done</span>}
-                    {isNow  && <span className="ml-2 text-gold-400 text-[10px] font-semibold uppercase tracking-wider">Now</span>}
-                  </p>
-                  <p className={`font-body text-xs mt-0.5 ${isDone || isNow ? "text-white/45" : "text-white/25"}`}>{step.desc}</p>
-                </div>
-              </div>
-            );
-          });
-          })()}
-        </div>
-      </div>
-
-      {/* CTA — only visible when not yet eligible */}
-      {!isEligible && !currentStage && (
-        <div className="p-5 rounded-2xl bg-white/[0.03] border border-white/[0.07] text-center space-y-3">
-          <Briefcase className="w-8 h-8 text-gold-400/50 mx-auto" />
-          <p className="font-body text-sm text-white/60">
-            Browse courses that include 6-month paid internship placements.
-          </p>
-          <Link
-            href="/dashboard/student/courses"
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gold-400/15 border border-gold-400/30 text-gold-400 font-body text-sm font-semibold hover:bg-gold-400/25 transition-all"
-          >
-            Browse Courses <ArrowRight className="w-4 h-4" />
-          </Link>
+                    }`}
+                  >
+                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                      isDone ? "bg-emerald-500/20 border border-emerald-400/30"
+                      : isNow ? "bg-gold-400/15 border border-gold-400/30"
+                      : "bg-white/[0.05] border border-white/10"
+                    }`}>
+                      {isDone ? <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                               : isNow ? <Clock className="w-4 h-4 text-gold-400" />
+                               : <span className="font-body text-xs text-white/30 font-bold">{i + 1}</span>}
+                    </div>
+                    <div>
+                      <p className={`font-body text-sm font-semibold ${isDone ? "text-white/80" : isNow ? "text-white/85" : "text-white/40"}`}>
+                        {step.title}
+                        {isDone && <span className="ml-2 text-emerald-400 text-[10px] font-semibold uppercase tracking-wider">Done</span>}
+                        {isNow  && <span className="ml-2 text-gold-400 text-[10px] font-semibold uppercase tracking-wider">Now</span>}
+                      </p>
+                      <p className={`font-body text-xs mt-0.5 ${isDone || isNow ? "text-white/45" : "text-white/25"}`}>{step.desc}</p>
+                    </div>
+                  </div>
+                );
+              });
+            })()}
+          </div>
         </div>
       )}
 
       {/* Advisor contact */}
       <div className="flex flex-col items-center gap-3 p-6 rounded-2xl bg-white/[0.03] border border-white/[0.07]">
         <p className="text-white/50 font-body text-sm text-center">
-          {isEligible
-            ? "Ready to match with an employer? Talk to your advisor."
-            : "Questions about internship placements?"}
+          {isEligible ? "Need help finding the right match?" : "Questions about internship placements?"}
         </p>
         <a
           href="https://wa.me/6583776492"
