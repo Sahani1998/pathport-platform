@@ -76,6 +76,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // supabase and fetchProfile are both stable references so these deps never
   // change — the effect never re-runs after mount.
   useEffect(() => {
+    // Hard ceiling: guarantee `loading` always resolves, even if getUser() or
+    // fetchProfile() stalls indefinitely on a GoTrue navigator.locks wait (the
+    // same lock-contention class that stalled the Public Content pages). Every
+    // path that clears `loading` for a signed-in user runs *after* the profile
+    // query resolves — so a hung query would otherwise leave the dashboard
+    // avatar/name skeleton (Sidebar) spinning forever. This net flips `loading`
+    // off regardless; the avatar then falls back to initials and upgrades to the
+    // real value if the profile lands later. (The public Navbar carries its own
+    // 2.5 s equivalent — this is the single source-of-truth version.)
+    const safetyTimer = setTimeout(() => setLoading(false), 3000);
+
     // Get current session on mount
     supabase.auth.getUser().then(({ data: { user: currentUser } }) => {
       setUser(currentUser);
@@ -100,7 +111,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     );
 
-    return () => subscription.unsubscribe();
+    return () => {
+      clearTimeout(safetyTimer);
+      subscription.unsubscribe();
+    };
   }, [supabase, fetchProfile]); // stable refs → runs once
 
   // ── Sign-out ───────────────────────────────────────────────────────────────

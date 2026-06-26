@@ -56,7 +56,13 @@ const NAV_ITEMS: Record<UserRole, { label: string; href: string; icon: React.Ele
     { label: "Settings",         href: "/dashboard/institution/settings",    icon: Settings        },
   ],
   recruitment_partner: [
-    { label: "Dashboard",        href: "/dashboard/partner",              icon: LayoutDashboard },
+    { label: "Dashboard",        href: "/dashboard/partner",                    icon: LayoutDashboard },
+    { label: "My Students",      href: "/dashboard/partner/students",           icon: Users           },
+    { label: "Applications",     href: "/dashboard/partner/applications",       icon: FileText        },
+    { label: "Commissions",      href: "/dashboard/partner/commissions",        icon: CreditCard      },
+    { label: "Institutions",     href: "/dashboard/partner/institutions",       icon: Building2       },
+    { label: "Notifications",    href: "/dashboard/partner/notifications",      icon: Bell            },
+    { label: "Settings",         href: "/dashboard/partner/settings",           icon: Settings        },
   ],
   employer: [
     { label: "Dashboard",        href: "/dashboard/employer",             icon: LayoutDashboard },
