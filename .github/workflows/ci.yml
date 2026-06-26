@@ -63,7 +63,11 @@ jobs:
           PORT: 3000
 
       - name: Wait for server
-        run: npx wait-on http://localhost:3000 --timeout 30000
+        run: |
+          for i in {1..30}; do
+            curl -sf http://localhost:3000 > /dev/null && echo "Server ready" && break
+            sleep 2
+          done
 
       - name: Run Playwright tests
         run: npx playwright test
