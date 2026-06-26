@@ -35,14 +35,11 @@ jobs:
     runs-on: ubuntu-latest
     needs: quality
     if: github.event_name == 'pull_request'
-    # Advisory until NEXT_PUBLIC_SUPABASE_URL + NEXT_PUBLIC_SUPABASE_ANON_KEY
-    # are configured as repository secrets. Failures show in the UI but do not
-    # block merge. Remove continue-on-error once secrets are wired up.
-    continue-on-error: true
     env:
       BASE_URL: http://localhost:3000
       NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
     steps:
       - uses: actions/checkout@v4
 
