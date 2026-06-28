@@ -59,7 +59,7 @@ export default async function StudentProfilePage() {
       {/* Identity card */}
       <div className="flex items-center gap-5 p-6 rounded-2xl bg-white/[0.04] border border-white/[0.08]">
         <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-gold-500 to-gold-600 flex items-center justify-center flex-shrink-0 text-navy-900 font-display font-bold text-2xl">
-          {(profile?.full_name ?? user.email ?? "U")[0].toUpperCase()}
+          {((profile?.full_name?.trim() || user.email || "U")[0] ?? "U").toUpperCase()}
         </div>
         <div>
           <p className="font-display text-2xl text-white">{profile?.full_name ?? "—"}</p>

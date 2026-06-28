@@ -169,7 +169,7 @@ export default async function PartnerDashboardPage() {
                   <div key={row.id as string} className="px-6 py-4 flex items-center justify-between gap-4 hover:bg-white/[0.02] transition-colors">
                     <div className="flex items-center gap-3 min-w-0">
                       <div className="w-9 h-9 rounded-full bg-gradient-to-br from-gold-500 to-gold-600 flex items-center justify-center flex-shrink-0 text-navy-900 font-display font-bold text-sm">
-                        {String(s?.full_name ?? "U")[0].toUpperCase()}
+                        {(String(s?.full_name ?? "").trim()[0] ?? "U").toUpperCase()}
                       </div>
                       <div className="min-w-0">
                         <p className="font-body font-semibold text-sm text-white/85 truncate">{s?.full_name as string ?? "—"}</p>

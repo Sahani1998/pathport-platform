@@ -72,7 +72,7 @@ export default function DashboardHeader({ title }: DashboardHeaderProps) {
         {/* Role badge + name */}
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-full bg-gradient-to-br from-gold-500 to-gold-600 flex items-center justify-center text-navy-900 font-display font-bold text-sm flex-shrink-0">
-            {(profile?.full_name ?? "U")[0].toUpperCase()}
+            {(profile?.full_name?.trim()?.[0] ?? "U").toUpperCase()}
           </div>
           <div className="hidden sm:block text-right">
             <p className="text-white/80 font-body text-xs font-semibold leading-tight">
