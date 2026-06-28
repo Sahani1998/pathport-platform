@@ -7,7 +7,7 @@ async function requireEmployer() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Unauthorized", status: 401 };
-  const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
+  const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).maybeSingle();
   if (profile?.role !== "employer") return { error: "Forbidden", status: 403 };
   return { user, supabase };
 }
@@ -42,7 +42,11 @@ export async function PATCH(req: NextRequest) {
   let body: Record<string, unknown>;
   try { body = await req.json(); } catch { return NextResponse.json({ error: "Invalid JSON" }, { status: 400 }); }
 
-  const allowed = ["company_name","industry","company_size","website_url","logo_url","hq_city","hq_country","description","linkedin_url"] as const;
+  const allowed = [
+    "company_name","industry","company_size","website_url","logo_url","hq_city","hq_country",
+    "description","linkedin_url","registration_number","uen","contact_email","contact_phone",
+    "company_culture","benefits","social_facebook","social_instagram","social_x","hiring_contact_name",
+  ] as const;
   const patch: Record<string, unknown> = {};
   for (const k of allowed) {
     if (k in body) patch[k] = body[k];

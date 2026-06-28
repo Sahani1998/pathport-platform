@@ -31,7 +31,7 @@ export default async function EmployerDashboardPage() {
     .from("profiles")
     .select("role, full_name, email")
     .eq("id", user.id)
-    .single();
+    .maybeSingle();
 
   if (profile?.role !== "employer") redirect("/dashboard");
 
@@ -48,7 +48,7 @@ export default async function EmployerDashboardPage() {
     { data: statsRow },
     { data: upcomingInterviews },
   ] = await Promise.all([
-    db.from("employer_companies").select("company_name, logo_url, industry, is_verified").eq("employer_id", user.id).maybeSingle(),
+    db.from("employer_companies").select("id, company_name, logo_url, industry, is_verified").eq("employer_id", user.id).maybeSingle(),
     db.from("postings").select("id, title, status, openings, created_at", { count: "exact" }).eq("employer_id", user.id).order("created_at", { ascending: false }),
     postingIdList.length > 0
       ? db.from("candidacies")
@@ -80,6 +80,23 @@ export default async function EmployerDashboardPage() {
 
   const companyName = company?.company_name ?? profile?.full_name ?? "Your Company";
   const hasCompanyProfile = !!company;
+
+  // Recent activity from the employer audit log (populated by the lifecycle helper)
+  const { data: recentActivity } = company?.id
+    ? await db.from("employer_audit_log")
+        .select("id, action, entity_type, from_value, to_value, created_at")
+        .eq("company_id", company.id)
+        .order("created_at", { ascending: false })
+        .limit(6)
+    : { data: [] as Record<string, unknown>[] };
+  const activity = recentActivity ?? [];
+
+  const fmtActivity = (a: Record<string, unknown>) => {
+    const action = String(a.action ?? "").replace(/_/g, " ");
+    const to = a.to_value ? String(a.to_value).replace(/_/g, " ") : "";
+    if (a.action === "candidacy_status_changed" && to) return `Candidate moved to ${to}`;
+    return action.charAt(0).toUpperCase() + action.slice(1);
+  };
 
   return (
     <div className="space-y-7 max-w-6xl">
@@ -285,6 +302,26 @@ export default async function EmployerDashboardPage() {
             >
               <PlusCircle className="w-4 h-4" /> New Posting
             </Link>
+          </div>
+
+          {/* Recent activity */}
+          <div className="bg-white/[0.04] border border-white/[0.08] rounded-2xl p-5">
+            <h3 className="font-display text-lg text-white mb-3">Recent Activity</h3>
+            {activity.length === 0 ? (
+              <p className="text-white/30 font-body text-sm text-center py-2">No activity yet</p>
+            ) : (
+              <div className="space-y-2.5">
+                {activity.map((a: Record<string, unknown>) => (
+                  <div key={a.id as string} className="flex items-start gap-2.5">
+                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-400/60 mt-1.5 flex-shrink-0" />
+                    <div className="min-w-0">
+                      <p className="font-body text-xs text-white/65 leading-snug">{fmtActivity(a)}</p>
+                      <p className="font-body text-[10px] text-white/30">{new Date(a.created_at as string).toLocaleDateString("en-SG", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Quick links */}

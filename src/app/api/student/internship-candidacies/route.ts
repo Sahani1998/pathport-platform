@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
+  const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).maybeSingle();
   if (profile?.role !== "student") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const db = createAdminClient();
@@ -45,7 +45,7 @@ export async function PATCH(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { data: profile } = await supabase.from("profiles").select("role, full_name").eq("id", user.id).single();
+  const { data: profile } = await supabase.from("profiles").select("role, full_name").eq("id", user.id).maybeSingle();
   if (profile?.role !== "student") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   let body: Record<string, unknown>;
@@ -151,7 +151,7 @@ export async function PATCH(req: NextRequest) {
 
   // Confirmation email to student on accept
   if (newStatus === "offer_accepted") {
-    const { data: me } = await db.from("profiles").select("email, full_name").eq("id", user.id).single();
+    const { data: me } = await db.from("profiles").select("email, full_name").eq("id", user.id).maybeSingle();
     if (me?.email) {
       await sendTemplatedEmail({
         to: me.email,

@@ -14,7 +14,7 @@ export default async function EmployerSettingsPage() {
     .from("profiles")
     .select("role, full_name, email")
     .eq("id", user.id)
-    .single();
+    .maybeSingle();
 
   if (profile?.role !== "employer") redirect("/dashboard");
 

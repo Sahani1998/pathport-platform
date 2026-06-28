@@ -16,19 +16,30 @@ const TABS = [
 ];
 
 type CompanyForm = {
-  company_name:  string;
-  industry:      string;
-  company_size:  string;
-  website_url:   string;
-  hq_city:       string;
-  hq_country:    string;
-  description:   string;
-  linkedin_url:  string;
+  company_name:        string;
+  registration_number: string;
+  uen:                 string;
+  industry:            string;
+  company_size:        string;
+  website_url:         string;
+  contact_email:       string;
+  contact_phone:       string;
+  hq_city:             string;
+  hq_country:          string;
+  description:         string;
+  company_culture:     string;
+  hiring_contact_name: string;
+  linkedin_url:        string;
+  social_facebook:     string;
+  social_instagram:    string;
+  social_x:            string;
 };
 
 const EMPTY: CompanyForm = {
-  company_name: "", industry: "", company_size: "", website_url: "",
-  hq_city: "Singapore", hq_country: "Singapore", description: "", linkedin_url: "",
+  company_name: "", registration_number: "", uen: "", industry: "", company_size: "",
+  website_url: "", contact_email: "", contact_phone: "",
+  hq_city: "Singapore", hq_country: "Singapore", description: "", company_culture: "",
+  hiring_contact_name: "", linkedin_url: "", social_facebook: "", social_instagram: "", social_x: "",
 };
 
 const SIZES = [
@@ -58,14 +69,23 @@ export default function EmployerCompanyPage() {
       if (company) {
         setIsVerified(!!company.is_verified);
         setForm({
-          company_name: company.company_name ?? "",
-          industry:     company.industry     ?? "",
-          company_size: company.company_size ?? "",
-          website_url:  company.website_url  ?? "",
-          hq_city:      company.hq_city      ?? "Singapore",
-          hq_country:   company.hq_country   ?? "Singapore",
-          description:  company.description  ?? "",
-          linkedin_url: company.linkedin_url ?? "",
+          company_name:        company.company_name        ?? "",
+          registration_number: company.registration_number ?? "",
+          uen:                 company.uen                 ?? "",
+          industry:            company.industry            ?? "",
+          company_size:        company.company_size        ?? "",
+          website_url:         company.website_url         ?? "",
+          contact_email:       company.contact_email       ?? "",
+          contact_phone:       company.contact_phone       ?? "",
+          hq_city:             company.hq_city             ?? "Singapore",
+          hq_country:          company.hq_country          ?? "Singapore",
+          description:         company.description         ?? "",
+          company_culture:     company.company_culture     ?? "",
+          hiring_contact_name: company.hiring_contact_name ?? "",
+          linkedin_url:        company.linkedin_url        ?? "",
+          social_facebook:     company.social_facebook     ?? "",
+          social_instagram:    company.social_instagram    ?? "",
+          social_x:            company.social_x            ?? "",
         });
       }
     } catch (e) {
@@ -210,6 +230,40 @@ export default function EmployerCompanyPage() {
           </div>
         </div>
 
+        {/* Registration + UEN */}
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block font-body text-xs text-white/50 uppercase tracking-wider mb-2">Registration Number</label>
+            <input {...field("registration_number")} placeholder="e.g. 201912345A"
+              className="w-full px-4 py-3 rounded-xl bg-white/[0.05] border border-white/[0.10] text-white/90 font-body text-sm placeholder:text-white/25 focus:outline-none focus:border-emerald-400/50 focus:bg-white/[0.07] transition-all" />
+          </div>
+          <div>
+            <label className="block font-body text-xs text-white/50 uppercase tracking-wider mb-2">UEN</label>
+            <input {...field("uen")} placeholder="Unique Entity Number"
+              className="w-full px-4 py-3 rounded-xl bg-white/[0.05] border border-white/[0.10] text-white/90 font-body text-sm placeholder:text-white/25 focus:outline-none focus:border-emerald-400/50 focus:bg-white/[0.07] transition-all" />
+          </div>
+        </div>
+
+        {/* Contact email + phone */}
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block font-body text-xs text-white/50 uppercase tracking-wider mb-2">Contact Email</label>
+            <input {...field("contact_email")} type="email" placeholder="hr@yourcompany.com"
+              className="w-full px-4 py-3 rounded-xl bg-white/[0.05] border border-white/[0.10] text-white/90 font-body text-sm placeholder:text-white/25 focus:outline-none focus:border-emerald-400/50 focus:bg-white/[0.07] transition-all" />
+          </div>
+          <div>
+            <label className="block font-body text-xs text-white/50 uppercase tracking-wider mb-2">Contact Phone</label>
+            <input {...field("contact_phone")} placeholder="+65 6123 4567"
+              className="w-full px-4 py-3 rounded-xl bg-white/[0.05] border border-white/[0.10] text-white/90 font-body text-sm placeholder:text-white/25 focus:outline-none focus:border-emerald-400/50 focus:bg-white/[0.07] transition-all" />
+          </div>
+        </div>
+
+        <div>
+          <label className="block font-body text-xs text-white/50 uppercase tracking-wider mb-2">Hiring Contact Name</label>
+          <input {...field("hiring_contact_name")} placeholder="e.g. Jane Tan, HR Manager"
+            className="w-full px-4 py-3 rounded-xl bg-white/[0.05] border border-white/[0.10] text-white/90 font-body text-sm placeholder:text-white/25 focus:outline-none focus:border-emerald-400/50 focus:bg-white/[0.07] transition-all" />
+        </div>
+
         <div>
           <label className="block font-body text-xs text-white/50 uppercase tracking-wider mb-2">Website</label>
           <input
@@ -220,14 +274,28 @@ export default function EmployerCompanyPage() {
           />
         </div>
 
-        <div>
-          <label className="block font-body text-xs text-white/50 uppercase tracking-wider mb-2">LinkedIn Page</label>
-          <input
-            {...field("linkedin_url")}
-            type="url"
-            placeholder="https://linkedin.com/company/yourcompany"
-            className="w-full px-4 py-3 rounded-xl bg-white/[0.05] border border-white/[0.10] text-white/90 font-body text-sm placeholder:text-white/25 focus:outline-none focus:border-emerald-400/50 focus:bg-white/[0.07] transition-all"
-          />
+        {/* Social links */}
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block font-body text-xs text-white/50 uppercase tracking-wider mb-2">LinkedIn</label>
+            <input {...field("linkedin_url")} type="url" placeholder="linkedin.com/company/…"
+              className="w-full px-4 py-3 rounded-xl bg-white/[0.05] border border-white/[0.10] text-white/90 font-body text-sm placeholder:text-white/25 focus:outline-none focus:border-emerald-400/50 focus:bg-white/[0.07] transition-all" />
+          </div>
+          <div>
+            <label className="block font-body text-xs text-white/50 uppercase tracking-wider mb-2">Facebook</label>
+            <input {...field("social_facebook")} type="url" placeholder="facebook.com/…"
+              className="w-full px-4 py-3 rounded-xl bg-white/[0.05] border border-white/[0.10] text-white/90 font-body text-sm placeholder:text-white/25 focus:outline-none focus:border-emerald-400/50 focus:bg-white/[0.07] transition-all" />
+          </div>
+          <div>
+            <label className="block font-body text-xs text-white/50 uppercase tracking-wider mb-2">Instagram</label>
+            <input {...field("social_instagram")} placeholder="@yourcompany"
+              className="w-full px-4 py-3 rounded-xl bg-white/[0.05] border border-white/[0.10] text-white/90 font-body text-sm placeholder:text-white/25 focus:outline-none focus:border-emerald-400/50 focus:bg-white/[0.07] transition-all" />
+          </div>
+          <div>
+            <label className="block font-body text-xs text-white/50 uppercase tracking-wider mb-2">X (Twitter)</label>
+            <input {...field("social_x")} placeholder="@yourcompany"
+              className="w-full px-4 py-3 rounded-xl bg-white/[0.05] border border-white/[0.10] text-white/90 font-body text-sm placeholder:text-white/25 focus:outline-none focus:border-emerald-400/50 focus:bg-white/[0.07] transition-all" />
+          </div>
         </div>
 
         <div>
@@ -235,7 +303,17 @@ export default function EmployerCompanyPage() {
           <textarea
             {...field("description")}
             rows={4}
-            placeholder="Tell students about your company, culture, and what makes you a great place to intern..."
+            placeholder="Tell students about your company and what makes you a great place to intern..."
+            className="w-full px-4 py-3 rounded-xl bg-white/[0.05] border border-white/[0.10] text-white/90 font-body text-sm placeholder:text-white/25 focus:outline-none focus:border-emerald-400/50 focus:bg-white/[0.07] transition-all resize-none"
+          />
+        </div>
+
+        <div>
+          <label className="block font-body text-xs text-white/50 uppercase tracking-wider mb-2">Company Culture</label>
+          <textarea
+            {...field("company_culture")}
+            rows={3}
+            placeholder="Describe your team culture, work environment, and values..."
             className="w-full px-4 py-3 rounded-xl bg-white/[0.05] border border-white/[0.10] text-white/90 font-body text-sm placeholder:text-white/25 focus:outline-none focus:border-emerald-400/50 focus:bg-white/[0.07] transition-all resize-none"
           />
         </div>
