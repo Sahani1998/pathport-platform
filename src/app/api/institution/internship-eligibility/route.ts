@@ -38,16 +38,23 @@ export async function GET(req: NextRequest) {
     `)
     .order("updated_at", { ascending: false });
 
-  // Institution users are scoped to their college's students
-  if (profile.role === "institution" && collegeId) {
-    // Filter by students enrolled at this institution
-    const { data: collegeStudentIds } = await db
+  // Institution users are scoped to their college's students. college_id lives
+  // on `courses`, NOT `applications` — resolve via course ids (same pattern as
+  // every other institution page) instead of filtering applications.college_id.
+  if (profile.role === "institution") {
+    if (!collegeId) return NextResponse.json({ eligibility: [] });
+
+    const { data: courseRows } = await db.from("courses").select("id").eq("college_id", collegeId);
+    const courseIds = (courseRows ?? []).map((c: Record<string, unknown>) => c.id as string);
+    if (!courseIds.length) return NextResponse.json({ eligibility: [] });
+
+    const { data: collegeStudents } = await db
       .from("applications")
       .select("student_id")
-      .eq("college_id", collegeId)
+      .in("course_id", courseIds)
       .not("current_stage", "in", '("rejected","withdrawn")');
 
-    const ids = (collegeStudentIds ?? []).map((r: Record<string,unknown>) => r.student_id as string).filter(Boolean);
+    const ids = (collegeStudents ?? []).map((r: Record<string, unknown>) => r.student_id as string).filter(Boolean);
     if (!ids.length) return NextResponse.json({ eligibility: [] });
     query = query.in("student_id", ids);
   }

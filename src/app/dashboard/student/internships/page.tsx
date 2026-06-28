@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Briefcase, CheckCircle2, Clock, ArrowRight, AlertCircle, Building2, MapPin, DollarSign } from "lucide-react";
 import type { ApplicationStage } from "@/types/timeline";
 import { getStageMeta } from "@/types/timeline";
+import { resolveStage, isStudentInternshipEligible } from "@/lib/application-stage-mapping";
 import ApplicationStageBadge from "@/components/applications/ApplicationStageBadge";
 import InternshipHubClient from "./InternshipHubClient";
 import StudentApplicationsPanel, { type StudentCandidacy } from "./StudentApplicationsPanel";
@@ -34,7 +35,7 @@ export default async function StudentInternshipsPage() {
   const [{ data: appRow }, { data: eligibility }] = await Promise.all([
     db.from("applications")
       .select(`
-        id, current_stage,
+        id, current_stage, status,
         courses (
           title, internship_available, internship_duration_months,
           estimated_internship_allowance,
@@ -67,16 +68,19 @@ export default async function StudentInternshipsPage() {
   const internshipDuration  = rawCourse?.internship_duration_months ?? 6;
   const internshipAllowance = rawCourse?.estimated_internship_allowance ?? null;
 
-  const currentStage  = (appRow?.current_stage ?? null) as ApplicationStage | null;
+  const currentStage  = appRow ? resolveStage(appRow.current_stage as string | null, appRow.status as string | null) : null;
   const currentStep   = currentStage ? stageStep(currentStage) : 0;
 
   const isEnrolled  = currentStep >= stageStep("enrolled");
   const isCompleted = currentStep >= stageStep("completed");
 
-  // Eligibility logic: eligible record OR stage >= internship_eligible, unless suspended
+  // Eligibility — single source of truth (see application-stage-mapping)
   const isSuspended  = eligibility?.status === "suspended";
-  const eligibleByStage = currentStep >= stageStep("internship_eligible");
-  const isEligible   = (eligibility?.status === "eligible" || eligibleByStage) && !isSuspended;
+  const isEligible   = isStudentInternshipEligible(
+    eligibility?.status,
+    appRow?.current_stage as string | null,
+    appRow?.status as string | null,
+  );
 
   // Fetch open postings only when eligible
   const postings = isEligible

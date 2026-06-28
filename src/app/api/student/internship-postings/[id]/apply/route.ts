@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin-client";
 import { NextRequest, NextResponse } from "next/server";
 import { checkRateLimitAsync, getClientIp, rateLimitResponse, LIMITS } from "@/lib/rate-limit";
-import { getStageMeta } from "@/types/timeline";
+import { isStudentInternshipEligible } from "@/lib/application-stage-mapping";
 import { notifyUser } from "@/lib/application-timeline";
 import { recordCandidacyTimeline } from "@/lib/candidacy-lifecycle";
 import { sendTemplatedEmail } from "@/lib/email/send";
@@ -31,16 +31,18 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   const { data: appRow } = await db
     .from("applications")
-    .select("id, current_stage")
+    .select("id, current_stage, status")
     .eq("student_id", user.id)
     .not("current_stage", "in", '("rejected","withdrawn")')
     .order("submitted_at", { ascending: false })
     .limit(1)
     .maybeSingle();
 
-  const stageStep = appRow ? getStageMeta(appRow.current_stage as Parameters<typeof getStageMeta>[0]).step : 0;
-  const eligibleByStage = stageStep >= getStageMeta("internship_eligible").step;
-  const isEligible = eligibility?.status === "eligible" || (eligibleByStage && eligibility?.status !== "suspended");
+  const isEligible = isStudentInternshipEligible(
+    eligibility?.status,
+    appRow?.current_stage as string | null,
+    appRow?.status as string | null,
+  );
 
   if (!isEligible) return NextResponse.json({ error: "You are not eligible to apply for internships yet." }, { status: 403 });
 
