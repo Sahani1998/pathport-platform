@@ -73,7 +73,12 @@ function Branding() {
         )}
       </div>
       {current ? (
-        <div className="flex items-center gap-2 text-emerald-400 font-body text-xs"><CheckCircle2 className="w-4 h-4" /> Uploaded</div>
+        <div className="space-y-2">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={current.public_url as string} alt={label}
+            className={`w-full ${type === "banner" ? "h-24" : "h-20"} object-contain rounded-xl bg-white/[0.03] border border-white/[0.06]`} />
+          <div className="flex items-center gap-2 text-emerald-400 font-body text-xs"><CheckCircle2 className="w-3.5 h-3.5" /> Uploaded</div>
+        </div>
       ) : (
         <label className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-white/[0.04] border border-dashed border-white/[0.15] text-white/45 font-body text-sm cursor-pointer hover:bg-white/[0.06] transition-all">
           {uploading === type ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
@@ -108,9 +113,13 @@ function Branding() {
         ) : (
           <div className="flex flex-wrap gap-2">
             {gallery.map(g => (
-              <div key={g.id as string} className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.08]">
-                <ImageIcon className="w-3.5 h-3.5 text-white/40" />
-                <button onClick={() => remove(g.id as string)} className="text-red-400/50 hover:text-red-400"><X className="w-3.5 h-3.5" /></button>
+              <div key={g.id as string} className="relative group">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={g.public_url as string} alt="Gallery" className="w-20 h-20 object-cover rounded-lg border border-white/[0.08]" />
+                <button onClick={() => remove(g.id as string)}
+                  className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-red-500/80 border border-red-400/40 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                  <X className="w-3 h-3" />
+                </button>
               </div>
             ))}
           </div>

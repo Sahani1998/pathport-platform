@@ -24,7 +24,13 @@ export async function GET(req: NextRequest) {
     .order("sort_order", { ascending: true });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ media: data ?? [] });
+
+  // Attach public URLs so the client can render previews
+  const media = (data ?? []).map(m => ({
+    ...m,
+    public_url: db.storage.from(m.bucket as string).getPublicUrl(m.path as string).data.publicUrl,
+  }));
+  return NextResponse.json({ media });
 }
 
 // Upload logo / banner / gallery image
