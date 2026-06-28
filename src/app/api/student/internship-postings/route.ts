@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin-client";
 import { NextRequest, NextResponse } from "next/server";
 import { checkRateLimitAsync, getClientIp, rateLimitResponse, LIMITS } from "@/lib/rate-limit";
-import { getStageMeta } from "@/types/timeline";
+import { isStudentInternshipEligible } from "@/lib/application-stage-mapping";
 
 export async function GET(req: NextRequest) {
   const rl = await checkRateLimitAsync(getClientIp(req), LIMITS.profile.limit, LIMITS.profile.windowMs);
@@ -24,19 +24,21 @@ export async function GET(req: NextRequest) {
     .eq("student_id", user.id)
     .maybeSingle();
 
-  // Also check application stage as fallback
+  // Application stage fallback (single source of truth — see application-stage-mapping)
   const { data: appRow } = await db
     .from("applications")
-    .select("current_stage")
+    .select("current_stage, status")
     .eq("student_id", user.id)
     .not("current_stage", "in", '("rejected","withdrawn")')
     .order("submitted_at", { ascending: false })
     .limit(1)
     .maybeSingle();
 
-  const stageStep = appRow ? getStageMeta(appRow.current_stage as Parameters<typeof getStageMeta>[0]).step : 0;
-  const eligibleByStage = stageStep >= getStageMeta("internship_eligible").step;
-  const isEligible = eligibility?.status === "eligible" || (eligibleByStage && eligibility?.status !== "suspended");
+  const isEligible = isStudentInternshipEligible(
+    eligibility?.status,
+    appRow?.current_stage as string | null,
+    appRow?.status as string | null,
+  );
 
   if (!isEligible) return NextResponse.json({ error: "Not eligible for internship browsing", eligible: false }, { status: 403 });
 

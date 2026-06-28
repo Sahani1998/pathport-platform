@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin-client";
 import { redirect } from "next/navigation";
+import { resolveStage, isInternshipRelevant } from "@/lib/application-stage-mapping";
 import EligibilityClient from "./EligibilityClient";
 
 export const dynamic = "force-dynamic";
@@ -14,63 +15,79 @@ export default async function InstitutionInternshipEligibilityPage() {
     .from("profiles")
     .select("role, college_id")
     .eq("id", user.id)
-    .single();
+    .maybeSingle();
 
-  if (!profile || !["institution","admin"].includes(profile.role)) redirect("/dashboard");
+  if (!profile || !["institution", "admin"].includes(profile.role)) redirect("/dashboard");
 
   const db = createAdminClient();
-  const collegeId = profile.college_id as string | null;
+  const collegeId = (profile.college_id as string | null) ?? null;
+  const isInstitution = profile.role === "institution";
 
-  // Fetch enrolled students who are at internship-relevant stages
-  let studentQuery = db
+  // ── College scoping ──────────────────────────────────────────────────────
+  // college_id lives on `courses`, NOT on `applications`. Every institution
+  // page scopes by resolving the college's course ids first, then filtering
+  // applications by course_id. (Filtering applications.college_id directly was
+  // the bug that made this page show zero enrolled students.)
+  let courseIds: string[] | null = null; // null = admin, no scoping
+  if (isInstitution) {
+    if (!collegeId) return <EligibilityClient students={[]} />;
+    const { data: courseRows } = await db
+      .from("courses")
+      .select("id")
+      .eq("college_id", collegeId);
+    courseIds = (courseRows ?? []).map((c: Record<string, unknown>) => c.id as string);
+    if (courseIds.length === 0) return <EligibilityClient students={[]} />;
+  }
+
+  // ── Fetch applications (scoped to the college's courses for institutions) ──
+  let appQuery = db
     .from("applications")
     .select(`
-      id, student_id, current_stage,
+      id, student_id, current_stage, status,
       student:profiles!applications_student_id_fkey(
         id, full_name, email, country
       ),
       courses(title, colleges(name))
     `)
-    .not("current_stage", "in", '("rejected","withdrawn","application_submitted","documents_pending","documents_uploaded","documents_under_review","documents_verified","offer_letter_processing","offer_letter_ready","offer_letter_accepted","fee_payment_pending","ipa_processing","approved","tuition_fee_payment_pending","arrival_preparation")')
+    .not("current_stage", "in", '("rejected","withdrawn")')
     .order("submitted_at", { ascending: false });
 
-  if (collegeId && profile.role === "institution") {
-    studentQuery = studentQuery.eq("college_id", collegeId);
-  }
+  if (courseIds) appQuery = appQuery.in("course_id", courseIds);
 
-  const { data: applications } = await studentQuery;
+  const { data: applications } = await appQuery;
 
-  // Fetch existing eligibility records
-  const studentIds = (applications ?? [])
-    .map((a: Record<string,unknown>) => a.student_id as string)
-    .filter(Boolean);
+  // ── Filter to internship-relevant students via the SINGLE SOURCE OF TRUTH ──
+  // (enrolled and beyond, derived from resolveStage — same logic every other
+  // module uses; no hardcoded stage exclusion list.)
+  const relevant = (applications ?? []).filter((a: Record<string, unknown>) =>
+    isInternshipRelevant(a.current_stage as string | null, a.status as string | null),
+  );
 
+  // Existing eligibility records
+  const studentIds = relevant.map((a: Record<string, unknown>) => a.student_id as string).filter(Boolean);
   const { data: eligibilityRows } = studentIds.length > 0
-    ? await db
-        .from("posting_eligibility")
-        .select("*")
-        .in("student_id", studentIds)
+    ? await db.from("posting_eligibility").select("*").in("student_id", studentIds)
     : { data: [] };
 
-  const eligibilityMap: Record<string, Record<string,unknown>> = {};
+  const eligibilityMap: Record<string, Record<string, unknown>> = {};
   for (const row of eligibilityRows ?? []) {
-    const r = row as Record<string,unknown>;
+    const r = row as Record<string, unknown>;
     eligibilityMap[r.student_id as string] = r;
   }
 
-  const students = (applications ?? []).map((a: Record<string,unknown>) => {
-    const student = Array.isArray(a.student) ? a.student[0] : a.student as Record<string,unknown> | null;
-    const course  = Array.isArray(a.courses) ? a.courses[0] : a.courses as Record<string,unknown> | null;
+  const students = relevant.map((a: Record<string, unknown>) => {
+    const student = Array.isArray(a.student) ? a.student[0] : a.student as Record<string, unknown> | null;
+    const course  = Array.isArray(a.courses) ? a.courses[0] : a.courses as Record<string, unknown> | null;
     const college = course ? (Array.isArray(course.colleges) ? course.colleges[0] : course.colleges) : null;
     return {
       applicationId: a.id as string,
       studentId:     a.student_id as string,
-      currentStage:  a.current_stage as string,
-      fullName:      student?.full_name as string ?? "—",
-      email:         student?.email as string ?? "—",
-      country:       student?.country as string | null ?? null,
-      courseTitle:   course?.title as string ?? "—",
-      collegeName:   (college as Record<string,unknown> | null)?.name as string ?? "—",
+      currentStage:  resolveStage(a.current_stage as string | null, a.status as string | null),
+      fullName:      (student?.full_name as string) ?? "—",
+      email:         (student?.email as string) ?? "—",
+      country:       (student?.country as string | null) ?? null,
+      courseTitle:   (course?.title as string) ?? "—",
+      collegeName:   ((college as Record<string, unknown> | null)?.name as string) ?? "—",
       eligibility:   eligibilityMap[a.student_id as string] ?? null,
     };
   });
