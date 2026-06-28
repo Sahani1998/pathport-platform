@@ -17,17 +17,18 @@ export default async function PostingDetailPage({ params }: { params: Promise<{ 
 
   const db = createAdminClient();
   const [{ data: posting }, { data: candidacies }] = await Promise.all([
-    db.from("internship_postings")
+    db.from("postings")
       .select("*, employer_companies(company_name, logo_url)")
       .eq("id", id)
       .eq("employer_id", user.id)
       .maybeSingle(),
-    db.from("internship_candidacies")
+    db.from("candidacies")
       .select(`
-        id, status, cover_note, resume_url, interview_date,
-        interview_notes, offer_allowance_sgd, offer_start_date,
-        rejection_reason, employer_notes, applied_at, updated_at,
-        student:profiles!internship_candidacies_student_id_fkey(
+        id, status, cover_note, resume_url, interview_date, interview_mode,
+        interview_location, interview_notes, offer_allowance, offer_currency,
+        offer_start_date, offer_response_deadline, rejection_reason,
+        employer_notes, applied_at, updated_at,
+        student:profiles!student_id(
           id, full_name, email, country
         )
       `)

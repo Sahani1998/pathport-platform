@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
 
   // Check internship eligibility
   const { data: eligibility } = await db
-    .from("internship_eligibility")
+    .from("posting_eligibility")
     .select("status")
     .eq("student_id", user.id)
     .maybeSingle();
@@ -44,10 +44,10 @@ export async function GET(req: NextRequest) {
   const search = url.searchParams.get("q")?.trim() ?? "";
 
   let query = db
-    .from("internship_postings")
+    .from("postings")
     .select(`
       id, title, department, description, location, work_type,
-      monthly_allowance_sgd, duration_months, openings, skills_required,
+      monthly_allowance, duration_months, openings, skills_required,
       start_date, application_deadline, created_at,
       employer_companies(company_name, logo_url, industry, hq_city)
     `)

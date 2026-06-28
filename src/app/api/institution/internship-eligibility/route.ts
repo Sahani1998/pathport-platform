@@ -29,10 +29,10 @@ export async function GET(req: NextRequest) {
   const collegeId = profile.college_id as string | null;
 
   let query = db
-    .from("internship_eligibility")
+    .from("posting_eligibility")
     .select(`
       id, status, enabled_at, suspended_at, suspension_reason, notes, updated_at,
-      student:profiles!internship_eligibility_student_id_fkey(
+      student:profiles!student_id(
         id, full_name, email, country
       )
     `)
@@ -75,7 +75,7 @@ export async function POST(req: NextRequest) {
   const now = new Date().toISOString();
 
   const { data, error } = await db
-    .from("internship_eligibility")
+    .from("posting_eligibility")
     .upsert({
       student_id:     student_id as string,
       application_id: application_id as string | null ?? null,

@@ -4,6 +4,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { checkRateLimitAsync, getClientIp, rateLimitResponse, LIMITS } from "@/lib/rate-limit";
 import { getStageMeta } from "@/types/timeline";
 import { notifyUser } from "@/lib/application-timeline";
+import { recordCandidacyTimeline } from "@/lib/candidacy-lifecycle";
+import { sendTemplatedEmail } from "@/lib/email/send";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const rl = await checkRateLimitAsync(getClientIp(req), LIMITS.apply.limit, LIMITS.apply.windowMs);
@@ -22,7 +24,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   // Check eligibility
   const { data: eligibility } = await db
-    .from("internship_eligibility")
+    .from("posting_eligibility")
     .select("status")
     .eq("student_id", user.id)
     .maybeSingle();
@@ -44,7 +46,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   // Verify posting is open
   const { data: posting } = await db
-    .from("internship_postings")
+    .from("postings")
     .select("id, status, title, employer_id")
     .eq("id", postingId)
     .maybeSingle();
@@ -56,7 +58,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   try { body = await req.json(); } catch { /* cover note is optional */ }
 
   const { data, error } = await db
-    .from("internship_candidacies")
+    .from("candidacies")
     .insert({
       posting_id:    postingId,
       student_id:    user.id,
@@ -72,13 +74,39 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  // Non-fatal: notify the employer
+  // Record candidacy timeline (applied)
+  await recordCandidacyTimeline(db, {
+    candidacyId:   data.id,
+    status:        "applied",
+    createdBy:     user.id,
+    createdByRole: "student",
+  });
+
+  // Non-fatal: notify the employer in-app
   await notifyUser(db, {
     userId:  posting.employer_id,
-    title:   "New Internship Application",
-    message: `A student has applied to your position: ${posting.title}`,
-    type:    "system",
+    title:   "New Application",
+    message: `A student has applied to your posting: ${posting.title}`,
+    type:    "application_update",
   });
+
+  // Non-fatal: email the employer
+  const { data: employer } = await db
+    .from("profiles").select("email, full_name").eq("id", posting.employer_id).maybeSingle();
+  const { data: me } = await db
+    .from("profiles").select("full_name").eq("id", user.id).maybeSingle();
+  if (employer?.email) {
+    await sendTemplatedEmail({
+      to: employer.email,
+      template: "new_applicant_employer",
+      context: {
+        name:          employer.full_name ?? undefined,
+        postingTitle:  posting.title,
+        candidateName: me?.full_name ?? "A student",
+      },
+      userId: posting.employer_id,
+    });
+  }
 
   return NextResponse.json({ candidacy: data }, { status: 201 });
 }

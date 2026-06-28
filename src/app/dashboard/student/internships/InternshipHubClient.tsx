@@ -8,7 +8,7 @@ import {
 
 type Posting = {
   id: string; title: string; department: string | null; location: string;
-  work_type: string; monthly_allowance_sgd: number; duration_months: number;
+  work_type: string; monthly_allowance: number; duration_months: number;
   openings: number; skills_required: string[];
   start_date: string | null; application_deadline: string | null;
   employer_companies: { company_name: string; logo_url: string | null; industry: string | null } | null;
@@ -155,7 +155,7 @@ export default function InternshipHubClient({
                       <MapPin className="w-3 h-3" /> {posting.location} · {posting.work_type}
                     </span>
                     <span className="flex items-center gap-1.5 text-white/45 font-body text-xs">
-                      <DollarSign className="w-3 h-3" /> S${Number(posting.monthly_allowance_sgd).toLocaleString("en-SG")}/mo
+                      <DollarSign className="w-3 h-3" /> S${Number(posting.monthly_allowance).toLocaleString("en-SG")}/mo
                     </span>
                     <span className="flex items-center gap-1.5 text-white/45 font-body text-xs">
                       <Clock className="w-3 h-3" /> {posting.duration_months} months

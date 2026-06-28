@@ -6,24 +6,29 @@ import { PlusCircle, AlertCircle, Loader2 } from "lucide-react";
 
 type PostingForm = {
   title:                 string;
+  posting_type:          string;
   department:            string;
   description:           string;
   requirements:          string;
   location:              string;
   work_type:             string;
-  monthly_allowance_sgd: string;
+  monthly_allowance:     string;
+  currency_code:         string;
+  working_hours_per_week: string;
   duration_months:       string;
   openings:              string;
   skills_required:       string;
+  benefits:              string;
   start_date:            string;
   application_deadline:  string;
 };
 
 const EMPTY: PostingForm = {
-  title: "", department: "", description: "", requirements: "",
+  title: "", posting_type: "internship", department: "", description: "", requirements: "",
   location: "Singapore", work_type: "onsite",
-  monthly_allowance_sgd: "", duration_months: "6", openings: "1",
-  skills_required: "", start_date: "", application_deadline: "",
+  monthly_allowance: "", currency_code: "SGD", working_hours_per_week: "",
+  duration_months: "6", openings: "1",
+  skills_required: "", benefits: "", start_date: "", application_deadline: "",
 };
 
 export default function NewPostingPage() {
@@ -41,18 +46,20 @@ export default function NewPostingPage() {
   async function handleSubmit(e: React.FormEvent, publish: boolean) {
     e.preventDefault();
     if (!form.title.trim()) { setError("Title is required"); return; }
-    if (!form.monthly_allowance_sgd) { setError("Monthly allowance is required"); return; }
+    if (!form.monthly_allowance) { setError("Monthly allowance is required"); return; }
     setSaving(true); setError(null);
     try {
       const payload = {
         ...form,
-        monthly_allowance_sgd: parseFloat(form.monthly_allowance_sgd),
-        duration_months:       parseInt(form.duration_months, 10),
-        openings:              parseInt(form.openings, 10),
-        skills_required:       form.skills_required.split(",").map(s => s.trim()).filter(Boolean),
-        status:                publish ? "open" : "draft",
-        start_date:            form.start_date || null,
-        application_deadline:  form.application_deadline || null,
+        monthly_allowance:      parseFloat(form.monthly_allowance),
+        working_hours_per_week: form.working_hours_per_week ? parseInt(form.working_hours_per_week, 10) : null,
+        duration_months:        parseInt(form.duration_months, 10),
+        openings:               parseInt(form.openings, 10),
+        skills_required:        form.skills_required.split(",").map(s => s.trim()).filter(Boolean),
+        benefits:               form.benefits.split(",").map(s => s.trim()).filter(Boolean),
+        status:                 publish ? "open" : "draft",
+        start_date:             form.start_date || null,
+        application_deadline:   form.application_deadline || null,
       };
       const res = await fetch("/api/employer/postings", {
         method: "POST",
@@ -83,9 +90,21 @@ export default function NewPostingPage() {
       )}
 
       <form className="space-y-5">
-        <div>
-          <label className="block font-body text-xs text-white/50 uppercase tracking-wider mb-2">Job Title *</label>
-          <input {...field("title")} required placeholder="e.g. Business Development Intern" className="w-full px-4 py-3 rounded-xl bg-white/[0.05] border border-white/[0.10] text-white/90 font-body text-sm placeholder:text-white/25 focus:outline-none focus:border-emerald-400/50 transition-all" />
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block font-body text-xs text-white/50 uppercase tracking-wider mb-2">Job Title *</label>
+            <input {...field("title")} required placeholder="e.g. Business Development Intern" className="w-full px-4 py-3 rounded-xl bg-white/[0.05] border border-white/[0.10] text-white/90 font-body text-sm placeholder:text-white/25 focus:outline-none focus:border-emerald-400/50 transition-all" />
+          </div>
+          <div>
+            <label className="block font-body text-xs text-white/50 uppercase tracking-wider mb-2">Opportunity Type</label>
+            <select {...field("posting_type")} className="w-full px-4 py-3 rounded-xl bg-white/[0.05] border border-white/[0.10] text-white/90 font-body text-sm focus:outline-none focus:border-emerald-400/50 transition-all">
+              <option value="internship">Internship</option>
+              <option value="graduate_job">Graduate Job</option>
+              <option value="part_time">Part-Time</option>
+              <option value="contract">Contract</option>
+              <option value="permanent">Permanent</option>
+            </select>
+          </div>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
@@ -111,7 +130,7 @@ export default function NewPostingPage() {
         <div className="grid grid-cols-3 gap-4">
           <div>
             <label className="block font-body text-xs text-white/50 uppercase tracking-wider mb-2">Monthly Allowance (S$) *</label>
-            <input {...field("monthly_allowance_sgd")} type="number" min="0" placeholder="1000" className="w-full px-4 py-3 rounded-xl bg-white/[0.05] border border-white/[0.10] text-white/90 font-body text-sm placeholder:text-white/25 focus:outline-none focus:border-emerald-400/50 transition-all" />
+            <input {...field("monthly_allowance")} type="number" min="0" placeholder="1000" className="w-full px-4 py-3 rounded-xl bg-white/[0.05] border border-white/[0.10] text-white/90 font-body text-sm placeholder:text-white/25 focus:outline-none focus:border-emerald-400/50 transition-all" />
           </div>
           <div>
             <label className="block font-body text-xs text-white/50 uppercase tracking-wider mb-2">Duration (months)</label>
@@ -136,6 +155,29 @@ export default function NewPostingPage() {
         <div>
           <label className="block font-body text-xs text-white/50 uppercase tracking-wider mb-2">Skills (comma-separated)</label>
           <input {...field("skills_required")} placeholder="e.g. Microsoft Excel, Communication, Customer Service" className="w-full px-4 py-3 rounded-xl bg-white/[0.05] border border-white/[0.10] text-white/90 font-body text-sm placeholder:text-white/25 focus:outline-none focus:border-emerald-400/50 transition-all" />
+        </div>
+
+        <div>
+          <label className="block font-body text-xs text-white/50 uppercase tracking-wider mb-2">Benefits (comma-separated)</label>
+          <input {...field("benefits")} placeholder="e.g. Free lunch, Transport allowance, Mentorship" className="w-full px-4 py-3 rounded-xl bg-white/[0.05] border border-white/[0.10] text-white/90 font-body text-sm placeholder:text-white/25 focus:outline-none focus:border-emerald-400/50 transition-all" />
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block font-body text-xs text-white/50 uppercase tracking-wider mb-2">Currency</label>
+            <select {...field("currency_code")} className="w-full px-4 py-3 rounded-xl bg-white/[0.05] border border-white/[0.10] text-white/90 font-body text-sm focus:outline-none focus:border-emerald-400/50 transition-all">
+              <option value="SGD">SGD</option>
+              <option value="USD">USD</option>
+              <option value="AUD">AUD</option>
+              <option value="GBP">GBP</option>
+              <option value="EUR">EUR</option>
+              <option value="INR">INR</option>
+            </select>
+          </div>
+          <div>
+            <label className="block font-body text-xs text-white/50 uppercase tracking-wider mb-2">Working Hours / Week</label>
+            <input {...field("working_hours_per_week")} type="number" min="1" max="80" placeholder="40" className="w-full px-4 py-3 rounded-xl bg-white/[0.05] border border-white/[0.10] text-white/90 font-body text-sm placeholder:text-white/25 focus:outline-none focus:border-emerald-400/50 transition-all" />
+          </div>
         </div>
 
         <div className="grid grid-cols-2 gap-4">

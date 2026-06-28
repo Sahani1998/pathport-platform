@@ -71,7 +71,16 @@ export type EmailTemplate =
   | "withdrawal_notice_internal"
   | "partner_approved"
   | "partner_activation"
-  | "partner_rejected";
+  | "partner_rejected"
+  // Employer / candidacy lifecycle (Sprint E2)
+  | "candidacy_received"
+  | "candidacy_shortlisted"
+  | "interview_scheduled"
+  | "offer_extended"
+  | "offer_accepted_confirmation"
+  | "candidacy_rejected"
+  | "hired_welcome"
+  | "new_applicant_employer";
 
 export interface TemplateContext {
   name?: string;
@@ -100,6 +109,16 @@ export interface TemplateContext {
   priority?: string;
   // Offer letter decisions
   decision?: string;
+  // Employer / candidacy lifecycle (Sprint E2)
+  companyName?: string;
+  postingTitle?: string;
+  interviewDate?: string;
+  interviewMode?: string;
+  interviewLocation?: string;
+  allowance?: string;
+  startDate?: string;
+  responseDeadline?: string;
+  candidateName?: string;
 }
 
 export interface RenderedEmail {
@@ -407,6 +426,96 @@ export const TEMPLATES: Record<EmailTemplate, (ctx: TemplateContext) => Rendered
       (ctx.amount ? highlight("Amount Receipted", ctx.amount) : "") +
       p("You can download your official receipt from your invoice page. Keep it for your records.") +
       cta(dashboardUrl, "Download Receipt →")
+    ),
+  }),
+
+  // ─── Employer / candidacy lifecycle (Sprint E2) ──────────────────────────────
+
+  candidacy_received: ctx => ({
+    subject: `Application received — ${ctx.postingTitle ?? "internship position"}`,
+    html: shell(
+      h1("Application received") +
+      p(`Hi ${ctx.name ?? "there"}, your application for <strong style="color:#fff">${ctx.postingTitle ?? "the position"}</strong>${ctx.companyName ? ` at ${ctx.companyName}` : ""} has been received.`) +
+      p("The employer will review your application and you'll be notified at every stage. Track your application status from your internships page.") +
+      cta(`${SITE_URL}/dashboard/student/internships`, "View My Applications →")
+    ),
+  }),
+
+  candidacy_shortlisted: ctx => ({
+    subject: `You've been shortlisted! — ${ctx.postingTitle ?? "internship"}`,
+    html: shell(
+      h1("You've been shortlisted! 🎉") +
+      p(`Great news ${ctx.name ?? "there"}! ${ctx.companyName ?? "An employer"} has shortlisted you for <strong style="color:#fff">${ctx.postingTitle ?? "their position"}</strong>.`) +
+      highlight("Status", "Shortlisted") +
+      p("The employer may reach out to schedule an interview. Keep an eye on your notifications.") +
+      cta(`${SITE_URL}/dashboard/student/internships`, "View Application →")
+    ),
+  }),
+
+  interview_scheduled: ctx => ({
+    subject: `Interview scheduled — ${ctx.postingTitle ?? "internship"}`,
+    html: shell(
+      h1("Your interview is scheduled 📅") +
+      p(`Hi ${ctx.name ?? "there"}, ${ctx.companyName ?? "the employer"} has scheduled your interview for <strong style="color:#fff">${ctx.postingTitle ?? "the position"}</strong>.`) +
+      (ctx.interviewDate ? highlight("Interview Date", ctx.interviewDate) : "") +
+      (ctx.interviewMode ? p(`<strong style="color:rgba(255,255,255,.85)">Mode:</strong> ${ctx.interviewMode}`) : "") +
+      (ctx.interviewLocation ? p(`<strong style="color:rgba(255,255,255,.85)">Location / Link:</strong> ${ctx.interviewLocation}`) : "") +
+      p("Please be prepared and on time. Good luck!") +
+      cta(`${SITE_URL}/dashboard/student/internships`, "View Details →")
+    ),
+  }),
+
+  offer_extended: ctx => ({
+    subject: `You've received an offer! — ${ctx.postingTitle ?? "internship"}`,
+    html: shell(
+      h1("You've received an offer! 🎊") +
+      p(`Congratulations ${ctx.name ?? "there"}! ${ctx.companyName ?? "The employer"} has extended an offer for <strong style="color:#fff">${ctx.postingTitle ?? "the position"}</strong>.`) +
+      (ctx.allowance ? highlight("Monthly Allowance", ctx.allowance) : "") +
+      (ctx.startDate ? p(`<strong style="color:rgba(255,255,255,.85)">Start Date:</strong> ${ctx.startDate}`) : "") +
+      (ctx.responseDeadline ? p(`<strong style="color:rgba(255,255,255,.85)">Respond By:</strong> ${ctx.responseDeadline}`) : "") +
+      p("Review the offer and accept or decline from your internships page.") +
+      cta(`${SITE_URL}/dashboard/student/internships`, "Review Offer →")
+    ),
+  }),
+
+  offer_accepted_confirmation: ctx => ({
+    subject: `Offer accepted — ${ctx.postingTitle ?? "internship"}`,
+    html: shell(
+      h1("Offer accepted ✅") +
+      p(`Hi ${ctx.name ?? "there"}, you've accepted the offer for <strong style="color:#fff">${ctx.postingTitle ?? "the position"}</strong>${ctx.companyName ? ` at ${ctx.companyName}` : ""}.`) +
+      p("The employer has been notified and will be in touch with onboarding details. Congratulations on your placement!") +
+      cta(`${SITE_URL}/dashboard/student/internships`, "View Placement →")
+    ),
+  }),
+
+  candidacy_rejected: ctx => ({
+    subject: `Application update — ${ctx.postingTitle ?? "internship"}`,
+    html: shell(
+      h1("Application update") +
+      p(`Hi ${ctx.name ?? "there"}, thank you for your interest in <strong style="color:#fff">${ctx.postingTitle ?? "the position"}</strong>${ctx.companyName ? ` at ${ctx.companyName}` : ""}.`) +
+      p("After careful consideration, the employer has decided to move forward with other candidates. Don't be discouraged — new opportunities are added regularly.") +
+      cta(`${SITE_URL}/dashboard/student/internships`, "Browse More Internships →")
+    ),
+  }),
+
+  hired_welcome: ctx => ({
+    subject: `Internship confirmed! — ${ctx.postingTitle ?? "internship"}`,
+    html: shell(
+      h1("Your internship is confirmed! 🚀") +
+      p(`Congratulations ${ctx.name ?? "there"}! Your placement for <strong style="color:#fff">${ctx.postingTitle ?? "the position"}</strong>${ctx.companyName ? ` at ${ctx.companyName}` : ""} is now confirmed.`) +
+      (ctx.startDate ? highlight("Start Date", ctx.startDate) : "") +
+      p("Welcome aboard! The employer will share onboarding details soon. Your PathPort advisor is here if you need anything.") +
+      cta(`${SITE_URL}/dashboard/student/internships`, "View Placement →")
+    ),
+  }),
+
+  new_applicant_employer: ctx => ({
+    subject: `New applicant — ${ctx.postingTitle ?? "your posting"}`,
+    html: shell(
+      h1("You have a new applicant") +
+      p(`Hi ${ctx.name ?? "there"}, ${ctx.candidateName ?? "a student"} has applied to your posting <strong style="color:#fff">${ctx.postingTitle ?? ""}</strong>.`) +
+      p("Review their application and move them through your hiring pipeline.") +
+      cta(`${SITE_URL}/dashboard/employer/pipeline`, "Review Applicant →")
     ),
   }),
 };

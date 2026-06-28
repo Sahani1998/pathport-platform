@@ -23,16 +23,16 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
   const db = createAdminClient();
   // Verify employer owns this posting
-  const { data: posting } = await db.from("internship_postings").select("id").eq("id", postingId).eq("employer_id", user.id).maybeSingle();
+  const { data: posting } = await db.from("postings").select("id").eq("id", postingId).eq("employer_id", user.id).maybeSingle();
   if (!posting) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const { data, error } = await db
-    .from("internship_candidacies")
+    .from("candidacies")
     .select(`
       id, status, cover_note, resume_url, interview_date,
-      interview_notes, offer_allowance_sgd, offer_start_date,
+      interview_notes, offer_allowance, offer_start_date,
       rejection_reason, employer_notes, applied_at, updated_at,
-      student:profiles!internship_candidacies_student_id_fkey(
+      student:profiles!student_id(
         id, full_name, email, country
       )
     `)
