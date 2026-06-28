@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin-client";
 import { NextRequest, NextResponse } from "next/server";
 import { checkRateLimitAsync, getClientIp, rateLimitResponse, LIMITS } from "@/lib/rate-limit";
+import { loadStudentProfiles } from "@/lib/student-profiles";
 import {
   EMPLOYER_TRANSITIONS, fireCandidacyTransition,
   type CandidacyStatus,
@@ -29,13 +30,14 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   try { body = await req.json(); } catch { return NextResponse.json({ error: "Invalid JSON" }, { status: 400 }); }
 
   const db = createAdminClient();
-  // Fetch candidacy + posting (ownership) + student (email) + company (name)
+  // Fetch candidacy + posting (ownership) + company (name). Student profile is
+  // loaded separately: candidacies.student_id → auth.users, so it cannot be
+  // embedded from profiles (that would error the whole query).
   const { data: candidacy } = await db
     .from("candidacies")
     .select(`
       id, status, student_id, application_id,
-      postings!inner(employer_id, title, company_id, company:employer_companies(company_name)),
-      student:profiles!student_id(email, full_name)
+      postings!inner(employer_id, title, company_id, company:employer_companies(company_name))
     `)
     .eq("id", id)
     .maybeSingle();
@@ -45,7 +47,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const posting = Array.isArray(candidacy.postings) ? candidacy.postings[0] : candidacy.postings as Record<string, unknown> | null;
   if ((posting?.employer_id as string) !== user.id) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-  const student = Array.isArray(candidacy.student) ? candidacy.student[0] : candidacy.student as Record<string, unknown> | null;
+  const profileMap = await loadStudentProfiles(db, [candidacy.student_id as string]);
+  const student = profileMap.get(candidacy.student_id as string) ?? null;
   const company = posting?.company
     ? (Array.isArray(posting.company) ? posting.company[0] : posting.company as Record<string, unknown>)
     : null;

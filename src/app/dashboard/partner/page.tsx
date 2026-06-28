@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin-client";
 import { redirect } from "next/navigation";
+import { loadStudentProfiles } from "@/lib/student-profiles";
 import Link from "next/link";
 import {
   Award, Users, FileText, CreditCard, Building2, Bell,
@@ -46,15 +47,19 @@ export default async function PartnerDashboardPage() {
   ]);
 
   // ── Fetch recent students with their applications ─────────────────────────
-  const { data: recentStudentsRaw } = await db
+  // partner_students.student_id → auth.users (no FK to profiles) — batch-load.
+  const { data: recentStudentsRows } = await db
     .from("partner_students")
-    .select(`
-      id, referred_at,
-      student:profiles!partner_students_student_id_fkey ( id, full_name, email, country )
-    `)
+    .select(`id, referred_at, student_id`)
     .eq("partner_id", user.id)
     .order("referred_at", { ascending: false })
     .limit(5);
+
+  const recentStudentProfileMap = await loadStudentProfiles(db, (recentStudentsRows ?? []).map((r: Record<string,unknown>) => r.student_id as string));
+  const recentStudentsRaw = (recentStudentsRows ?? []).map((r: Record<string,unknown>) => ({
+    ...r,
+    student: recentStudentProfileMap.get(r.student_id as string) ?? null,
+  }));
 
   // ── Fetch recent applications from partner's students ─────────────────────
   const studentIds = (recentStudentsRaw ?? [])
@@ -64,18 +69,24 @@ export default async function PartnerDashboardPage() {
     })
     .filter((id): id is string => Boolean(id));
 
-  const { data: recentApps } = studentIds.length > 0
+  const { data: recentAppsRaw } = studentIds.length > 0
     ? await db
         .from("applications")
         .select(`
-          id, current_stage, status, submitted_at,
-          student:profiles!applications_student_id_fkey ( full_name ),
+          id, current_stage, status, submitted_at, student_id,
           courses ( title, colleges ( name ) )
         `)
         .in("student_id", studentIds)
         .order("submitted_at", { ascending: false })
         .limit(5)
     : { data: [] };
+
+  // applications.student_id → auth.users (no FK to profiles) — batch-load profiles
+  const recentProfileMap = await loadStudentProfiles(db, (recentAppsRaw ?? []).map((a: Record<string,unknown>) => a.student_id as string));
+  const recentApps = (recentAppsRaw ?? []).map((a: Record<string,unknown>) => ({
+    ...a,
+    student: recentProfileMap.get(a.student_id as string) ?? null,
+  }));
 
   // ── Commission stats ───────────────────────────────────────────────────────
   const commList = commissions ?? [];

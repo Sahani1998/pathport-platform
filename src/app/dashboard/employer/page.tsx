@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin-client";
 import { redirect } from "next/navigation";
+import { loadStudentProfiles } from "@/lib/student-profiles";
 import Link from "next/link";
 import {
   Briefcase, Building2, Users, CheckCircle2,
@@ -52,7 +53,7 @@ export default async function EmployerDashboardPage() {
     db.from("postings").select("id, title, status, openings, created_at", { count: "exact" }).eq("employer_id", user.id).order("created_at", { ascending: false }),
     postingIdList.length > 0
       ? db.from("candidacies")
-          .select(`id, status, applied_at, student:profiles!student_id(full_name, email), postings(title)`)
+          .select(`id, status, applied_at, student_id, postings(title)`)
           .in("posting_id", postingIdList)
           .order("applied_at", { ascending: false })
           .limit(6)
@@ -60,7 +61,7 @@ export default async function EmployerDashboardPage() {
     db.rpc("get_employer_dashboard_stats", { p_employer_id: user.id }).then(r => ({ data: Array.isArray(r.data) ? r.data[0] : r.data })),
     postingIdList.length > 0
       ? db.from("candidacies")
-          .select(`id, interview_date, interview_mode, student:profiles!student_id(full_name), postings(id, title)`)
+          .select(`id, interview_date, interview_mode, student_id, postings(id, title)`)
           .in("posting_id", postingIdList)
           .eq("status", "interview_scheduled")
           .gte("interview_date", new Date().toISOString())
@@ -69,14 +70,22 @@ export default async function EmployerDashboardPage() {
       : Promise.resolve({ data: [] as Record<string, unknown>[] }),
   ]);
 
+  // candidacies.student_id → auth.users (no FK to profiles) — batch-load profiles
+  // for both the recent-applicants and upcoming-interviews lists.
+  const dashProfileMap = await loadStudentProfiles(db, [
+    ...((recentCandidacies ?? []) as Record<string, unknown>[]).map(c => c.student_id as string),
+    ...((upcomingInterviews ?? []) as Record<string, unknown>[]).map(c => c.student_id as string),
+  ]);
+  const attachStudent = (c: Record<string, unknown>) => ({ ...c, student: dashProfileMap.get(c.student_id as string) ?? null });
+
   const postings = postingsRaw ?? [];
-  const candidacies  = recentCandidacies ?? [];
+  const candidacies  = ((recentCandidacies ?? []) as Record<string, unknown>[]).map(attachStudent);
   const stats = (statsRow ?? {}) as Record<string, number>;
   const openPostings    = Number(stats.open_postings ?? 0);
   const totalApplicants = Number(stats.active_candidacies ?? 0);
   const shortlisted     = Number(stats.shortlisted_count ?? 0);
   const pendingDecisions = Number(stats.pending_decisions ?? 0);
-  const interviews = upcomingInterviews ?? [];
+  const interviews = ((upcomingInterviews ?? []) as Record<string, unknown>[]).map(attachStudent);
 
   const companyName = company?.company_name ?? profile?.full_name ?? "Your Company";
   const hasCompanyProfile = !!company;
