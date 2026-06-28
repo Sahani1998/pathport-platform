@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin-client";
 import { redirect } from "next/navigation";
 import { resolveStage, isInternshipRelevant } from "@/lib/application-stage-mapping";
+import { getStageMeta } from "@/types/timeline";
 import EligibilityClient from "./EligibilityClient";
 
 export const dynamic = "force-dynamic";
@@ -30,13 +31,17 @@ export default async function InstitutionInternshipEligibilityPage() {
   // the bug that made this page show zero enrolled students.)
   let courseIds: string[] | null = null; // null = admin, no scoping
   if (isInstitution) {
-    if (!collegeId) return <EligibilityClient students={[]} />;
+    if (!collegeId) {
+      return <EligibilityClient students={[]} diagnostics={{ reason: "no_college" }} />;
+    }
     const { data: courseRows } = await db
       .from("courses")
       .select("id")
       .eq("college_id", collegeId);
     courseIds = (courseRows ?? []).map((c: Record<string, unknown>) => c.id as string);
-    if (courseIds.length === 0) return <EligibilityClient students={[]} />;
+    if (courseIds.length === 0) {
+      return <EligibilityClient students={[]} diagnostics={{ reason: "no_courses" }} />;
+    }
   }
 
   // ── Fetch applications (scoped to the college's courses for institutions) ──
@@ -92,5 +97,27 @@ export default async function InstitutionInternshipEligibilityPage() {
     };
   });
 
-  return <EligibilityClient students={students} />;
+  // ── Diagnostics for the empty state ───────────────────────────────────────
+  // When there are no internship-relevant students, show WHY: how many active
+  // students exist in scope and which stages they're at, so the institution can
+  // see the truth (e.g. "3 students, but the furthest is at Approved — not yet
+  // Enrolled") instead of an opaque "none found".
+  const allActive = applications ?? [];
+  const stageCounts: Record<string, number> = {};
+  for (const a of allActive) {
+    const stage = resolveStage((a as Record<string, unknown>).current_stage as string | null, (a as Record<string, unknown>).status as string | null);
+    const label = getStageMeta(stage).label;
+    stageCounts[label] = (stageCounts[label] ?? 0) + 1;
+  }
+  const diagnostics = students.length === 0
+    ? {
+        reason: "none_enrolled" as const,
+        activeStudents: allActive.length,
+        stageBreakdown: Object.entries(stageCounts)
+          .map(([label, count]) => ({ label, count }))
+          .sort((a, b) => b.count - a.count),
+      }
+    : undefined;
+
+  return <EligibilityClient students={students} diagnostics={diagnostics} />;
 }

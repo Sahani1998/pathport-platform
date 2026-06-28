@@ -19,13 +19,24 @@ type StudentRow = {
 
 type EligStatus = "not_eligible" | "eligible" | "suspended" | null;
 
+export type EligibilityDiagnostics =
+  | { reason: "no_college" }
+  | { reason: "no_courses" }
+  | { reason: "none_enrolled"; activeStudents: number; stageBreakdown: { label: string; count: number }[] };
+
 const STATUS_META: Record<string, { label: string; badge: string; icon: React.ElementType }> = {
   eligible:    { label: "Eligible",     badge: "text-emerald-400 bg-emerald-500/10 border-emerald-400/25", icon: CheckCircle2 },
   suspended:   { label: "Suspended",    badge: "text-orange-400 bg-orange-500/10 border-orange-400/25",   icon: AlertCircle  },
   not_eligible:{ label: "Not Eligible", badge: "text-white/40   bg-white/[0.04]  border-white/[0.08]",   icon: Clock        },
 };
 
-export default function EligibilityClient({ students }: { students: StudentRow[] }) {
+export default function EligibilityClient({
+  students,
+  diagnostics,
+}: {
+  students: StudentRow[];
+  diagnostics?: EligibilityDiagnostics;
+}) {
   const [rows, setRows]                   = useState(students);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [actionError, setActionError]     = useState<string | null>(null);
@@ -154,10 +165,43 @@ export default function EligibilityClient({ students }: { students: StudentRow[]
       )}
 
       {rows.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-16 bg-white/[0.03] border border-white/[0.07] rounded-2xl">
+        <div className="flex flex-col items-center justify-center py-16 px-6 bg-white/[0.03] border border-white/[0.07] rounded-2xl text-center">
           <GraduationCap className="w-10 h-10 text-white/20 mb-3" />
           <p className="font-display text-xl text-white/40">No enrolled students found</p>
-          <p className="text-white/30 font-body text-sm mt-1">Students appear here once they reach the enrolled stage.</p>
+
+          {diagnostics?.reason === "no_college" ? (
+            <p className="text-white/30 font-body text-sm mt-2 max-w-md">
+              Your account isn&apos;t linked to a college yet, so we can&apos;t show its students.
+              Ask your PathPort admin to link your institution account to a college.
+            </p>
+          ) : diagnostics?.reason === "no_courses" ? (
+            <p className="text-white/30 font-body text-sm mt-2 max-w-md">
+              Your college has no courses set up yet. Add courses (and students will be
+              matched to them) before managing internship access.
+            </p>
+          ) : diagnostics?.reason === "none_enrolled" && diagnostics.activeStudents > 0 ? (
+            <div className="mt-2 max-w-md">
+              <p className="text-white/35 font-body text-sm">
+                You have {diagnostics.activeStudents} active student{diagnostics.activeStudents !== 1 ? "s" : ""}, but
+                none have reached the <span className="text-white/60 font-semibold">Enrolled</span> stage yet —
+                that&apos;s the gate for internship access.
+              </p>
+              <div className="mt-3 inline-flex flex-col items-start gap-1 rounded-xl bg-white/[0.03] border border-white/[0.07] px-4 py-3">
+                <p className="text-white/30 font-body text-[10px] uppercase tracking-wider mb-1">Current stages</p>
+                {diagnostics.stageBreakdown.map(s => (
+                  <p key={s.label} className="font-body text-xs text-white/55">
+                    {s.count} × <span className="text-white/75">{s.label}</span>
+                  </p>
+                ))}
+              </div>
+              <p className="text-white/30 font-body text-xs mt-3">
+                Advance a student to <span className="text-white/60 font-semibold">Enrolled</span> on the
+                Applications page and they&apos;ll appear here automatically.
+              </p>
+            </div>
+          ) : (
+            <p className="text-white/30 font-body text-sm mt-1">Students appear here once they reach the enrolled stage.</p>
+          )}
         </div>
       ) : (
         <div className="bg-white/[0.04] border border-white/[0.08] rounded-2xl overflow-hidden">
