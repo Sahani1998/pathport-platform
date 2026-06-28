@@ -91,7 +91,7 @@ export default function StudentsClient({ initialRows }: Props) {
                 {/* Avatar + name */}
                 <div className="md:col-span-4 flex items-center gap-3 min-w-0">
                   <div className="w-9 h-9 rounded-full bg-gradient-to-br from-gold-500 to-gold-600 flex items-center justify-center flex-shrink-0 text-navy-900 font-display font-bold text-sm">
-                    {(row.student.full_name ?? "U")[0].toUpperCase()}
+                    {(row.student.full_name?.trim()?.[0] ?? "U").toUpperCase()}
                   </div>
                   <div className="min-w-0">
                     <p className="font-body font-semibold text-sm text-white/85 truncate">{row.student.full_name ?? "—"}</p>

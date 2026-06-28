@@ -107,7 +107,7 @@ export default async function EmployerPipelinePage() {
                       >
                         <div className="flex items-center gap-3 min-w-0">
                           <div className="w-9 h-9 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center flex-shrink-0 text-white font-display font-bold text-sm">
-                            {String(student?.full_name ?? "U")[0].toUpperCase()}
+                            {(String(student?.full_name ?? "").trim()[0] ?? "U").toUpperCase()}
                           </div>
                           <div className="min-w-0">
                             <p className="font-body font-semibold text-sm text-white/85 truncate">{student?.full_name as string ?? "—"}</p>

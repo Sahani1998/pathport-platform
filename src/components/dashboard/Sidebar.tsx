@@ -193,7 +193,7 @@ export default function Sidebar() {
               <div className="w-9 h-9 rounded-full bg-white/[0.08] animate-pulse flex-shrink-0" />
             ) : (
               <div className="w-9 h-9 rounded-full bg-gradient-to-br from-gold-500 to-gold-600 flex items-center justify-center flex-shrink-0 text-navy-900 font-display font-bold text-sm">
-                {(profile?.full_name ?? "U")[0].toUpperCase()}
+                {(profile?.full_name?.trim()?.[0] ?? "U").toUpperCase()}
               </div>
             )}
             <div className="min-w-0">
