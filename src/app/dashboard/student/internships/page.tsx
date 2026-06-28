@@ -7,6 +7,7 @@ import type { ApplicationStage } from "@/types/timeline";
 import { getStageMeta } from "@/types/timeline";
 import ApplicationStageBadge from "@/components/applications/ApplicationStageBadge";
 import InternshipHubClient from "./InternshipHubClient";
+import StudentApplicationsPanel, { type StudentCandidacy } from "./StudentApplicationsPanel";
 
 function stageStep(stage: ApplicationStage): number {
   return getStageMeta(stage).step;
@@ -45,7 +46,7 @@ export default async function StudentInternshipsPage() {
       .order("submitted_at", { ascending: false })
       .limit(1)
       .maybeSingle(),
-    db.from("internship_eligibility")
+    db.from("posting_eligibility")
       .select("status, suspension_reason")
       .eq("student_id", user.id)
       .maybeSingle(),
@@ -80,10 +81,10 @@ export default async function StudentInternshipsPage() {
   // Fetch open postings only when eligible
   const postings = isEligible
     ? await db
-        .from("internship_postings")
+        .from("postings")
         .select(`
           id, title, department, location, work_type,
-          monthly_allowance_sgd, duration_months, openings,
+          monthly_allowance, duration_months, openings,
           skills_required, start_date, application_deadline,
           employer_companies(company_name, logo_url, industry)
         `)
@@ -92,16 +93,50 @@ export default async function StudentInternshipsPage() {
         .then(r => r.data ?? [])
     : [];
 
-  // Fetch student's candidacies
-  const candidacies = isEligible
+  // Fetch student's candidacies (full detail for the applications panel)
+  const candidaciesFull = isEligible
     ? await db
-        .from("internship_candidacies")
-        .select("posting_id, status")
+        .from("candidacies")
+        .select(`
+          id, posting_id, status, offer_allowance, offer_currency, offer_start_date,
+          offer_response_deadline, offer_terms, interview_date, interview_mode,
+          interview_location, applied_at,
+          postings(title, employer_companies(company_name))
+        `)
         .eq("student_id", user.id)
+        .order("applied_at", { ascending: false })
         .then(r => r.data ?? [])
     : [];
 
-  const appliedSet = new Set((candidacies as { posting_id: string; status: string }[]).map(c => c.posting_id));
+  const candidacies = (candidaciesFull as Record<string, unknown>[]).map(c => ({
+    posting_id: c.posting_id as string,
+    status:     c.status as string,
+  }));
+
+  const appliedSet = new Set(candidacies.map(c => c.posting_id));
+
+  // Normalised candidacy detail for the applications panel
+  const studentCandidacies: StudentCandidacy[] = (candidaciesFull as Record<string, unknown>[]).map(c => {
+    const posting = Array.isArray(c.postings) ? c.postings[0] : c.postings as Record<string, unknown> | null;
+    const companyRaw = posting?.employer_companies;
+    const company = Array.isArray(companyRaw) ? companyRaw[0] : companyRaw as Record<string, unknown> | null;
+    return {
+      id:                      c.id as string,
+      posting_id:              c.posting_id as string,
+      status:                  c.status as string,
+      offer_allowance:         (c.offer_allowance as number | null) ?? null,
+      offer_currency:          (c.offer_currency as string | null) ?? null,
+      offer_start_date:        (c.offer_start_date as string | null) ?? null,
+      offer_response_deadline: (c.offer_response_deadline as string | null) ?? null,
+      offer_terms:             (c.offer_terms as string | null) ?? null,
+      interview_date:          (c.interview_date as string | null) ?? null,
+      interview_mode:          (c.interview_mode as string | null) ?? null,
+      interview_location:      (c.interview_location as string | null) ?? null,
+      applied_at:              c.applied_at as string,
+      postingTitle:            (posting?.title as string) ?? "Internship",
+      companyName:             (company?.company_name as string) ?? "—",
+    };
+  });
 
   function fmtSGD(n: number) { return `S$${n.toLocaleString("en-SG")}`; }
 
@@ -188,6 +223,11 @@ export default async function StudentInternshipsPage() {
             </div>
           ))}
         </div>
+      )}
+
+      {/* ── My applications (offers, interviews, status) ── */}
+      {isEligible && studentCandidacies.length > 0 && (
+        <StudentApplicationsPanel candidacies={studentCandidacies} />
       )}
 
       {/* ── Live job listings (eligible students only) ── */}

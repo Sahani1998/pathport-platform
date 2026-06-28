@@ -23,7 +23,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
   const db = createAdminClient();
   const { data, error } = await db
-    .from("internship_postings")
+    .from("postings")
     .select("*, employer_companies(company_name, logo_url)")
     .eq("id", id)
     .eq("employer_id", user.id)
@@ -45,16 +45,22 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   let body: Record<string, unknown>;
   try { body = await req.json(); } catch { return NextResponse.json({ error: "Invalid JSON" }, { status: 400 }); }
 
-  const allowed = ["title","department","description","requirements","location","work_type","monthly_allowance_sgd","duration_months","openings","status","skills_required","start_date","application_deadline"] as const;
+  const allowed = ["title","department","description","requirements","location","work_type","monthly_allowance","duration_months","openings","status","skills_required","start_date","application_deadline","posting_type","country_code","currency_code","working_hours_per_week","benefits"] as const;
   const patch: Record<string, unknown> = {};
   for (const k of allowed) {
     if (k in body) patch[k] = body[k];
   }
   if (!Object.keys(patch).length) return NextResponse.json({ error: "No valid fields" }, { status: 400 });
 
+  // Archiving stamps archived_at/by
+  if (patch.status === "archived") {
+    patch.archived_at = new Date().toISOString();
+    patch.archived_by = user.id;
+  }
+
   const db = createAdminClient();
   const { data, error } = await db
-    .from("internship_postings")
+    .from("postings")
     .update(patch)
     .eq("id", id)
     .eq("employer_id", user.id)
@@ -76,11 +82,11 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
 
   const db = createAdminClient();
   // Only allow deleting drafts — close live postings instead
-  const { data: posting } = await db.from("internship_postings").select("status").eq("id", id).eq("employer_id", user.id).single();
+  const { data: posting } = await db.from("postings").select("status").eq("id", id).eq("employer_id", user.id).single();
   if (!posting) return NextResponse.json({ error: "Not found" }, { status: 404 });
   if (posting.status !== "draft") return NextResponse.json({ error: "Only draft postings can be deleted. Set status to 'closed' instead." }, { status: 409 });
 
-  const { error } = await db.from("internship_postings").delete().eq("id", id).eq("employer_id", user.id);
+  const { error } = await db.from("postings").delete().eq("id", id).eq("employer_id", user.id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ ok: true });
 }

@@ -31,10 +31,10 @@ export default async function EmployerPostingsPage({
   const db = createAdminClient();
 
   let query = db
-    .from("internship_postings")
+    .from("postings")
     .select(`
       id, title, department, work_type, location,
-      monthly_allowance_sgd, duration_months, openings, status, created_at
+      monthly_allowance, duration_months, openings, status, created_at
     `)
     .eq("employer_id", user.id)
     .order("created_at", { ascending: false });
@@ -47,7 +47,7 @@ export default async function EmployerPostingsPage({
   const postingIds = (postings ?? []).map((p: Record<string,unknown>) => p.id as string);
   const { data: countRows } = postingIds.length > 0
     ? await db
-        .from("internship_candidacies")
+        .from("candidacies")
         .select("posting_id, status")
         .in("posting_id", postingIds)
     : { data: [] };
@@ -130,7 +130,7 @@ export default async function EmployerPostingsPage({
                       <p className="font-body text-xs text-white/40 mt-0.5 truncate">
                         {posting.department ? `${posting.department} · ` : ""}
                         {posting.location as string} · {posting.work_type as string} ·{" "}
-                        S${Number(posting.monthly_allowance_sgd).toLocaleString("en-SG")}/mo ·{" "}
+                        S${Number(posting.monthly_allowance).toLocaleString("en-SG")}/mo ·{" "}
                         {posting.duration_months as number}m · {posting.openings as number}{" "}
                         {Number(posting.openings) === 1 ? "opening" : "openings"}
                       </p>

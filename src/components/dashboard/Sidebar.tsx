@@ -66,12 +66,15 @@ const NAV_ITEMS: Record<UserRole, { label: string; href: string; icon: React.Ele
     { label: "Settings",         href: "/dashboard/partner/settings",           icon: Settings        },
   ],
   employer: [
-    { label: "Dashboard",        href: "/dashboard/employer",             icon: LayoutDashboard },
-    { label: "Postings",         href: "/dashboard/employer/postings",    icon: Briefcase       },
-    { label: "New Posting",      href: "/dashboard/employer/postings/new",icon: PlusCircle      },
-    { label: "Pipeline",         href: "/dashboard/employer/pipeline",    icon: Users           },
-    { label: "Company Profile",  href: "/dashboard/employer/company",     icon: Building2       },
-    { label: "Settings",         href: "/dashboard/employer/settings",    icon: Settings        },
+    { label: "Dashboard",        href: "/dashboard/employer",              icon: LayoutDashboard },
+    { label: "Postings",         href: "/dashboard/employer/postings",     icon: Briefcase       },
+    { label: "New Posting",      href: "/dashboard/employer/postings/new", icon: PlusCircle      },
+    { label: "Pipeline",         href: "/dashboard/employer/pipeline",     icon: Users           },
+    { label: "Candidates",       href: "/dashboard/employer/candidates",   icon: UserCircle      },
+    { label: "Analytics",        href: "/dashboard/employer/analytics",    icon: BarChart2       },
+    { label: "Company Profile",  href: "/dashboard/employer/company",      icon: Building2       },
+    { label: "Notifications",    href: "/dashboard/employer/notifications",icon: Bell            },
+    { label: "Settings",         href: "/dashboard/employer/settings",     icon: Settings        },
   ],
 };
 

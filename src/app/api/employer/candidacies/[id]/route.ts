@@ -2,28 +2,10 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin-client";
 import { NextRequest, NextResponse } from "next/server";
 import { checkRateLimitAsync, getClientIp, rateLimitResponse, LIMITS } from "@/lib/rate-limit";
-import { notifyUser } from "@/lib/application-timeline";
-
-const VALID_TRANSITIONS: Record<string, string[]> = {
-  applied:             ["shortlisted","rejected"],
-  shortlisted:         ["interview_scheduled","rejected"],
-  interview_scheduled: ["interview_completed","rejected"],
-  interview_completed: ["offer_extended","rejected"],
-  offer_extended:      ["offer_accepted","offer_declined"],
-  offer_accepted:      ["hired"],
-  offer_declined:      [],
-  hired:               [],
-  withdrawn:           [],
-  rejected:            [],
-};
-
-const STATUS_MESSAGES: Record<string, { title: string; message: string }> = {
-  shortlisted:         { title: "You've been shortlisted! 🎉", message: "Congratulations! An employer has shortlisted you for their internship position." },
-  interview_scheduled: { title: "Interview Scheduled 📅", message: "Your interview has been scheduled. Check your candidacy details for the date and time." },
-  offer_extended:      { title: "Offer Extended! 🎊", message: "You have received an internship offer! Please review and respond at your earliest convenience." },
-  hired:               { title: "Internship Confirmed! 🚀", message: "Congratulations! Your internship placement has been confirmed. Welcome aboard!" },
-  rejected:            { title: "Application Update", message: "Thank you for your interest. The employer has decided to move forward with other candidates." },
-};
+import {
+  EMPLOYER_TRANSITIONS, fireCandidacyTransition,
+  type CandidacyStatus,
+} from "@/lib/candidacy-lifecycle";
 
 async function requireEmployer() {
   const supabase = await createClient();
@@ -47,35 +29,44 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   try { body = await req.json(); } catch { return NextResponse.json({ error: "Invalid JSON" }, { status: 400 }); }
 
   const db = createAdminClient();
-  // Fetch candidacy and verify employer owns the posting
+  // Fetch candidacy + posting (ownership) + student (email) + company (name)
   const { data: candidacy } = await db
-    .from("internship_candidacies")
+    .from("candidacies")
     .select(`
       id, status, student_id, application_id,
-      internship_postings!inner(employer_id)
+      postings!inner(employer_id, title, company_id, company:employer_companies(company_name)),
+      student:profiles!student_id(email, full_name)
     `)
     .eq("id", id)
     .maybeSingle();
 
   if (!candidacy) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  const posting = Array.isArray(candidacy.internship_postings)
-    ? candidacy.internship_postings[0]
-    : candidacy.internship_postings as { employer_id: string } | null;
+  const posting = Array.isArray(candidacy.postings) ? candidacy.postings[0] : candidacy.postings as Record<string, unknown> | null;
+  if ((posting?.employer_id as string) !== user.id) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-  if (posting?.employer_id !== user.id) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const student = Array.isArray(candidacy.student) ? candidacy.student[0] : candidacy.student as Record<string, unknown> | null;
+  const company = posting?.company
+    ? (Array.isArray(posting.company) ? posting.company[0] : posting.company as Record<string, unknown>)
+    : null;
 
-  const newStatus = body.status as string | undefined;
+  const fromStatus = candidacy.status as CandidacyStatus;
+  const newStatus  = body.status as CandidacyStatus | undefined;
+
   if (newStatus) {
-    const allowed = VALID_TRANSITIONS[candidacy.status] ?? [];
+    const allowed = EMPLOYER_TRANSITIONS[fromStatus] ?? [];
     if (!allowed.includes(newStatus)) {
       return NextResponse.json({
-        error: `Cannot transition from '${candidacy.status}' to '${newStatus}'`,
+        error: `Cannot transition from '${fromStatus}' to '${newStatus}'`,
       }, { status: 409 });
     }
   }
 
-  const allowed = ["status","interview_date","interview_notes","offer_allowance_sgd","offer_start_date","rejection_reason","employer_notes"] as const;
+  const allowed = [
+    "status", "interview_date", "interview_location", "interview_mode", "interview_notes",
+    "offer_allowance", "offer_currency", "offer_start_date", "offer_response_deadline", "offer_terms",
+    "rejection_reason", "rejection_category", "employer_notes",
+  ] as const;
   const patch: Record<string, unknown> = {};
   for (const k of allowed) {
     if (k in body) patch[k] = body[k];
@@ -83,7 +74,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (!Object.keys(patch).length) return NextResponse.json({ error: "No valid fields" }, { status: 400 });
 
   const { data, error } = await db
-    .from("internship_candidacies")
+    .from("candidacies")
     .update(patch)
     .eq("id", id)
     .select()
@@ -91,15 +82,27 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  // Non-fatal notification to student
-  if (newStatus && STATUS_MESSAGES[newStatus]) {
-    const notif = STATUS_MESSAGES[newStatus];
-    await notifyUser(db, {
-      userId:        candidacy.student_id,
-      applicationId: candidacy.application_id ?? undefined,
-      title:         notif.title,
-      message:       notif.message,
-      type:          "application_update",
+  // Fire full side-effect quartet on a status change
+  if (newStatus && newStatus !== fromStatus) {
+    await fireCandidacyTransition(db, {
+      candidacyId:  id,
+      studentId:    candidacy.student_id as string,
+      postingTitle: (posting?.title as string) ?? "the position",
+      companyName:  (company?.company_name as string) ?? null,
+      companyId:    (posting?.company_id as string) ?? null,
+      fromStatus,
+      toStatus:     newStatus,
+      actorId:      user.id,
+      actorRole:    "employer",
+      studentEmail: (student?.email as string) ?? null,
+      studentName:  (student?.full_name as string) ?? null,
+      interviewDate: data.interview_date ?? null,
+      interviewMode: data.interview_mode ?? null,
+      interviewLocation: data.interview_location ?? null,
+      allowance:    data.offer_allowance != null ? `${data.offer_currency ?? "SGD"} ${data.offer_allowance}` : null,
+      startDate:    data.offer_start_date ?? null,
+      responseDeadline: data.offer_response_deadline ?? null,
+      reason:       (body.rejection_reason as string) ?? null,
     });
   }
 

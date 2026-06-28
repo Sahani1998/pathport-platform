@@ -35,7 +35,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   }
 
   const db = createAdminClient();
-  const { data: existing } = await db.from("internship_eligibility").select("id, student_id, application_id, status").eq("id", id).maybeSingle();
+  const { data: existing } = await db.from("posting_eligibility").select("id, student_id, application_id, status").eq("id", id).maybeSingle();
   if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const now = new Date().toISOString();
@@ -71,7 +71,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   }
 
   const { data, error } = await db
-    .from("internship_eligibility")
+    .from("posting_eligibility")
     .update(patch)
     .eq("id", id)
     .select()

@@ -47,7 +47,7 @@ export default async function InstitutionInternshipEligibilityPage() {
 
   const { data: eligibilityRows } = studentIds.length > 0
     ? await db
-        .from("internship_eligibility")
+        .from("posting_eligibility")
         .select("*")
         .in("student_id", studentIds)
     : { data: [] };

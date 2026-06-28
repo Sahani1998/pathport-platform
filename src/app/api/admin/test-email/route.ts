@@ -30,6 +30,14 @@ const SAMPLE_CONTEXTS: Record<EmailTemplate, TemplateContext> = {
   enrollment_completed:         { name: "Priya Sharma", courseName: "Diploma in Business Management", collegeName: "PSB Academy" },
   application_withdrawn:        { name: "Priya Sharma", courseName: "Diploma in Business Management", reason: "Accepted at another institution" },
   withdrawal_notice_internal:   { studentName: "Priya Sharma", courseName: "Diploma in Business Management", collegeName: "PSB Academy", reason: "Accepted at another institution", message: "Found a more suitable course locally." },
+  candidacy_received:           { name: "Priya Sharma", postingTitle: "Business Development Intern", companyName: "Acme Pte. Ltd." },
+  candidacy_shortlisted:        { name: "Priya Sharma", postingTitle: "Business Development Intern", companyName: "Acme Pte. Ltd." },
+  interview_scheduled:          { name: "Priya Sharma", postingTitle: "Business Development Intern", companyName: "Acme Pte. Ltd.", interviewDate: "5 July 2026, 10:00 AM", interviewMode: "Video", interviewLocation: "Google Meet link to follow" },
+  offer_extended:               { name: "Priya Sharma", postingTitle: "Business Development Intern", companyName: "Acme Pte. Ltd.", allowance: "SGD 1,200", startDate: "1 August 2026", responseDeadline: "15 July 2026" },
+  offer_accepted_confirmation:  { name: "Priya Sharma", postingTitle: "Business Development Intern", companyName: "Acme Pte. Ltd." },
+  candidacy_rejected:           { name: "Priya Sharma", postingTitle: "Business Development Intern", companyName: "Acme Pte. Ltd." },
+  hired_welcome:                { name: "Priya Sharma", postingTitle: "Business Development Intern", companyName: "Acme Pte. Ltd.", startDate: "1 August 2026" },
+  new_applicant_employer:       { name: "Acme HR", postingTitle: "Business Development Intern", candidateName: "Priya Sharma" },
 };
 
 export async function POST(request: Request) {

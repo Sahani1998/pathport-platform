@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
 
   const db = createAdminClient();
   let query = db
-    .from("internship_postings")
+    .from("postings")
     .select("*, employer_companies(company_name, logo_url)")
     .eq("employer_id", user.id)
     .order("created_at", { ascending: false });
@@ -48,22 +48,22 @@ export async function POST(req: NextRequest) {
   let body: Record<string, unknown>;
   try { body = await req.json(); } catch { return NextResponse.json({ error: "Invalid JSON" }, { status: 400 }); }
 
-  const { title, monthly_allowance_sgd, duration_months } = body;
-  if (!title || monthly_allowance_sgd === undefined || !duration_months) {
-    return NextResponse.json({ error: "title, monthly_allowance_sgd, and duration_months are required" }, { status: 400 });
+  const { title, monthly_allowance, duration_months } = body;
+  if (!title || monthly_allowance === undefined || !duration_months) {
+    return NextResponse.json({ error: "title, monthly_allowance, and duration_months are required" }, { status: 400 });
   }
 
   const db = createAdminClient();
   const { data: company } = await db.from("employer_companies").select("id").eq("employer_id", user.id).maybeSingle();
 
-  const allowed = ["title","department","description","requirements","location","work_type","monthly_allowance_sgd","duration_months","openings","status","skills_required","start_date","application_deadline"] as const;
+  const allowed = ["title","department","description","requirements","location","work_type","monthly_allowance","duration_months","openings","status","skills_required","start_date","application_deadline","posting_type","country_code","currency_code","working_hours_per_week","benefits"] as const;
   const payload: Record<string, unknown> = { employer_id: user.id };
   if (company) payload.company_id = company.id;
   for (const k of allowed) {
     if (k in body) payload[k] = body[k];
   }
 
-  const { data, error } = await db.from("internship_postings").insert(payload).select().single();
+  const { data, error } = await db.from("postings").insert(payload).select().single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ posting: data }, { status: 201 });
 }

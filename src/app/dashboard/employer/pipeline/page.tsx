@@ -30,7 +30,7 @@ export default async function EmployerPipelinePage() {
   const db = createAdminClient();
 
   const { data: postingIds } = await db
-    .from("internship_postings")
+    .from("postings")
     .select("id")
     .eq("employer_id", user.id);
 
@@ -38,13 +38,13 @@ export default async function EmployerPipelinePage() {
 
   const { data: candidacies } = ids.length > 0
     ? await db
-        .from("internship_candidacies")
+        .from("candidacies")
         .select(`
           id, status, applied_at,
-          student:profiles!internship_candidacies_student_id_fkey(
+          student:profiles!student_id(
             full_name, email, country
           ),
-          internship_postings(id, title)
+          postings(id, title)
         `)
         .in("posting_id", ids)
         .order("applied_at", { ascending: false })
@@ -98,7 +98,7 @@ export default async function EmployerPipelinePage() {
                 <div className="divide-y divide-white/[0.05]">
                   {group.map((row: Record<string,unknown>) => {
                     const student = row.student as Record<string,unknown> | null;
-                    const posting = Array.isArray(row.internship_postings) ? row.internship_postings[0] : row.internship_postings as Record<string,unknown> | null;
+                    const posting = Array.isArray(row.postings) ? row.postings[0] : row.postings as Record<string,unknown> | null;
                     return (
                       <Link
                         key={row.id as string}

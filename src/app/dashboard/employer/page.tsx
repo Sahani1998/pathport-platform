@@ -37,33 +37,46 @@ export default async function EmployerDashboardPage() {
 
   const db = createAdminClient();
 
+  // Resolve posting ids once for the candidacy queries
+  const { data: postingIdRows } = await db.from("postings").select("id").eq("employer_id", user.id);
+  const postingIdList = (postingIdRows ?? []).map((p: Record<string, unknown>) => p.id as string);
+
   const [
     { data: company },
     { data: postingsRaw, count: totalPostings },
     { data: recentCandidacies },
+    { data: statsRow },
+    { data: upcomingInterviews },
   ] = await Promise.all([
     db.from("employer_companies").select("company_name, logo_url, industry, is_verified").eq("employer_id", user.id).maybeSingle(),
-    db.from("internship_postings").select("id, title, status, openings, created_at", { count: "exact" }).eq("employer_id", user.id).order("created_at", { ascending: false }),
-    db.from("internship_candidacies")
-      .select(`
-        id, status, applied_at,
-        student:profiles!internship_candidacies_student_id_fkey(full_name, email),
-        internship_postings(title)
-      `)
-      .in("posting_id",
-        (await db.from("internship_postings").select("id").eq("employer_id", user.id)).data?.map((p: Record<string,unknown>) => p.id as string) ?? []
-      )
-      .order("applied_at", { ascending: false })
-      .limit(6),
+    db.from("postings").select("id, title, status, openings, created_at", { count: "exact" }).eq("employer_id", user.id).order("created_at", { ascending: false }),
+    postingIdList.length > 0
+      ? db.from("candidacies")
+          .select(`id, status, applied_at, student:profiles!student_id(full_name, email), postings(title)`)
+          .in("posting_id", postingIdList)
+          .order("applied_at", { ascending: false })
+          .limit(6)
+      : Promise.resolve({ data: [] as Record<string, unknown>[] }),
+    db.rpc("get_employer_dashboard_stats", { p_employer_id: user.id }).then(r => ({ data: Array.isArray(r.data) ? r.data[0] : r.data })),
+    postingIdList.length > 0
+      ? db.from("candidacies")
+          .select(`id, interview_date, interview_mode, student:profiles!student_id(full_name), postings(id, title)`)
+          .in("posting_id", postingIdList)
+          .eq("status", "interview_scheduled")
+          .gte("interview_date", new Date().toISOString())
+          .order("interview_date", { ascending: true })
+          .limit(5)
+      : Promise.resolve({ data: [] as Record<string, unknown>[] }),
   ]);
 
   const postings = postingsRaw ?? [];
-  const openPostings = postings.filter((p: Record<string,unknown>) => p.status === "open").length;
   const candidacies  = recentCandidacies ?? [];
-  const totalApplicants = candidacies.length;
-  const shortlisted = candidacies.filter((c: Record<string,unknown>) =>
-    ["shortlisted","interview_scheduled","interview_completed","offer_extended","offer_accepted","hired"].includes(c.status as string)
-  ).length;
+  const stats = (statsRow ?? {}) as Record<string, number>;
+  const openPostings    = Number(stats.open_postings ?? 0);
+  const totalApplicants = Number(stats.active_candidacies ?? 0);
+  const shortlisted     = Number(stats.shortlisted_count ?? 0);
+  const pendingDecisions = Number(stats.pending_decisions ?? 0);
+  const interviews = upcomingInterviews ?? [];
 
   const companyName = company?.company_name ?? profile?.full_name ?? "Your Company";
   const hasCompanyProfile = !!company;
@@ -129,6 +142,53 @@ export default async function EmployerDashboardPage() {
         ))}
       </div>
 
+      {/* Pending tasks + upcoming interviews */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Pending tasks */}
+        <div className="bg-white/[0.04] border border-white/[0.08] rounded-2xl p-5">
+          <h3 className="font-display text-lg text-white mb-3 flex items-center gap-2">
+            <Clock className="w-4 h-4 text-gold-400" /> Pending Tasks
+          </h3>
+          {pendingDecisions === 0 ? (
+            <p className="text-white/30 font-body text-sm text-center py-4">You&apos;re all caught up 🎉</p>
+          ) : (
+            <Link href="/dashboard/employer/pipeline" className="flex items-center justify-between p-3 rounded-xl bg-gold-400/[0.06] border border-gold-400/20 hover:bg-gold-400/[0.1] transition-colors">
+              <span className="font-body text-sm text-white/75">{pendingDecisions} candidate{pendingDecisions !== 1 ? "s" : ""} awaiting your action</span>
+              <ChevronRight className="w-4 h-4 text-gold-400" />
+            </Link>
+          )}
+        </div>
+
+        {/* Upcoming interviews */}
+        <div className="bg-white/[0.04] border border-white/[0.08] rounded-2xl p-5">
+          <h3 className="font-display text-lg text-white mb-3 flex items-center gap-2">
+            <Clock className="w-4 h-4 text-emerald-400" /> Upcoming Interviews
+          </h3>
+          {interviews.length === 0 ? (
+            <p className="text-white/30 font-body text-sm text-center py-4">No interviews scheduled</p>
+          ) : (
+            <div className="space-y-2">
+              {interviews.map((iv: Record<string, unknown>) => {
+                const student = Array.isArray(iv.student) ? iv.student[0] : iv.student as Record<string, unknown> | null;
+                const posting = Array.isArray(iv.postings) ? iv.postings[0] : iv.postings as Record<string, unknown> | null;
+                return (
+                  <Link key={iv.id as string} href={`/dashboard/employer/postings/${posting?.id ?? ""}`}
+                    className="flex items-center justify-between p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.05] transition-colors">
+                    <div className="min-w-0">
+                      <p className="font-body text-sm text-white/80 font-semibold truncate">{student?.full_name as string ?? "—"}</p>
+                      <p className="font-body text-xs text-white/40 truncate">{posting?.title as string ?? "—"}</p>
+                    </div>
+                    <p className="font-body text-xs text-emerald-400 flex-shrink-0 ml-2">
+                      {new Date(iv.interview_date as string).toLocaleString("en-SG", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                    </p>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Main grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
@@ -157,7 +217,7 @@ export default async function EmployerDashboardPage() {
             <div className="divide-y divide-white/[0.05]">
               {candidacies.map((row: Record<string,unknown>) => {
                 const student = row.student as Record<string,unknown> | null;
-                const posting = Array.isArray(row.internship_postings) ? row.internship_postings[0] : row.internship_postings as Record<string,unknown> | null;
+                const posting = Array.isArray(row.postings) ? row.postings[0] : row.postings as Record<string,unknown> | null;
                 const status  = row.status as string;
                 const color   = CANDIDACY_STATUS_COLOR[status] ?? "text-white/50";
                 return (

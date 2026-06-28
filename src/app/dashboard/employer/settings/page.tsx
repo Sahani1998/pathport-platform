@@ -48,8 +48,8 @@ export default async function EmployerSettingsPage() {
       <div className="p-5 rounded-2xl bg-white/[0.04] border border-white/[0.08] space-y-2">
         <h3 className="font-display text-lg text-white mb-3">Quick Actions</h3>
         {[
-          { icon: Building2, label: "Company Profile",   href: "/dashboard/employer/company",  desc: "Update your company details"        },
-          { icon: Bell,      label: "Notifications",     href: "#",                             desc: "Notification preferences coming soon"},
+          { icon: Building2, label: "Company Profile", href: "/dashboard/employer/company",       desc: "Logo, offices, recruiters, verification" },
+          { icon: Bell,      label: "Notifications",   href: "/dashboard/employer/notifications", desc: "View your notification inbox"            },
         ].map(({ icon: Icon, label, href, desc }) => (
           <Link key={label} href={href} className="flex items-center gap-3 p-3 rounded-xl hover:bg-white/[0.04] transition-colors group">
             <div className="w-9 h-9 rounded-xl bg-white/[0.05] border border-white/[0.08] flex items-center justify-center flex-shrink-0">
