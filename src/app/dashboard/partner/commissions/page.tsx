@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin-client";
 import { redirect } from "next/navigation";
+import { loadStudentProfiles } from "@/lib/student-profiles";
 import CommissionsClient, { type PartnerCommission } from "./CommissionsClient";
 
 export const dynamic = "force-dynamic";
@@ -16,12 +17,13 @@ export default async function PartnerCommissionsPage() {
 
   const db = createAdminClient();
 
+  // partner_commissions.student_id → auth.users (no FK to profiles) — batch-load
+  // separately. The application embed IS a real FK (application_id → applications).
   const { data: rawComm } = await db
     .from("partner_commissions")
     .select(`
       id, amount_cents, currency, status, description, notes,
-      paid_at, approved_at, created_at,
-      student:profiles!partner_commissions_student_id_fkey ( full_name, email ),
+      paid_at, approved_at, created_at, student_id,
       application:applications!partner_commissions_application_id_fkey (
         public_id, current_stage,
         courses ( title, colleges ( name ) )
@@ -30,8 +32,10 @@ export default async function PartnerCommissionsPage() {
     .eq("partner_id", user.id)
     .order("created_at", { ascending: false });
 
+  const commProfileMap = await loadStudentProfiles(db, (rawComm ?? []).map((c: Record<string,unknown>) => c.student_id as string));
+
   const rows: PartnerCommission[] = (rawComm ?? []).map((c: Record<string,unknown>) => {
-    const student = c.student as Record<string,unknown> | null;
+    const student = commProfileMap.get(c.student_id as string) ?? null;
     const application = c.application as Record<string,unknown> | null;
     const courses = application?.courses as Record<string,unknown> | null;
     const colleges = courses?.colleges as Record<string,unknown> | null;

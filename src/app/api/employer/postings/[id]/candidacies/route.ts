@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin-client";
+import { loadStudentProfiles } from "@/lib/student-profiles";
 import { NextRequest, NextResponse } from "next/server";
 import { checkRateLimitAsync, getClientIp, rateLimitResponse, LIMITS } from "@/lib/rate-limit";
 
@@ -31,14 +32,17 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     .select(`
       id, status, cover_note, resume_url, interview_date,
       interview_notes, offer_allowance, offer_start_date,
-      rejection_reason, employer_notes, applied_at, updated_at,
-      student:profiles!student_id(
-        id, full_name, email, country
-      )
+      rejection_reason, employer_notes, applied_at, updated_at, student_id
     `)
     .eq("posting_id", postingId)
     .order("applied_at", { ascending: false });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ candidacies: data ?? [] });
+
+  // candidacies.student_id → auth.users (no FK to profiles) — batch-load profiles
+  const rows = data ?? [];
+  const profileMap = await loadStudentProfiles(db, rows.map((r: Record<string, unknown>) => r.student_id as string));
+  const candidacies = rows.map((r: Record<string, unknown>) => ({ ...r, student: profileMap.get(r.student_id as string) ?? null }));
+
+  return NextResponse.json({ candidacies });
 }

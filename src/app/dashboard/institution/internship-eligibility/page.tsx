@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin-client";
 import { redirect } from "next/navigation";
 import { resolveStage, isInternshipRelevant } from "@/lib/application-stage-mapping";
+import { loadStudentProfiles } from "@/lib/student-profiles";
 import { getStageMeta } from "@/types/timeline";
 import EligibilityClient from "./EligibilityClient";
 
@@ -45,13 +46,16 @@ export default async function InstitutionInternshipEligibilityPage() {
   }
 
   // ── Fetch applications (scoped to the college's courses for institutions) ──
+  // NOTE: applications.student_id → auth.users(id); there is NO FK from
+  // applications to profiles, so PostgREST CANNOT embed `profiles` inline
+  // (`student:profiles!applications_student_id_fkey(...)` errors the whole
+  // query → null → zero rows). Every working institution page batch-loads
+  // student profiles separately. We do the same. `courses` IS a real FK so
+  // that embed is fine.
   let appQuery = db
     .from("applications")
     .select(`
       id, student_id, current_stage, status,
-      student:profiles!applications_student_id_fkey(
-        id, full_name, email, country
-      ),
       courses(title, colleges(name))
     `)
     .not("current_stage", "in", '("rejected","withdrawn")')
@@ -59,7 +63,8 @@ export default async function InstitutionInternshipEligibilityPage() {
 
   if (courseIds) appQuery = appQuery.in("course_id", courseIds);
 
-  const { data: applications } = await appQuery;
+  const { data: applications, error: appError } = await appQuery;
+  if (appError) console.error("[InternshipEligibility] applications query failed:", appError.message);
 
   // ── Filter to internship-relevant students via the SINGLE SOURCE OF TRUTH ──
   // (enrolled and beyond, derived from resolveStage — same logic every other
@@ -68,11 +73,15 @@ export default async function InstitutionInternshipEligibilityPage() {
     isInternshipRelevant(a.current_stage as string | null, a.status as string | null),
   );
 
-  // Existing eligibility records
+  // Batch-load student profiles + eligibility records (no inline FK embed).
   const studentIds = relevant.map((a: Record<string, unknown>) => a.student_id as string).filter(Boolean);
-  const { data: eligibilityRows } = studentIds.length > 0
-    ? await db.from("posting_eligibility").select("*").in("student_id", studentIds)
-    : { data: [] };
+
+  const [profileMap, { data: eligibilityRows }] = await Promise.all([
+    loadStudentProfiles(db, studentIds),
+    studentIds.length > 0
+      ? db.from("posting_eligibility").select("*").in("student_id", studentIds)
+      : Promise.resolve({ data: [] as Record<string, unknown>[] }),
+  ]);
 
   const eligibilityMap: Record<string, Record<string, unknown>> = {};
   for (const row of eligibilityRows ?? []) {
@@ -81,7 +90,7 @@ export default async function InstitutionInternshipEligibilityPage() {
   }
 
   const students = relevant.map((a: Record<string, unknown>) => {
-    const student = Array.isArray(a.student) ? a.student[0] : a.student as Record<string, unknown> | null;
+    const student = profileMap.get(a.student_id as string) ?? null;
     const course  = Array.isArray(a.courses) ? a.courses[0] : a.courses as Record<string, unknown> | null;
     const college = course ? (Array.isArray(course.colleges) ? course.colleges[0] : course.colleges) : null;
     return {

@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin-client";
 import { redirect } from "next/navigation";
+import { loadStudentProfiles } from "@/lib/student-profiles";
 import Link from "next/link";
 import { Users, ChevronRight } from "lucide-react";
 
@@ -40,17 +41,16 @@ export default async function EmployerPipelinePage() {
     ? await db
         .from("candidacies")
         .select(`
-          id, status, applied_at,
-          student:profiles!student_id(
-            full_name, email, country
-          ),
+          id, status, applied_at, student_id,
           postings(id, title)
         `)
         .in("posting_id", ids)
         .order("applied_at", { ascending: false })
     : { data: [] };
 
-  const rows = candidacies ?? [];
+  // candidacies.student_id → auth.users (no FK to profiles) — batch-load profiles
+  const profileMap = await loadStudentProfiles(db, (candidacies ?? []).map((c: Record<string,unknown>) => c.student_id as string));
+  const rows = (candidacies ?? []).map((c: Record<string,unknown>) => ({ ...c, student: profileMap.get(c.student_id as string) ?? null }));
 
   const stages = [
     { key: "applied",             label: "Applied"              },

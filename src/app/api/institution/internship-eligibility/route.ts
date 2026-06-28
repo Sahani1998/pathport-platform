@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin-client";
 import { NextRequest, NextResponse } from "next/server";
 import { checkRateLimitAsync, getClientIp, rateLimitResponse, LIMITS } from "@/lib/rate-limit";
 import { notifyUser } from "@/lib/application-timeline";
+import { loadStudentProfiles } from "@/lib/student-profiles";
 
 async function requireInstitution() {
   const supabase = await createClient();
@@ -28,14 +29,11 @@ export async function GET(req: NextRequest) {
   const db = createAdminClient();
   const collegeId = profile.college_id as string | null;
 
+  // posting_eligibility.student_id → auth.users(id), NOT profiles — so the
+  // profiles embed can't be used (errors the query). Batch-load instead.
   let query = db
     .from("posting_eligibility")
-    .select(`
-      id, status, enabled_at, suspended_at, suspension_reason, notes, updated_at,
-      student:profiles!student_id(
-        id, full_name, email, country
-      )
-    `)
+    .select("id, student_id, status, enabled_at, suspended_at, suspension_reason, notes, updated_at")
     .order("updated_at", { ascending: false });
 
   // Institution users are scoped to their college's students. college_id lives
@@ -61,7 +59,16 @@ export async function GET(req: NextRequest) {
 
   const { data, error } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ eligibility: data ?? [] });
+
+  // Attach student profiles (batch-loaded — no inline FK embed)
+  const rows = data ?? [];
+  const profileMap = await loadStudentProfiles(db, rows.map((r: Record<string, unknown>) => r.student_id as string));
+  const eligibility = rows.map((r: Record<string, unknown>) => ({
+    ...r,
+    student: profileMap.get(r.student_id as string) ?? null,
+  }));
+
+  return NextResponse.json({ eligibility });
 }
 
 export async function POST(req: NextRequest) {

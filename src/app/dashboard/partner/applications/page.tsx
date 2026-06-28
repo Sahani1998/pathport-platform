@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin-client";
 import { redirect } from "next/navigation";
+import { loadStudentProfiles } from "@/lib/student-profiles";
 import ApplicationsClient, { type PartnerApplication } from "./ApplicationsClient";
 
 export const dynamic = "force-dynamic";
@@ -28,8 +29,7 @@ export default async function PartnerApplicationsPage() {
     ? await db
         .from("applications")
         .select(`
-          id, public_id, current_stage, status, submitted_at, updated_at,
-          student:profiles!applications_student_id_fkey ( id, full_name, email, country ),
+          id, public_id, current_stage, status, submitted_at, updated_at, student_id,
           courses (
             id, title, category, level, tuition_fee,
             colleges ( name, logo_url )
@@ -39,8 +39,11 @@ export default async function PartnerApplicationsPage() {
         .order("submitted_at", { ascending: false })
     : { data: [] };
 
+  // applications.student_id → auth.users (no FK to profiles) — batch-load profiles
+  const appProfileMap = await loadStudentProfiles(db, (appsRaw ?? []).map((a: Record<string,unknown>) => a.student_id as string));
+
   const rows: PartnerApplication[] = (appsRaw ?? []).map((a: Record<string,unknown>) => {
-    const student = a.student as Record<string,unknown> | null;
+    const student = appProfileMap.get(a.student_id as string) ?? null;
     const courses = a.courses as Record<string,unknown> | null;
     const colleges = courses?.colleges as Record<string,unknown> | null;
     return {
