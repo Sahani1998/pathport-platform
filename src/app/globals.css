@@ -43,6 +43,25 @@
     color: #F5E8B0;
   }
 
+  /* Dark dropdown options — native <option> popups ignore the parent <select>
+     styling and render white by default. Force the dark theme so the open
+     dropdown list matches the rest of the UI. */
+  select option,
+  select optgroup {
+    background-color: #0B1322;
+    color: #F4F6FB;
+  }
+
+  /* Native date/time picker calendar icon is dark-on-dark and nearly invisible
+     on our dark inputs — invert it so it's legible. */
+  input[type="date"]::-webkit-calendar-picker-indicator,
+  input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+  input[type="time"]::-webkit-calendar-picker-indicator,
+  input[type="month"]::-webkit-calendar-picker-indicator {
+    filter: invert(0.75);
+    cursor: pointer;
+  }
+
   /* Custom scrollbar */
   ::-webkit-scrollbar       { width: 5px; }
   ::-webkit-scrollbar-track { background: #060B18; }
